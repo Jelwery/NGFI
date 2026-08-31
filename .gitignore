@@ -1,0 +1,55 @@
+# Dependencies and build outputs
+node_modules/
+**/node_modules/
+**/lib/
+coverage/
+
+# Python environments and caches
+.venv/
+**/.venv/
+.uv-cache/
+**/.uv-cache/
+.pytest_cache/
+**/.pytest_cache/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Runtime state, generated files, and local data
+/.runtime/
+/generated/
+/packages/combinatorial-optimization/data/
+/skills/*-workspace/
+*.log
+.DS_Store
+
+# Local credentials and machine-specific configuration
+/.npmrc
+/.env
+/.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+*credentials*.json
+*secrets*.json
+*.local.*
+
+# Private integration and engineering-only material
+/src/
+/profiles/
+/packages/dsh-finance-bundle/
+/tests/composition.test.ts
+/tests/evals.test.ts
+/tests/headless.test.ts
+/tests/isolation.test.ts
+/evals/
+/scripts/
+/docs/
+**/docs/
+**/参考资料/
+/packages/combinatorial-optimization/README.md
+AGENTS.md
+CLAUDE.md
+

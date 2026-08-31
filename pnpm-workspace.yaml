@@ -1,0 +1,15 @@
+packages:
+  - packages/finance-core
+  - packages/finance-provider-yfinance
+  - packages/dsh-finance-tools
+  - packages/combinatorial-optimization
+
+allowBuilds:
+  '@deepseek-ai/dsh-subprocess-local': true
+  '@google/genai': false
+  esbuild: true
+  koffi: true
+  node-pty: true
+  protobufjs: false
+
+strictDepBuilds: true

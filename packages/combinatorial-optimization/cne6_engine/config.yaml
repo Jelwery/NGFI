@@ -1,0 +1,16 @@
+assets:
+  # Assets are owned by this package. Rebuild them from the documented
+  # Sina/AKShare sources; do not borrow Finance2DSH's yfinance provider.
+  root: "."
+  price_file: "data/reference/price_history.parquet"
+  cap_snapshot_file: "data/reference/market_cap_snapshot.parquet"
+  fundamentals_file: "data/reference/historical_fundamentals.parquet"
+  industry_file: "data/reference/sw_industry.parquet"
+
+benchmark:
+  symbol: "sh000300"
+  cache_file: "data/reference/benchmark_sh000300.parquet"
+  start_date: "2015-01-01"
+
+universe:
+  min_listed_days: 252

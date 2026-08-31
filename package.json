@@ -1,0 +1,40 @@
+{
+  "name": "ngfi",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.19.0",
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "scripts": {
+    "build": "pnpm -r --if-present run build",
+    "clean": "pnpm -r --if-present run clean",
+    "typecheck": "tsc -p tsconfig.json --noEmit && pnpm -r --if-present run typecheck",
+    "test": "vitest run",
+    "sync:cne6": "cd packages/combinatorial-optimization && UV_CACHE_DIR=.uv-cache uv sync --extra dev",
+    "cne6:data": "pnpm --dir packages/combinatorial-optimization run cne6:data",
+    "cne6:data:probe": "pnpm --dir packages/combinatorial-optimization run cne6:data:probe",
+    "cne6:data:rebuild": "pnpm --dir packages/combinatorial-optimization run cne6:data:rebuild",
+    "cne6:data:validate": "pnpm --dir packages/combinatorial-optimization run cne6:data:validate",
+    "cne6:data:smoke": "pnpm --dir packages/combinatorial-optimization run cne6:data:smoke",
+    "test:cne6": "pnpm --dir packages/combinatorial-optimization run test:cne6",
+    "test:live:yfinance": "FINANCE2DSH_LIVE=1 vitest run --config vitest.live.config.ts tests/yfinance.live.test.ts",
+    "test:live:cne6": "pnpm --dir packages/combinatorial-optimization run test:cne6:live",
+    "check": "pnpm run build && pnpm run typecheck && pnpm run test && pnpm run test:cne6"
+  },
+  "dependencies": {
+    "@deepseek-ai/cordis": "4.0.1",
+    "@deepseek-ai/dsh-tools": "0.1.1-rc.2",
+    "@finance2dsh/core": "workspace:*",
+    "@finance2dsh/dsh-tools": "workspace:*",
+    "@finance2dsh/provider-yfinance": "workspace:*",
+    "yaml": "2.8.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.0",
+    "tsx": "4.22.4",
+    "typescript": "6.0.3",
+    "vitest": "4.1.8"
+  }
+}

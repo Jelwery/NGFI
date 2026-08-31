@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cne6-engine"
+version = "0.1.0"
+description = "CNE6 daily stock covariance matrix engine with three-layer architecture"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+keywords = ["risk-model", "covariance", "barra", "cne6", "quant"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3.11",
+]
+dependencies = [
+    "numpy>=1.26",
+    "scipy>=1.11",
+    "numba>=0.58",
+    "polars>=0.19",
+    "pyarrow>=13.0",
+    "akshare>=1.12",
+    "pyyaml>=6.0",
+    "aiohttp-socks>=0.9",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.4"]
+
+[tool.setuptools.packages.find]
+include = ["cne6_engine", "cne6_engine.*"]
+
+[tool.setuptools.package-data]
+cne6_engine = ["config.yaml"]
+
+[tool.pytest.ini_options]
+testpaths = ["cne6_engine/tests"]
+addopts = "-m 'not live'"
+markers = [
+    "live: accesses the real Sina/AKShare/East Money upstreams",
+]

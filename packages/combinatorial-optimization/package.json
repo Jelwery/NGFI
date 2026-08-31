@@ -1,0 +1,14 @@
+{
+  "name": "@finance2dsh/combinatorial-optimization",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "cne6:data": "UV_CACHE_DIR=.uv-cache uv run --project . python -m cne6_engine.data_sources.cli",
+    "cne6:data:probe": "UV_CACHE_DIR=.uv-cache uv run --project . python -m cne6_engine.data_sources.cli probe",
+    "cne6:data:rebuild": "UV_CACHE_DIR=.uv-cache uv run --project . python -m cne6_engine.data_sources.cli rebuild",
+    "cne6:data:validate": "UV_CACHE_DIR=.uv-cache uv run --project . python -m cne6_engine.data_sources.cli validate",
+    "cne6:data:smoke": "UV_CACHE_DIR=.uv-cache uv run --project . python -m cne6_engine.data_sources.cli smoke",
+    "test:cne6": "UV_CACHE_DIR=.uv-cache uv run --project . --extra dev python -m pytest -q",
+    "test:cne6:live": "CNE6_LIVE=1 UV_CACHE_DIR=.uv-cache uv run --project . --extra dev python -m pytest -q -o addopts='' -m live cne6_engine/tests/test_live_data_sources.py"
+  }
+}

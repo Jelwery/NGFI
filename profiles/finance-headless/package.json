@@ -1,0 +1,17 @@
+{
+  "name": "dsh-profile-finance-headless",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@finance2dsh/dsh-bundle": "0.1.0"
+  },
+  "dsh": {
+    "profile": {
+      "bundles": [
+        "@deepseek-ai/dsh-base",
+        "@deepseek-ai/dsh-headless",
+        "@finance2dsh/dsh-bundle"
+      ]
+    }
+  }
+}

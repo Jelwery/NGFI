@@ -1,0 +1,34 @@
+# Finance2DSH one-shot profile. The project runner replaces the stock runner so
+# every headless agent joins the same finance-analyst preset as Web sessions.
+- id: sandbox-policy
+  config:
+    mode: read-only
+    workspaceRoot: !!js process.cwd()
+
+- id: approval
+  config:
+    policy: ask
+
+- id: agent-default-model
+  config:
+    provider: !!js process.env.NGFI_LLM_PROVIDER || 'deepseek-official'
+    model: !!js process.env.NGFI_LLM_MODEL || 'deepseek-v4-flash'
+
+- insert:
+    - id: agent-presets
+      name: '@deepseek-ai/dsh-agent-presets'
+      config:
+        default: finance-analyst
+        roots: []
+        includeUserRoot: true
+
+- id: headless-runner
+  disabled: true
+
+- insert:
+    - id: finance-headless-runner
+      name: '@finance2dsh/dsh-bundle/headless'
+      inject: [headlessStartup]
+      config:
+        task: !!js ctx.headlessStartup.task
+        preset: finance-analyst

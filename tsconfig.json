@@ -16,14 +16,9 @@
     "packages/finance-core/src/**/*.ts",
     "packages/finance-provider-yfinance/src/**/*.ts",
     "packages/dsh-finance-tools/src/**/*.ts",
-    "tests/behavior-core.test.ts",
-    "tests/behavior-reference.test.ts",
-    "tests/behavior-skill.test.ts",
-    "tests/behavior-tools.test.ts",
-    "tests/core.test.ts",
-    "tests/provider.test.ts",
-    "tests/tools.test.ts",
-    "tests/yfinance.live.test.ts",
+    "packages/dsh-finance-bundle/src/**/*.ts",
+    "src/**/*.ts",
+    "tests/**/*.ts",
     "vitest.config.ts",
     "vitest.live.config.ts"
   ]

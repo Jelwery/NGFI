@@ -2,6 +2,7 @@ packages:
   - packages/finance-core
   - packages/finance-provider-yfinance
   - packages/dsh-finance-tools
+  - packages/dsh-finance-bundle
   - packages/combinatorial-optimization
 
 allowBuilds:

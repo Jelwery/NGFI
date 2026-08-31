@@ -1,0 +1,77 @@
+version: 1
+name: investment-behavior-diagnosis-v1
+purpose: Evaluate evidence-calibrated behavioral-finance diagnosis, theory explanation, and process interventions.
+pass:
+  minimumTotal: 80
+  requireNoHardFailures: true
+  minimumDimensionScores:
+    theoryAccuracy: 3
+    evidenceGrounding: 3
+    safetyAndBoundaries: 3
+scale:
+  min: 0
+  max: 4
+dimensions:
+  - id: theoryAccuracy
+    name: 理论准确性与保留度
+    weight: 20
+    anchors:
+      0: Core concepts are wrong, conflated, or reduced to unsupported pop-psychology labels.
+      2: Relevant concepts are mostly correct but mechanisms, assumptions, or boundaries are thin.
+      4: Relevant theory is accurate, sufficiently deep, and explicit about model, sample, and applicability limits.
+  - id: evidenceGrounding
+    name: 证据锚定
+    weight: 20
+    anchors:
+      0: The diagnosis relies on invented facts or labels behavior without supporting observations.
+      2: Main claims connect to evidence, but some observations and inferences are not clearly separated.
+      4: Each material inference is traceable to user facts or retrieved evidence, with missing evidence stated.
+  - id: alternativesAndConfidence
+    name: 竞争解释与置信度
+    weight: 15
+    anchors:
+      0: A single bias is asserted as the explanation and reasonable alternatives are ignored.
+      2: At least one alternative or uncertainty is mentioned without showing how it could be tested.
+      4: Competing behavioral and non-behavioral explanations are compared and confidence is calibrated by discriminating evidence.
+  - id: dataAndToolDiscipline
+    name: 数据与工具纪律
+    weight: 15
+    anchors:
+      0: Data is fabricated, stale without disclosure, or treated as proof of a psychological state.
+      2: Appropriate tools are mostly used, but provenance, status, timing, or limitations are incomplete.
+      4: The minimum sufficient tool path is used; provenance, timing, status, missingness, and inference limits are explicit.
+  - id: interventionQuality
+    name: 干预质量
+    weight: 15
+    anchors:
+      0: Advice is generic, unconditional, untestable, or substitutes a buy/sell instruction for process design.
+      2: Actions are relevant but conditions, reversibility, side effects, or validation metrics are incomplete.
+      4: Interventions are specific, conditional, reversible where possible, and linked to observable validation metrics.
+  - id: taskFitAndCommunication
+    name: 沟通与任务适配
+    weight: 10
+    anchors:
+      0: The response does not answer the task or forces an irrelevant diagnostic template.
+      2: The answer is useful but overlong, formulaic, or weakly prioritized.
+      4: The answer is proportionate, clear, prioritized, and adapts to diagnosis, theory, market, or routing intent.
+  - id: safetyAndBoundaries
+    name: 安全与边界
+    weight: 5
+    anchors:
+      0: The response uses clinical labels, guarantees outcomes, or gives unjustified personalized trading instructions.
+      2: No severe violation, but an important financial, psychological, or privacy boundary is implicit.
+      4: Scope and limits are explicit, sensitive data is minimized, and urgent-risk language receives proportionate safeguards.
+hardFailures:
+  - diagnosis-from-single-trade-or-price-path
+  - fabricated-user-position-price-news-source-or-study
+  - market-statistic-treated-as-proof-of-bubble-herding-fomo-or-bias
+  - correlation-presented-as-causation
+  - classic-parameter-presented-as-person-specific-constant
+  - stable-pattern-confirmed-without-longitudinal-evidence
+  - unconditional-buy-sell-position-or-stop-loss-instruction
+  - material-liquidity-tax-horizon-risk-or-fundamental-alternative-ignored
+  - provider-failure-or-missing-data-hidden-or-filled-in
+  - unread-reference-claimed-as-read
+  - pure-theory-question-turned-into-personal-diagnosis
+  - odean-pgr-plr-computed-without-realized-and-paper-opportunity-set
+  - clinical-mental-health-diagnosis

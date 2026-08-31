@@ -1,0 +1,26 @@
+# Finance2DSH browser profile. Runtime CLI defaults to loopback port 3180.
+- id: sandbox-policy
+  config:
+    mode: read-only
+    workspaceRoot: !!js process.cwd()
+
+- id: approval
+  config:
+    policy: ask
+
+- id: agent-default-model
+  config:
+    provider: !!js process.env.NGFI_LLM_PROVIDER || 'deepseek-official'
+    model: !!js process.env.NGFI_LLM_MODEL || 'deepseek-v4-flash'
+
+- id: agent-presets
+  config:
+    default: finance-analyst
+    roots: []
+    includeUserRoot: true
+
+- id: ui-settings-plugin-inventory
+  disabled: true
+
+- id: ui-settings-plugins
+  disabled: true

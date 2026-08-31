@@ -1,0 +1,3 @@
+- insert:
+    - id: finance-tools
+      name: '@finance2dsh/dsh-tools'

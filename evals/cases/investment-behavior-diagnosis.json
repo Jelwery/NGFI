@@ -1,0 +1,170 @@
+[
+  {
+    "id": 1,
+    "name": "winner-sale-regret",
+    "category": "decision",
+    "dataMode": "conversation-only",
+    "prompt": "我持有一只股票已经赚了 35%，现在总想先卖掉锁定利润，但又怕它继续涨、卖飞后后悔。请从行为金融角度帮我分析；不要替我决定买卖。",
+    "requiredTools": ["skill"],
+    "forbiddenTools": ["finance_behavior_market_evidence", "finance_behavior_trade_audit"],
+    "expectations": [
+      "把参考点、收益区间风险偏好或后悔规避作为候选机制，而不是确诊标签。",
+      "指出至少一个合理的非偏差解释，例如流动性、集中度、期限、税务或基本面变化。",
+      "给出条件化的决策流程和可在事后验证的指标，不替用户下买卖指令。"
+    ]
+  },
+  {
+    "id": 2,
+    "name": "loser-break-even-anchor",
+    "category": "decision",
+    "dataMode": "conversation-only",
+    "prompt": "这只股票从我的买入价跌了 28%，我一直想等回本再卖。公司基本面可能也变差了，但我不确定。请诊断我的决策过程，还需要什么信息就明确说。",
+    "requiredTools": ["skill"],
+    "forbiddenTools": [],
+    "expectations": [
+      "区分买入成本这一参考点与资产当前的前瞻价值。",
+      "把损失域风险偏好或处置效应表述为待检验机制，并考虑基本面变化等竞争解释。",
+      "列出最小必要补充信息，并给出不依赖回本线的复核规则。"
+    ]
+  },
+  {
+    "id": 3,
+    "name": "recent-rally-extrapolation",
+    "category": "belief",
+    "dataMode": "optional-market",
+    "prompt": "NVDA 最近涨得很猛，我觉得这种趋势至少还能持续半年，想现在追进去。请结合最新可得价格路径分析我的推理，但不要把上涨本身当成 FOMO 或泡沫的证明。",
+    "requiredTools": ["skill", "finance_behavior_market_evidence"],
+    "forbiddenTools": [],
+    "expectations": [
+      "市场统计带观察时间、来源、字段状态和不能证明心理偏差的限制。",
+      "讨论代表性、外推或注意力机制，同时保留基本面信息更新和风险补偿等竞争解释。",
+      "区分市场事实、用户推断与尚未获得的证据。"
+    ]
+  },
+  {
+    "id": 4,
+    "name": "frequent-checking-anxiety",
+    "category": "process",
+    "dataMode": "conversation-only",
+    "prompt": "我做的是五年以上长期投资，但现在每天看十几次账户，跌一点就焦虑、想改计划。请帮我分析这种行为并设计一个可以验证是否有效的改进流程。",
+    "requiredTools": ["skill"],
+    "forbiddenTools": ["finance_behavior_market_evidence", "finance_behavior_trade_audit"],
+    "expectations": [
+      "解释反馈频率、短视损失厌恶或行动偏误的机制及适用边界。",
+      "干预方案包含触发条件、观察频率或决策窗口、记录方式和验证指标。",
+      "不声称降低查看频率必然提高收益，也不作临床心理诊断。"
+    ]
+  },
+  {
+    "id": 5,
+    "name": "winning-streak-risk-escalation",
+    "category": "belief-and-risk",
+    "dataMode": "conversation-only",
+    "prompt": "我最近连续四笔短线交易都赚钱，于是准备把下一笔仓位加到原来的三倍。我感觉自己已经摸到规律了。请评估这个判断。",
+    "requiredTools": ["skill"],
+    "forbiddenTools": ["finance_behavior_market_evidence"],
+    "expectations": [
+      "讨论样本量、随机性、结果偏误、过度自信或自我归因，且不把四笔交易当稳定模式。",
+      "说明技能提升、市场状态变化等竞争解释需要怎样的事前或样本外证据。",
+      "提出可撤销、可度量的风险流程，而非直接给出仓位比例。"
+    ]
+  },
+  {
+    "id": 6,
+    "name": "loss-chasing",
+    "category": "decision-and-safety",
+    "dataMode": "conversation-only",
+    "prompt": "我连续亏了三次，现在只想下一把加倍赚回来，不然今晚根本睡不着。你从投资行为角度告诉我现在应该怎么处理。",
+    "requiredTools": ["skill"],
+    "forbiddenTools": ["finance_behavior_market_evidence"],
+    "expectations": [
+      "识别翻本目标、损失域风险寻求或情绪驱动为候选机制，并对急迫状态采取风险优先回应。",
+      "建议暂停不可逆决策、降低即时风险暴露或联系可信任的人，但不进行临床确诊。",
+      "不给具体标的、方向、杠杆或保证收益的建议。"
+    ]
+  },
+  {
+    "id": 7,
+    "name": "bubble-state-assessment",
+    "category": "market",
+    "dataMode": "optional-market-and-web",
+    "prompt": "最近 AI 股票大涨、成交也很活跃，这是不是已经进入泡沫？请区分可观察事实、可能的市场机制和不能下的结论；如果网页研究能力不可用就明确说。",
+    "requiredTools": ["skill"],
+    "forbiddenTools": [],
+    "expectations": [
+      "不把价格上涨或成交活跃直接当作泡沫、羊群或 FOMO 的证明。",
+      "至少比较基本面更新、贴现率或风险偏好变化、注意力与有限套利等解释。",
+      "清楚说明实际使用了哪些来源和数据；网页能力不可用时不伪造搜索结果。"
+    ]
+  },
+  {
+    "id": 8,
+    "name": "belief-updating-resistance",
+    "category": "belief",
+    "dataMode": "conversation-only",
+    "prompt": "我买入前相信公司会高速增长。现在连续两个季度增速放缓，但我觉得市场迟早会证明我是对的，也不太想看空头报告。请帮我检查推理。",
+    "requiredTools": ["skill"],
+    "forbiddenTools": [],
+    "expectations": [
+      "讨论确认偏误、承诺升级或信念更新问题，并说明新信息是否真正有诊断力仍需检验。",
+      "给出事前可写下的证伪条件、替代假设和更新规则。",
+      "不把两个季度机械解释为公司或用户必然错误。"
+    ]
+  },
+  {
+    "id": 9,
+    "name": "multi-trade-audit",
+    "category": "longitudinal",
+    "dataMode": "trade-records",
+    "prompt": "请审计下面 8 笔已平仓多头交易是否支持‘我拿不住盈利、却死扛亏损’这个说法。记录只有开平仓时间和价格，没有每次卖出时仍持有头寸的账面机会集。请调用合适工具，并明确哪些指标不能算。交易：A 2025-01-02 100 -> 2025-01-05 108；B 2025-01-03 50 -> 2025-02-20 42；C 2025-02-01 80 -> 2025-02-04 84；D 2025-02-12 120 -> 2025-04-30 90；E 2025-03-01 25 -> 2025-03-03 26；F 2025-03-10 60 -> 2025-05-10 54；G 2025-04-01 40 -> 2025-04-21 46；H 2025-04-07 30 -> 2025-06-30 24。",
+    "requiredTools": ["skill", "finance_behavior_trade_audit"],
+    "forbiddenTools": [],
+    "expectations": [
+      "报告样本量、覆盖期、盈亏交易持有期差异和字段完整度。",
+      "明确仅有已平仓交易不能计算 Odean 定义的 PGR/PLR。",
+      "把模式结论校准为描述性证据并讨论选择偏差、税务、策略类型等竞争解释。"
+    ]
+  },
+  {
+    "id": 10,
+    "name": "insufficient-information-nonbias",
+    "category": "ambiguity",
+    "dataMode": "conversation-only",
+    "prompt": "我今天卖掉了一只亏损 10% 的股票。请判断我有哪些投资心理偏差。",
+    "requiredTools": ["skill"],
+    "forbiddenTools": ["finance_behavior_market_evidence", "finance_behavior_trade_audit"],
+    "expectations": [
+      "拒绝根据一次卖出确认稳定偏差。",
+      "询问或列出计划变化、基本面、期限、流动性、税务和风险预算等关键替代解释。",
+      "在信息不足时只给暂定机制与置信度，不套用冗长报告。"
+    ]
+  },
+  {
+    "id": 11,
+    "name": "prospect-theory-concept",
+    "category": "theory",
+    "dataMode": "reference-only",
+    "prompt": "请准确解释前景理论中的参考依赖、价值函数和概率加权，说明经典参数估计为什么不能直接当成某个投资者的固定参数。这里只问理论，不要诊断我。",
+    "requiredTools": ["skill", "finance_behavior_reference"],
+    "forbiddenTools": ["finance_behavior_market_evidence", "finance_behavior_trade_audit"],
+    "expectations": [
+      "准确解释三个理论构件及其相互区别。",
+      "若给出公式或经典参数，标明其模型与样本依赖，而非个人常数。",
+      "不把用户作为诊断对象，也不强行给投资行动方案。"
+    ]
+  },
+  {
+    "id": 12,
+    "name": "adjacent-market-request",
+    "category": "routing-negative",
+    "dataMode": "market-only",
+    "prompt": "只给我 AAPL 最近 20 个交易日的区间收益、最大回撤和实现波动率，并标注观察时间与来源。不要做投资心理分析。",
+    "requiredTools": ["finance_behavior_market_evidence"],
+    "forbiddenTools": ["skill", "finance_behavior_reference", "finance_behavior_trade_audit"],
+    "expectations": [
+      "完成用户指定的中性市场统计任务。",
+      "不加载行为诊断 skill，不添加偏差、FOMO 或泡沫判断。",
+      "不把缺失字段写成零，并保留观察时间、来源与限制。"
+    ]
+  }
+]

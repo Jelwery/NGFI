@@ -16,18 +16,20 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 
-# Runtime state, generated files, and local data
+# Runtime state, generated eval runs, and local market data
 /.runtime/
-/generated/
 /packages/combinatorial-optimization/data/
 /skills/*-workspace/
+/evals/baselines/
+/evals/runtime/
 *.log
 .DS_Store
 
-# Local credentials and machine-specific configuration
+# Credentials and machine-specific configuration
 /.npmrc
 /.env
 /.env.*
+!/.env.example
 *.pem
 *.key
 *.p12
@@ -36,20 +38,11 @@ __pycache__/
 *secrets*.json
 *.local.*
 
-# Private integration and engineering-only material
-/src/
-/profiles/
-/packages/dsh-finance-bundle/
-/tests/composition.test.ts
-/tests/evals.test.ts
-/tests/headless.test.ts
-/tests/isolation.test.ts
-/evals/
-/scripts/
+# Local engineering/reference documents are intentionally not distributed
 /docs/
 **/docs/
 **/参考资料/
+/evals/README.md
 /packages/combinatorial-optimization/README.md
 AGENTS.md
 CLAUDE.md
-

@@ -1,0 +1,64 @@
+version: 1
+name: finance-analysis-v1
+purpose: Evaluate Finance2DSH research quality, not FinanceGym leaderboard performance.
+pass:
+  minimumTotal: 75
+  requireNoHardFailures: true
+  minimumDimensionScores:
+    dataAccuracy: 3
+    methodCorrectness: 3
+scale:
+  min: 0
+  max: 4
+dimensions:
+  - id: dataAccuracy
+    name: 数据正确性
+    weight: 25
+    anchors:
+      0: Material figures are fabricated, corrupted, or use missing values as zero.
+      2: Main figures are grounded but some units, signs, or reconciliations are unclear.
+      4: Every material figure is traceable to tool output or a labelled assumption and units/signs reconcile.
+  - id: temporalDiscipline
+    name: 时间口径
+    weight: 15
+    anchors:
+      0: Historical, spot, TTM, quarterly, annual, or forecast values are materially confused.
+      2: Most periods are clear but some observations or comparisons are under-labelled.
+      4: Filing periods, observation times, and historical/current/forecast boundaries are explicit throughout.
+  - id: sourceQuality
+    name: 来源质量
+    weight: 10
+    anchors:
+      0: Sources are invented or do not support the claims.
+      2: Sources are named but limitations or claim-level traceability are incomplete.
+      4: Claims are supported by actually used sources and provider limitations are explicit.
+  - id: methodCorrectness
+    name: 方法正确性
+    weight: 25
+    anchors:
+      0: The valuation method is invalid or inputs contradict stated assumptions.
+      2: The broad method is sound but important bridges, exclusions, or checks are missing.
+      4: Formula choice, inputs, intermediate values, EV-equity bridge, peer treatment, and sensitivity are auditable.
+  - id: completeness
+    name: 分析完整性
+    weight: 15
+    anchors:
+      0: The requested analysis is largely absent.
+      2: Core answer exists but one or more material requested sections are thin or absent.
+      4: The answer proportionally covers every requested section, data gaps, risks, and limitations.
+  - id: synthesis
+    name: 综合判断
+    weight: 10
+    anchors:
+      0: The conclusion is unsupported, contradictory, or a mechanical target-price assertion.
+      2: The conclusion summarizes evidence but weakly reconciles conflicts or uncertainty.
+      4: The conclusion reconciles DCF, comps, consensus, and risks into a falsifiable, calibrated view.
+hardFailures:
+  - fabricated-number-or-source
+  - current-value-presented-as-historical
+  - currency-unit-percent-or-multiple-confusion
+  - estimate-presented-as-reported-fact
+  - dcf-input-text-mismatch
+  - gordon-growth-at-or-above-discount-rate
+  - unread-source-cited-as-evidence
+  - target-price-without-assumptions-and-sensitivity

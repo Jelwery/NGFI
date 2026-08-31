@@ -354,7 +354,8 @@ async function main(): Promise<void> {
     if (args.some(argument => argument === '--port' || argument.startsWith('--port='))) {
       throw new Error('Set FINANCE2DSH_PORT instead of passing --port so reserved-port checks cannot be bypassed')
     }
-    const rawPort = process.env.FINANCE2DSH_PORT?.trim() || String(DEFAULT_WEB_PORT)
+    const { environment } = await projectEnvironment()
+    const rawPort = environment.FINANCE2DSH_PORT?.trim() || String(DEFAULT_WEB_PORT)
     const port = Number(rawPort)
     await assertPortAvailable(port)
     process.exitCode = await runDsh([

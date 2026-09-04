@@ -1,0 +1,10 @@
+.DS_Store
+__pycache__/
+*.pyc
+_data.json
+_ratios.json
+_risk.json
+_valuation.json
+_provenance.json
+scenario.json
+tests/session-logs/

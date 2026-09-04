@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>三大投研 Skill 的价值与局限评估（NGFI 项目视角）</title>
+<style>
+  :root{
+    --bg:#fbf8f3; --panel:#ffffff; --ink:#2b2b2b; --muted:#6b6459;
+    --accent:#8a5a2b; --accent-soft:#f2e8dc; --line:#e5dccd;
+    --good:#2f7d5b; --good-soft:#e6f2ec; --warn:#a0641f; --warn-soft:#f7eddd;
+    --low:#9a4f4f; --low-soft:#f5e8e8;
+    --mono:ui-monospace,SFMono-Regular,"Cascadia Mono",Consolas,"Liberation Mono",Menlo,monospace;
+    --tok:monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Noto Sans SC","PingFang SC","Microsoft YaHei",-apple-system,"Segoe UI",Roboto,sans-serif;
+    line-height:1.75; font-size:16px;
+  }
+  .layout{display:flex; max-width:1280px; margin:0 auto; gap:0}
+  /* Sidebar */
+  .toc{
+    position:sticky; top:0; align-self:flex-start; height:100vh; overflow-y:auto;
+    width:260px; flex:0 0 260px; padding:26px 22px 40px; border-right:1px solid var(--line);
+    background:linear-gradient(180deg,#fffdf8,#f7f1e6);
+  }
+  .toc h1{font-size:15px; line-height:1.4; margin:0 0 4px; color:var(--accent); font-weight:700}
+  .toc .sub{font-size:12px; color:var(--muted); margin:0 0 18px}
+  .toc nav a{
+    display:block; color:var(--muted); text-decoration:none; font-size:13.5px;
+    padding:6px 8px; border-radius:6px; border-left:2px solid transparent;
+    margin:1px 0; transition:all .15s ease;
+  }
+  .toc nav a:hover{color:var(--ink); background:var(--accent-soft)}
+  .toc nav a.active{color:var(--accent); border-left-color:var(--accent); background:var(--accent-soft); font-weight:600}
+  .toc nav a.sub-item{padding-left:22px; font-size:12.5px}
+  .toc .foot{margin-top:18px; padding-top:14px; border-top:1px solid var(--line); font-size:11.5px; color:var(--muted)}
+  /* Main */
+  main{flex:1; min-width:0; padding:38px 44px 80px}
+  .hero{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:26px 28px; margin-bottom:34px; box-shadow:0 1px 3px rgba(0,0,0,.04)}
+  .hero h1{margin:0 0 8px; font-size:24px; color:var(--accent); line-height:1.3}
+  .hero p{margin:0; color:var(--muted); font-size:14.5px}
+  h2{font-size:21px; color:var(--accent); margin:44px 0 14px; padding-bottom:8px; border-bottom:2px solid var(--accent-soft)}
+  h3{font-size:17px; margin:28px 0 10px; color:#5a4021}
+  h4{font-size:15px; margin:20px 0 8px; color:#4a3b2a}
+  p{margin:0 0 14px}
+  .lead{font-size:16.5px}
+  .callout{border-radius:10px; padding:14px 18px; margin:16px 0; border:1px solid var(--line); background:var(--panel)}
+  .callout.warn{border-left:4px solid var(--warn); background:var(--warn-soft)}
+  .callout.good{border-left:4px solid var(--good); background:var(--good-soft)}
+  .callout.key{border-left:4px solid var(--accent); background:var(--accent-soft)}
+  .callout p{margin:0}
+  table{width:100%; border-collapse:collapse; margin:16px 0; font-size:14px; background:var(--panel); border:1px solid var(--line); border-radius:8px; overflow:hidden}
+  th,td{padding:9px 12px; text-align:left; vertical-align:top; border-bottom:1px solid var(--line)}
+  th{background:var(--accent-soft); color:#4a3b2a; font-weight:600; white-space:nowrap}
+  tr:last-child td{border-bottom:none}
+  td code, th code{font-family:var(--tok); font-size:12.5px; background:var(--accent-soft); padding:1px 5px; border-radius:4px}
+  .tag{display:inline-block; font-size:12px; font-weight:600; padding:2px 9px; border-radius:20px; vertical-align:middle}
+  .tag.good{color:var(--good); background:var(--good-soft)}
+  .tag.warn{color:var(--warn); background:var(--warn-soft)}
+  .tag.low{color:var(--low); background:var(--low-soft)}
+  .stars{color:var(--accent); letter-spacing:1px}
+  ul,ol{margin:0 0 14px; padding-left:22px}
+  li{margin:4px 0}
+  code{font-family:var(--tok); font-size:13px; background:var(--accent-soft); padding:1px 5px; border-radius:4px}
+  pre{background:#2f2b26; color:#f3ecdf; padding:14px 16px; border-radius:8px; overflow-x:auto; font-size:13px; line-height:1.55; margin:14px 0}
+  pre code{background:none; color:inherit; padding:0; font-size:13px}
+  .verdict{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:20px 22px; margin:18px 0}
+  .verdict .t{font-weight:700; color:var(--accent); margin-bottom:6px}
+  .list-tight li{margin:2px 0}
+  .mini{font-size:13px; color:var(--muted)}
+  @media(max-width:900px){
+    .layout{flex-direction:column}
+    .toc{position:relative; width:auto; flex:none; height:auto; border-right:none; border-bottom:1px solid var(--line)}
+    main{padding:24px 18px 60px}
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="toc">
+    <h1>三大投研 Skill 评估</h1>
+    <p class="sub">价值 · 局限 · 接入 NGFI 的判断（完整技术版）</p>
+    <nav id="nav"></nav>
+    <div class="foot">静态审阅于单个 Skill 目录；结论基于 <code>SKILL.md</code> 全文与 NGFI 目标架构的对照，未做实时数据回测验证。</div>
+  </aside>
+
+  <main>
+    <div class="hero">
+      <h1>三大投研 Skill 的价值与局限评估</h1>
+      <p>评估对象：<code>公司财务分析</code>、<code>宏观周期与政策分析</code>、<code>投资行为诊断</code>。<br>
+      评估视角：<b>NGFI（Next Generation Finance Investment）</b>——一个 AI-native 的投研与量化一体化系统。</p>
+      <p class="mini">判断依据：三份 <code>SKILL.md</code> 全文 + NGFI 目标架构中的「五接口、Signal 契约、点时纪律、确定性引擎 vs LLM 分工」。标注「成熟度」指工程结构与实现完整度，不等同于策略收益已被独立复现。</p>
+    </div>
+
+    <!-- 01 -->
+    <h2 id="overview">一、总览与结论</h2>
+    <p class="lead">一句话：<b>三个 Skill 的水平都远高于「AI 帮你炒股」的套路；其中「公司财务分析」几乎就是你想要的基本面路雏形。但它们目前都是「研究 / 方法资产」，而不是「信号 / 回测资产」。</b></p>
+    <table>
+      <thead><tr><th>Skill</th><th>对应 NGFI 哪一路 / 哪一层</th><th>对项目的帮助</th><th>直接可用度</th></tr></thead>
+      <tbody>
+        <tr><td><b>公司财务分析</b></td><td>基本面路 + 研究准出 / 质量门控</td><td><span class="stars">★★★★</span> 高（核心件）</td><td>需改造后接入</td></tr>
+        <tr><td><b>宏观周期与政策分析</b></td><td>市场状态路 + 事件 / 政策叙事</td><td><span class="stars">★★★</span> 中高（上下文与门禁）</td><td>不能当信号用</td></tr>
+        <tr><td><b>投资行为诊断</b></td><td>与信号链路无关 → 用户体验 / 复盘</td><td><span class="stars">★★</span> 中（产品差异化，非核心）</td><td>定位需确认</td></tr>
+      </tbody>
+    </table>
+    <div class="callout key">
+      <p>核心判断：真正对 NGFI 核心（信号 / 回测 / 融合）有直接贡献的是「公司财务分析」；「宏观」是有价值的上下文与门禁材料；「投资行为诊断」是产品体验资产，与信号引擎无关。</p>
+    </div>
+
+    <!-- 02 -->
+    <h2 id="skills">二、这三份 Skill 是什么</h2>
+    <p>三份 Skill 都位于 Claude Code 的 skills 目录，是面向「可移植投研方法」的自包含实现，每个都有自己的 <code>SKILL.md</code>、<code>references/</code> 参考材料与 <code>scripts/</code> 脚本。</p>
+    <table>
+      <thead><tr><th>Skill</th><th>核心用途</th><th>最有价值的机制</th></tr></thead>
+      <tbody>
+        <tr><td><b>公司财务分析</b></td><td>上市公司六阶段全面财务分析（初步→利润表→资产负债表→现金流→特殊指标→估值），产出研报级报告</td><td>确定性计算脚本 + 致命信号体系 + 结构化状态契约</td></tr>
+        <tr><td><b>宏观周期与政策分析</b></td><td>自上而下：周期定位 → 政策解读 → 资产含义</td><td>三层框架 + 第 3 层的「双 Agent」防偏见流程</td></tr>
+        <tr><td><b>投资行为诊断</b></td><td>用行为金融学分析用户决策：个体偏差 → 市场状态 → 行为模式</td><td>三层检查项 + 行为改善工具箱 + 诊断必配行动</td></tr>
+      </tbody>
+    </table>
+
+    <!-- 03 -->
+    <h2 id="finance">三、公司财务分析 —— 价值最高</h2>
+    <p class="lead">它最打动人的一点：<b>已经在实现 NGFI 的关键论点——「确定性引擎做计算、LLM 做解读」。</b></p>
+    <div class="verdict">
+      <div class="t">与 NGFI 理念的匹配度</div>
+      <table>
+        <thead><tr><th>NGFI 论点</th><th>该 Skill 的实现</th><th>判断</th></tr></thead>
+        <tbody>
+          <tr><td>确定性引擎算数，LLM 解读</td><td><code>calc_ratios.py</code> / <code>calc_risk_models.py</code> / <code>calc_valuation.py</code> 做<b>全部除法/指数计算</b>；LLM 只写叙事；明令禁止心算</td><td><span class="tag good">高度契合</span></td></tr>
+          <tr><td>反幻觉 / 可审计</td><td>「不编数据」「计算必须代码验证」「数据标注来源与可信度 L1/L2/L3」「交叉验证 4 必修项」</td><td><span class="tag good">正是审计基调</span></td></tr>
+          <tr><td>质量门禁 / quality_flags</td><td><b>致命信号体系</b>：M-Score、Z-Score、AG、存贷双高、大股东减持/质押、临阵换审计师等</td><td><span class="tag good">可直接映射</span></td></tr>
+          <tr><td>版本 / 可复现</td><td><code>state.json</code>、增量更新、<code>metadata</code> 键名规范、<code>last_valuation.results</code> 作为唯一对外接口</td><td><span class="tag good">符合版本追踪</span></td></tr>
+          <tr><td>结构化契约</td><td>报告模板 + 固定 JSON 结构（pessimistic / neutral / optimistic / recommended）</td><td><span class="tag good">端到端契约干净</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <h3>必须补的 4 个缺口</h3>
+    <ol>
+      <li><b>产出的是「当前时点」分析，不是点时历史。</b>市值 / PE / 10Y 国债收益率 / 可比公司 PE 全部用 WebSearch 拉当下值。这满足"作为 of today 的研究"，但<b>喂不进 NGFI 的 BacktestEngine 做 OOS</b>——回测缺的不是"今天值多少钱"，而是"2023-06-01 那天当时知道什么"。这一点与 NGFI 的「禁未来函数 / 点时数据」是相反的运行逻辑。</li>
+      <li><b>产出是内在价值区间，不是带方向和强度的 Signal。</b>它刻意「禁止出现股价、禁止算上行空间」——很好的研究纪律，但也意味着它<b>不是</b> NGFI 的 <code>direction / strength / probability / valid_until</code>。需要一个「翻译层」把它包成 SignalPlugin 的候选（基本面假设），而不是直接当信号。</li>
+      <li><b>无概率校准、无 walk-forward、无回测。</b>估值靠情景假设（<code>scenario.json</code>，<code>rf / ke / peer_pe</code> 手工定），正是 NGFI 文里说的「关键假设全部缺乏数据支撑」那类主观输入。它应当作为<b>单路候选</b>，由 FusionPolicy 去做校准和相关性惩罚，绝不能让它直接定买卖。</li>
+      <li><b>数据源裸用 akshare / 新浪 / 东财 + WebSearch。</b>这正是 NGFI 警告的「来源漂移 + 合规」，且无缓存、无 DataProvider 抽象。接入时必须挪到统一 <code>DataProvider</code> 契约后面。</li>
+    </ol>
+    <div class="callout good">
+      <p><b>建议：</b>把它的<b>脚本 + 致命信号库 + 状态契约</b>抽出来，作为 NGFI 基本面路的<b>质量门控与研究方法基线</b>；把 akshare / WebSearch 换成 <code>DataProvider</code>，把「当前时点分析」扩成「可按 as-of 回放」，并补一个到 <code>SignalPlugin</code> 的包壳。它 447 行里最值钱的是<b>致命信号库</b>和<b>确定性计算纪律</b>，不是抓取层。</p>
+    </div>
+
+    <!-- 04 -->
+    <h2 id="macro">四、宏观周期与政策分析 —— 好材料，但不能进融合打分</h2>
+    <p>它最亮的设计是<b>第 3 层的双 Agent 流程</b>（Agent A 纯理论预测、看不到行业结论；Agent B 只拿 A 的输出推导行业方向、看不到原始数据）。这正好避开了 NGFI 反感的「数据→先下结论→再补理论包装」，和 NGFI「Agent 做解释/审计、不做最终裁决」高度一致，值得保留。</p>
+    <div class="verdict">
+      <div class="t">它对 NGFI 的帮助</div>
+      <table>
+        <thead><tr><th>机制</th><th>对应 NGFI</th><th>判断</th></tr></thead>
+        <tbody>
+          <tr><td>周期定位（美林时钟 / 产出缺口）</td><td>市场状态</td><td><span class="tag good">正是「市场状态路」与 <code>market_regime</code> 门禁角色</span></td></tr>
+          <tr><td>政策解读（降准 / 降息 / MLF / 美联储）</td><td>事件 / 政策</td><td><span class="tag good">可作事件 / 政策叙事</span></td></tr>
+          <tr><td>受益 / 承压行业映射</td><td>行业方向</td><td><span class="tag warn">只作文本上下文，不能当信号</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <h3>三个硬伤</h3>
+    <ol>
+      <li><b>全员定性、无确定性计算、无回测、无校准。</b>它无法给出一个"可回放、可计分"的市场状态标签。在 NGFI 里，<b>市场状态的判断应当是确定性的规则函数</b>（像仓里的 <code>market_regime.py</code>），这个 Skill 只负责<b>解释那一层</b>。</li>
+      <li><b>宏观预测信噪比极低，且容易变成"事后合理"的叙事。</b>若让它直接参与融合打分或作为证据，等于把低可验证性输入当成证据。必须严格门控为<b>上下文 / 门禁</b>，不参与 Signal 融合权重。</li>
+      <li><b>同样用 WebSearch 拉数据</b>，不产出点时历史，无法用于 walk-forward 的状态历史标注。</li>
+    </ol>
+    <div class="callout warn">
+      <p><b>建议：</b>把它降格为 NGFI 的<b>「市场状态 / 政策解释器」</b>——给一个<b>确定性 regime 规则</b>（<code>market_regime.py</code>）做状态标签，这个 Skill 提供<b>解释与叙事</b>，以及给用户的「为什么」。它是好的解释层，但它<b>不该成为信号源</b>。</p>
+    </div>
+
+    <!-- 05 -->
+    <h2 id="behavior">五、投资行为诊断 —— 与信号引擎无关，是产品/体验资产</h2>
+    <p>必须诚实：<b>它对 NGFI 的投研/量化核心几乎没有帮助</b>——它不产生任何可回测、可融合、可验证的信号。它分析的是<b>用户自己</b>，不是标的。</p>
+    <p>但它的价值在<b>产品层</b>，而且不低：</p>
+    <ul class="list-tight">
+      <li>飞书 Bot 的「为什么 / 审计」、Web 的「复盘」环节，用行为金融做<b>用户诊断与干预</b>，是很好的差异化与留存点。</li>
+      <li>三层框架 + 行为改善工具箱 + 禁止箭头链 + 「诊断必配行动」，写得专业且可执行。</li>
+      <li>内容扎实（前景理论、处置效应、明斯基、卖空约束……）。</li>
+    </ul>
+    <h3>要留意两点</h3>
+    <ol>
+      <li><b>定位张力：</b>NGFI 的核心卖点是「可验证信号」，行为诊断是「心理学辅导」。它更像一个<b>伴生功能</b>，放进 <b>P1/P2 的产品闭环</b>（Web 复盘 + Bot 交互）即可，别放进 P0 的信号引擎。</li>
+      <li><b>可验证性：</b>诊断「用户偏差」本质是主观推断，无法回测/校准。好在它的措辞是「我注意到一个可能的模式」——这种探索语气是对的，别改成断言式。</li>
+    </ol>
+    <div class="callout">
+      <p><b>建议：</b>把它作为 NGFI 的<b>用户侧行为引导 / 复盘助手</b>，挂在 Bot 与 Web 的「复盘 / 为什么」入口，属于产品差异化资产，优先级放在 P1–P2。</p>
+    </div>
+
+    <!-- 06 -->
+    <h2 id="gap">六、三者共同的最大缺口</h2>
+    <p class="lead"><b>它们都不产出 NGFI 所要求的机器可消费 Signal 契约。</b></p>
+    <p>三个 Skill 输出的都是<b>人类可读的研究 / 叙事 / 诊断</b>；而 NGFI 要的是带 <code>signal_id / version / as_of / horizon / direction / strength / probability+calibration / evidence_refs / valid_until / quality_flags</code> 的<b>结构化、带版本、可回放、经校准的信号</b>，并且能回溯到点时数据、模型版本、回测口径（对应 NGFI 那张 Signal 字段表）。</p>
+    <div class="callout key">
+      <p>最关键的一句话：<b>这三个 Skill 是「方法与质量资产」，不是「信号与回测资产」。</b>它们能帮你把「研究正确、结论可解释」做扎实（NGFI 首版目标），但要把它们变成「可回放、可融合」的竞争力，缺了一整个契约层——<code>EvidencePack</code> 契约 + <code>DataProvider</code> 抽象 + 点到 <code>SignalPlugin</code> 的翻译壳 + 确定性 vs LLM 的强制拆分。</p>
+    </div>
+    <p>好在——它们恰恰是 NGFI 文档里分配给 <code>agent-agnostic-stock-skills</code> / <code>ai-berkshire</code> 的那份<b>「投研方法资产」的、更严格更自洽的现成版本</b>。你可以拿这三个 Skill 作为 NGFI 研究方法链路的<b>基线参考实现</b>，再统一回收进五接口契约。</p>
+
+    <!-- 07 -->
+    <h2 id="roadmap">七、落地建议（按优先级）</h2>
+    <table>
+      <thead><tr><th>优先级</th><th>动作</th></tr></thead>
+      <tbody>
+        <tr><td><span class="tag good">P0（核心）</span></td><td>从「公司财务分析」抽取<b>确定性脚本 + 致命信号库 + state.json 契约</b>，作为 NGFI 基本面路的质量门控与方法基线；把 akshare / WebSearch 挪进 <code>DataProvider</code> 抽象</td></tr>
+        <tr><td><span class="tag good">P0（契约）</span></td><td>定义一个 <b>Skill → Signal 的翻译壳</b>：只在「确定性数据 + 研究结论」齐备时，才把它升格为带 <code>evidence_refs</code> 的候选，避免直接把研究当信号</td></tr>
+        <tr><td><span class="tag warn">P1（门禁）</span></td><td>「宏观」降格为<b>市场状态 / 政策解释器</b>：regime 标签交给确定性规则，这个 Skill 只做解释叙事</td></tr>
+        <tr><td><span class="tag low">P2（体验）</span></td><td>「投资行为诊断」挂在 Bot / Web 的<b>复盘与「为什么」</b>入口，作产品差异化，不进信号引擎</td></tr>
+        <tr><td><span class="tag warn">全程</span></td><td>三点纪律对齐 NGFI：<b>点时历史</b>（当前是"当下分析"，要做 as-of 回放）、<b>版本 / 可复现</b>、<b>来源漂移与合规</b>（akshare / WebSearch 需纳入集中适配器治理）</td></tr>
+      </tbody>
+    </table>
+
+    <!-- 08 -->
+    <h2 id="summary">八、总结</h2>
+    <div class="verdict">
+      <div class="t">一句话结论</div>
+      <p>三个 Skill 的水平都远高于「AI 帮你炒股」的套路，尤其<b>「公司财务分析」几乎就是你要的基本面路的雏形</b>；但它们目前都是<b>「研究 / 方法资产」而不是「信号 / 回测资产」</b>。真正要喂进 NGFI 的核心，需要一层 <code>EvidencePack</code> + <code>SignalPlugin</code> 的契约包壳，并解决<b>「点时历史」</b>与<b>「确定性 vs LLM 拆分」</b>这两个关键缺口。</p>
+      <p class="mini" style="margin-top:8px">下一步最有价值的第一刀：按 NGFI 的五接口契约，把「公司财务分析」重构成一个带 <code>EvidencePack</code> 约束、可作 as-of 回放、能吐 <code>quality_flags</code> 的 <code>SignalPlugin</code> 样式原型。</p>
+    </div>
+    <p class="mini">本报告为静态审阅（基于 <code>SKILL.md</code> 全文与 NGFI 目标架构的对照），未做真实数据拉取、全量回测或生产压测。结论意在说明三者对 NGFI 的<b>定位贡献与局限</b>，不构成任何投资建议，亦不代表策略收益已被独立复现。</p>
+  </main>
+</div>
+
+<script>
+(function(){
+  var items = [
+    {id:"overview",t:"一、总览与结论"},
+    {id:"skills",t:"二、这三份 Skill 是什么"},
+    {id:"finance",t:"三、公司财务分析"},
+    {id:"macro",t:"四、宏观周期与政策分析"},
+    {id:"behavior",t:"五、投资行为诊断"},
+    {id:"gap",t:"六、三者共同的最大缺口"},
+    {id:"roadmap",t:"七、落地建议"},
+    {id:"summary",t:"八、总结"}
+  ];
+  var nav = document.getElementById("nav");
+  items.forEach(function(it){
+    var a = document.createElement("a");
+    a.href = "#" + it.id;
+    a.textContent = it.t;
+    a.setAttribute("data-target", it.id);
+    nav.appendChild(a);
+  });
+  var links = Array.prototype.slice.call(nav.querySelectorAll("a"));
+  var sections = items.map(function(it){ return document.getElementById(it.id); });
+
+  function onScroll(){
+    var pos = window.scrollY + 90;
+    var current = items[0].id;
+    for (var i=0;i<sections.length;i++){
+      if (sections[i] && sections[i].offsetTop <= pos) current = items[i].id;
+    }
+    links.forEach(function(a){
+      a.classList.toggle("active", a.getAttribute("data-target") === current);
+    });
+  }
+  window.addEventListener("scroll", onScroll, {passive:true});
+  onScroll();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+{
+  "version": "2.0.0",
+  "generated_at": "2026-09-04",
+  "source": "/Users/bytedance/Desktop/ngfi",
+  "source_tree_sha256": "0121c91e6d4e177ea6932f2709fb35bf92d6658b94aa6f501034e0164da5aba3",
+  "design_basis": {
+    "evaluation_project": "/Users/bytedance/Desktop/ngfi-skill-eval",
+    "cases": 24,
+    "system_runs": 144,
+    "blind_judgments": 48,
+    "original_mean_score": 80.013,
+    "atomized_mean_score": 78.035
+  },
+  "architecture": "three primary skills with internal typed stage contracts",
+  "primary_skills": [
+    "投资行为诊断",
+    "宏观周期与政策分析",
+    "公司财务分析"
+  ],
+  "invocation_names": [
+    "investment-behavior-diagnosis",
+    "macro-cycle-policy-analysis",
+    "company-financial-analysis"
+  ]
+}

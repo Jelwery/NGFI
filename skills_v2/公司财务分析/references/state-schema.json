@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ngfi.local/schemas/state-v2.json",
+  "title": "NGFI V2 Financial Analysis State",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "metadata",
+    "stage1",
+    "stage2_4_summary",
+    "risk_models",
+    "last_valuation",
+    "data_snapshots"
+  ],
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "required": ["code", "name", "last_period"],
+      "properties": {
+        "code": {"type": "string", "minLength": 1},
+        "name": {"type": "string", "minLength": 1},
+        "last_period": {"type": "string", "minLength": 1},
+        "last_qtr": {"type": "string"},
+        "last_report": {"type": "string"}
+      }
+    },
+    "stage1": {"type": "object"},
+    "stage2_4_summary": {"type": "object"},
+    "risk_models": {"type": "object"},
+    "data_snapshots": {
+      "type": "object",
+      "minProperties": 1
+    },
+    "last_valuation": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["status", "reason"],
+          "properties": {
+            "status": {"const": "unavailable"},
+            "reason": {"type": "string", "minLength": 1}
+          }
+        },
+        {
+          "type": "object",
+          "required": ["method", "scenario", "results"],
+          "properties": {
+            "method": {"type": "string", "minLength": 1},
+            "scenario": {"type": "object", "minProperties": 1},
+            "results": {
+              "type": "object",
+              "required": ["pessimistic", "neutral", "optimistic", "recommended"],
+              "properties": {
+                "pessimistic": {"type": "number"},
+                "neutral": {"type": "number"},
+                "optimistic": {"type": "number"},
+                "recommended": {"type": "number"}
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

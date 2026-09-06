@@ -14,6 +14,7 @@
   },
   "include": [
     "packages/finance-core/src/**/*.ts",
+    "packages/finance-data-service/src/**/*.ts",
     "packages/finance-provider-yfinance/src/**/*.ts",
     "packages/dsh-finance-tools/src/**/*.ts",
     "packages/dsh-finance-bundle/src/**/*.ts",

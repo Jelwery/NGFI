@@ -3,6 +3,36 @@
   "generatedAt": "2026-09-07",
   "capabilities": [
     {
+      "id": "data.canonical-v2",
+      "category": "data",
+      "ownerPackage": "packages/finance-core",
+      "publicExports": ["canonicalInstrumentId", "normalizeAshareInstrument", "FinanceDataError"],
+      "status": "kernel-tested",
+      "tools": [],
+      "skills": [],
+      "presets": [],
+      "contractTests": ["tests/data-v2.test.ts", "tests/cross-source-reconciliation.test.ts"],
+      "goldenFixtures": ["tests/fixtures/yfinance/runner.py"],
+      "upstream": [{"project": "NGFI local migration", "commit": "da101d13095c413e7904d4eb171afd11d01c97b5", "path": "packages/finance-core/src/data-v2"}],
+      "safetyBoundaries": ["canonical identity is market-qualified", "availableAt and PIT visibility are mandatory for historical reads", "currency, unit, adjustment, hash, snapshot, and provenance remain explicit"],
+      "knownLimitations": ["provider availability is declared separately", "kernel presence alone is not Agent exposure"]
+    },
+    {
+      "id": "data.provider-routing-and-reconciliation",
+      "category": "data",
+      "ownerPackage": "packages/finance-data-service",
+      "publicExports": ["FinanceDataService", "ProviderRegistry", "reconcileCrossSourceResults"],
+      "status": "kernel-tested",
+      "tools": [],
+      "skills": [],
+      "presets": [],
+      "contractTests": ["tests/finance-data-service.test.ts", "tests/cross-source-reconciliation.test.ts"],
+      "goldenFixtures": ["tests/fixtures/yfinance/runner.py"],
+      "upstream": [{"project": "NGFI local migration", "commit": "da101d13095c413e7904d4eb171afd11d01c97b5", "path": "packages/finance-data-service"}],
+      "safetyBoundaries": ["provider registration is capability-scoped", "fallback is recorded, never silent", "schema drift and authorization remain failures"],
+      "knownLimitations": ["no providers are registered by this package itself", "not Agent-exposed until a curated adapter is allowlisted"]
+    },
+    {
       "id": "finance.market-data-and-valuation",
       "category": "finance",
       "ownerPackage": "packages/dsh-finance-tools",

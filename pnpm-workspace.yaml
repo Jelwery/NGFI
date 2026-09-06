@@ -1,5 +1,6 @@
 packages:
   - packages/finance-core
+  - packages/finance-data-service
   - packages/finance-provider-yfinance
   - packages/dsh-finance-tools
   - packages/dsh-finance-bundle

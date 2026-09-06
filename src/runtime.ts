@@ -13,6 +13,9 @@ export const DEFAULT_PROVIDER = 'deepseek-official'
 export const DEFAULT_MODEL = 'deepseek-v4-flash'
 
 const PROFILE_NAMES = ['finance-headless', 'finance-dev'] as const
+export const AGENT_PRESET_NAMES = [
+  'finance-analyst', 'company-research', 'strategy-research', 'portfolio-risk',
+] as const
 const LOCAL_RUNTIME_PACKAGES = [
   '@finance2dsh/dsh-bundle',
   '@finance2dsh/dsh-tools',
@@ -277,6 +280,10 @@ export async function prepareRuntime(
   )
   const provider = resolveProvider(loaded.environment)
   const model = requiredText(loaded.environment, 'NGFI_LLM_MODEL', defaultModelFor(provider))
+  const preset = requiredText(loaded.environment, 'NGFI_AGENT_PRESET', 'finance-analyst')
+  if (!AGENT_PRESET_NAMES.includes(preset as typeof AGENT_PRESET_NAMES[number])) {
+    throw new Error(`Unsupported NGFI_AGENT_PRESET: ${preset}. Use ${AGENT_PRESET_NAMES.join(', ')}.`)
+  }
   if (model === '') throw new Error('NGFI_LLM_MODEL is required for the openai-compatible provider')
   validateBaseUrl(loaded.environment, provider)
 
@@ -306,6 +313,7 @@ export async function prepareRuntime(
     FINANCE2DSH_SKILLS_DIR: resolve(loaded.environment.FINANCE2DSH_SKILLS_DIR ?? join(PROJECT_ROOT, 'skills')),
     NGFI_LLM_PROVIDER: provider,
     NGFI_LLM_MODEL: model,
+    NGFI_AGENT_PRESET: preset,
   }
   const credentialSource = credential
     ? (loaded.fromFile.has(credentialName) ? 'project-env' : 'process-environment')

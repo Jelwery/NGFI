@@ -1,0 +1,3 @@
+name: Company Research
+description: 可审计公司研究工作流，包含 revisioned case、冻结 replay、报告审计、论点漂移与隔离式对抗审阅。
+order: 2

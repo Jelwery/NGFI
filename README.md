@@ -9,6 +9,9 @@ NGFI 是一个基于 [DeepSeek Harness（DSH）](https://www.npmjs.com/package/@
 - WACC、DCF、敏感性分析和相对估值
 - 投资行为诊断与交易记录审计
 - 可按需加载的金融分析 Skills
+- 受控 research workspace、冻结 replay、报告 audit、thesis drift 与隔离式对抗审阅
+- 固定策略/指标、smoke 与 research backtest、信号 outcome/calibration 证据链
+- staged-confirmed 持仓和 CNE6 portfolio/marginal/scenario risk
 - 独立的 CNE6 风格 A 股风险模型与数据构建 CLI
 - DSH Web 与一次性 headless 两种运行方式
 
@@ -56,6 +59,8 @@ pnpm web
 ```
 
 默认只监听 `127.0.0.1:3180`。可在 `.env` 中用 `FINANCE2DSH_PORT` 修改端口；为避免与 DSH 默认 profile 冲突，3080 和 3090 不可用。
+
+默认使用兼容的 `finance-analyst` preset。可通过 `NGFI_AGENT_PRESET=company-research`、`strategy-research` 或 `portfolio-risk` 选择职责隔离的治理 preset；每个 preset 继承原有 20 个金融工具，只增加本职责所需的受控工具。
 
 ## 模型配置
 
@@ -147,7 +152,7 @@ chmod 600 .runtime/secrets/a-share-data.env
 - `finance-headless`：一次性运行任务并返回最终结果
 - `finance-dev`：启动 DSH Web UI
 
-两者都挂载同一个 `finance-analyst` preset、项目 Skills 和 `@finance2dsh/dsh-bundle`，因此 Web 与 headless 的全球股票工具和 8 个 A 股 curated tools 完全相同；profile 只改变交互界面/runner。两者都使用只读 sandbox。运行时 materialize 到仓库内的 `.runtime/`，不会读写用户的全局 DSH home。
+两者默认挂载 `finance-analyst`，也可通过 `NGFI_AGENT_PRESET` 选择三个治理 preset；项目 Skills、`@finance2dsh/dsh-bundle` 和 20 个基础金融工具保持一致，profile 只改变交互界面/runner。两者都使用只读 sandbox。运行时 materialize 到仓库内的 `.runtime/`，不会读写用户的全局 DSH home。
 
 主要目录：
 
@@ -164,7 +169,8 @@ packages/finance-provider-tushare-mcp/ TuShare MCP 适配器
 packages/finance-provider-tdx/        TDX official/community 边界
 packages/finance-provider-ifind/      iFinD official 配置边界
 packages/finance-provider-cne6/       CNE6 本地只读适配器
-generated/agent-presets/              finance-analyst preset
+config/agent-presets/                 人工维护的四个 preset source of truth
+generated/agent-presets/              确定性生成的四个 preset
 skills/                               金融研究与行为诊断 Skills
 evals/                                可复用评测用例与 rubric
 packages/combinatorial-optimization/  CNE6 风险模型

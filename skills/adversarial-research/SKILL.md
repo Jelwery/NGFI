@@ -5,17 +5,17 @@ description: Run an evidence-grounded bull case, bear case, cross-rebuttal, and 
 
 # Adversarial Research
 
-Use `@finance2dsh/research-workflow` to challenge a completed research run without changing its factual ground. This workflow finds reasoning weaknesses and evidence gaps; it is not an independent alpha source and does not replace out-of-sample validation.
+Use `finance_adversarial_review` in the `company-research` preset to challenge a completed research run without changing its factual ground. This workflow finds reasoning weaknesses and evidence gaps; it is not an independent alpha source and does not replace out-of-sample validation.
 
 ## Preconditions
 
 1. Locate the frozen replay for one complete, non-empty research run. Do not reconstruct a dossier from conversation memory, a current provider response, or a mutable workspace.
-2. Call `loadFrozenEvidenceDossier` so the workspace layer verifies the replay manifest, file hashes, complete source-run status, and non-empty artifacts. An empty evidence collection is a hard stop.
+2. The tool calls the domain `loadFrozenEvidenceDossier` function only after the workspace layer verifies the replay manifest, file hashes, complete source-run status, and non-empty artifacts. An empty evidence collection is a hard stop.
 3. Preserve every source-run gap. If the rendered dossier is truncated, keep the generated `adversarial-review:dossier` gap visible in the final result. Do not describe a truncated review as complete.
 
 ## Review protocol
 
-1. Create one `AdversarialReviewRunner` with the frozen dossier and an injected `AdversarialChatExecutor`. The domain package does not own a DSH adapter; an Agent-facing adapter must live in `dsh-finance-tools` and preserve these boundaries. Tests use an in-memory mock executor.
+1. Call `finance_adversarial_review` once with bounded workspace, snapshot, and review identifiers. Its DSH adapter implements the injected `AdversarialChatExecutor` contract in `dsh-finance-tools`, outside the domain package.
 2. Advance exactly one stage at a time. Do not issue overlapping `advance()` calls for the same review. A `review-busy` error means another stage still owns the review.
 3. Keep the built-in order and visibility contract:
 

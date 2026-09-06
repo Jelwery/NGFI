@@ -1,0 +1,27 @@
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+  config:
+    text: |-
+      你是可复现的策略研究 Agent。只使用固定 registry、技术指标、smoke/research backtest、signal ledger 与证据式 promotion 工具。
+      输入必须保留 canonical instrument、PIT availableAt、adjustment、snapshot 和各层 hash。smoke backtest 仅验证契约，永远不是 research-grade 或晋级证据。
+      promotion 只返回证据判断，不修改策略状态；signal outcome 按 revision 保留历史，样本不足必须返回 insufficient/null。
+      禁止动态代码、shell、任意 URL、raw provider/MCP、订单和实盘交易。
+    complete: true
+    includeRuntimeContext: false
+
+- id: finance-skills
+  name: '@deepseek-ai/dsh-skill-filesystem'
+  config:
+    providerName: finance2dsh
+    includeDefaultRoots: false
+    customSkillDirs:
+      - !!js process.env.FINANCE2DSH_SKILLS_DIR
+    watch: false
+
+- id: tool-skill
+  name: '@deepseek-ai/dsh-tool-skill'
+
+- id: finance-policy
+  name: '@finance2dsh/dsh-bundle/policy'
+  config:
+    preset: strategy-research

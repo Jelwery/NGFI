@@ -5,16 +5,16 @@ description: Review an existing NGFI Thesis Snapshot against a newer snapshot an
 
 # Thesis Review
 
-Use the structured ThesisSnapshot and ThesisDrift APIs from
-@finance2dsh/research-core. The code owns validation and classification; this
-skill explains the result and identifies follow-up work.
+Use `finance_thesis_drift` in the `company-research` preset. The structured
+domain code owns validation and classification; this skill explains the result
+and identifies follow-up work.
 
 ## Workflow
 
 1. Locate the baseline and current snapshots for the same caseId. If the
    baseline is missing, return insufficient; never reconstruct it from memory.
-2. Validate both snapshots with validateThesisSnapshot.
-3. Run compareThesisSnapshots(baseline, current).
+2. Supply both structured snapshots to `finance_thesis_drift`; the tool validates
+   them before comparison.
 4. Explain each fixed dimension: core assumptions, valuation anchors, red
    lines, management/capital allocation, and competitive advantage.
 5. Preserve the returned improved, unchanged, weakened, or insufficient

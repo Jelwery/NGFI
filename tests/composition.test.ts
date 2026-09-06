@@ -5,11 +5,19 @@ import { promisify } from 'node:util'
 import { describe, expect, it } from 'vitest'
 import {
   ASHARE_TOOL_NAMES,
+  PORTFOLIO_TOOL_NAMES,
+  RESEARCH_TOOL_NAMES,
+  SIGNAL_TOOL_NAMES,
+  STRATEGY_TOOL_NAMES,
   createAshareFinanceTools,
   createFinanceTools,
+  createGovernedFinanceTools,
 } from '@finance2dsh/dsh-tools'
 import type { FinanceDataProvider } from '@finance2dsh/core'
-import { FINANCE_TOOL_ALLOWLIST } from '../packages/dsh-finance-bundle/src/policy.js'
+import {
+  COMPANY_RESEARCH_TOOL_ALLOWLIST, FINANCE_TOOL_ALLOWLIST, PORTFOLIO_RISK_TOOL_ALLOWLIST,
+  PRESET_TOOL_ALLOWLISTS, STRATEGY_RESEARCH_TOOL_ALLOWLIST,
+} from '../packages/dsh-finance-bundle/src/policy.js'
 import { PROJECT_ROOT, RUNTIME_HOME, prepareRuntime, resolveDshBin } from '../src/runtime.js'
 
 const execFileAsync = promisify(execFile)
@@ -61,6 +69,36 @@ describe('DSH finance composition', () => {
       ...EXPECTED_FINANCE_TOOLS,
       ...ASHARE_TOOL_NAMES,
     ])
+    expect(COMPANY_RESEARCH_TOOL_ALLOWLIST).toEqual([...FINANCE_TOOL_ALLOWLIST, ...RESEARCH_TOOL_NAMES])
+    expect(STRATEGY_RESEARCH_TOOL_ALLOWLIST).toEqual([
+      ...FINANCE_TOOL_ALLOWLIST, ...STRATEGY_TOOL_NAMES, ...SIGNAL_TOOL_NAMES,
+    ])
+    expect(PORTFOLIO_RISK_TOOL_ALLOWLIST).toEqual([...FINANCE_TOOL_ALLOWLIST, ...PORTFOLIO_TOOL_NAMES])
+    expect(PRESET_TOOL_ALLOWLISTS['finance-analyst']).toHaveLength(21)
+  })
+
+  it('registers the exact fourteen governed tool names without changing the legacy factory', () => {
+    const governed = createGovernedFinanceTools({
+      runtimeRoot: join(PROJECT_ROOT, '.runtime', 'test-finance-data'),
+      quantProjectRoot: join(PROJECT_ROOT, 'packages', 'quant-research'),
+    }).map(tool => tool.name)
+    expect(governed).toEqual([
+      ...RESEARCH_TOOL_NAMES, ...STRATEGY_TOOL_NAMES, ...SIGNAL_TOOL_NAMES, ...PORTFOLIO_TOOL_NAMES,
+    ])
+    expect(governed).toHaveLength(14)
+    expect(new Set(governed).size).toBe(14)
+    expect(createFinanceTools(unusedProvider).map(tool => tool.name)).toEqual(EXPECTED_FINANCE_TOOLS)
+  })
+
+  it('keeps the three governed presets isolated from unrelated tools', () => {
+    expect(COMPANY_RESEARCH_TOOL_ALLOWLIST).not.toEqual(expect.arrayContaining([...STRATEGY_TOOL_NAMES, ...SIGNAL_TOOL_NAMES, ...PORTFOLIO_TOOL_NAMES]))
+    expect(STRATEGY_RESEARCH_TOOL_ALLOWLIST).not.toEqual(expect.arrayContaining([...RESEARCH_TOOL_NAMES, ...PORTFOLIO_TOOL_NAMES]))
+    expect(PORTFOLIO_RISK_TOOL_ALLOWLIST).not.toEqual(expect.arrayContaining([...RESEARCH_TOOL_NAMES, ...STRATEGY_TOOL_NAMES, ...SIGNAL_TOOL_NAMES]))
+    for (const allowlist of Object.values(PRESET_TOOL_ALLOWLISTS)) {
+      for (const forbidden of ['shell', 'bash', 'web_search', 'web_fetch', 'raw_provider', 'raw_mcp', 'place_order']) {
+        expect(allowlist).not.toContain(forbidden)
+      }
+    }
   })
 
   it.each([
@@ -88,6 +126,7 @@ describe('DSH finance composition', () => {
     expect(output).toContain("name: '@finance2dsh/dsh-bundle/headless'")
     expect(output).toMatch(/id: headless-runner[\s\S]*?disabled: true/u)
     expect(output).toMatch(/id: tool-web[\s\S]*?fetch: false/u)
+    expect(output).toContain("preset: !!js process.env.NGFI_AGENT_PRESET || 'finance-analyst'")
     expect(FINANCE_TOOL_ALLOWLIST).not.toContain('web_search')
     expect(FINANCE_TOOL_ALLOWLIST).not.toContain('web_fetch')
   }, 30_000)
@@ -96,10 +135,20 @@ describe('DSH finance composition', () => {
     const output = await dump('finance-dev')
     expect(output).toContain("name: '@deepseek-ai/dsh-web-app")
     expect(output).toContain("name: '@finance2dsh/dsh-tools'")
-    expect(output).toContain('default: finance-analyst')
+    expect(output).toContain("default: !!js process.env.NGFI_AGENT_PRESET || 'finance-analyst'")
     expect(output).not.toContain('@deepseek-ai/dsh-mcp-client')
     expect(output).toMatch(/id: tool-web[\s\S]*?disabled: true/u)
     expect(FINANCE_TOOL_ALLOWLIST).not.toContain('web_search')
     expect(FINANCE_TOOL_ALLOWLIST).not.toContain('web_fetch')
+  }, 30_000)
+
+  it('materializes all governed presets through the DSH roster', async () => {
+    const output = await dump('finance-dev')
+    expect(output).toContain("default: !!js process.env.NGFI_AGENT_PRESET || 'finance-analyst'")
+    const runtime = await prepareRuntime()
+    for (const preset of ['company-research', 'strategy-research', 'portfolio-risk']) {
+      const policy = await readFile(join(runtime.home, '.agent-presets', preset, 'agent.cordis.yml'), 'utf8')
+      expect(policy).toContain(`preset: ${preset}`)
+    }
   }, 30_000)
 })

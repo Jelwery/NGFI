@@ -41,6 +41,10 @@ pnpm test:runtime
 
 唯一运行入口是 `skills/`。当前 canonical Skills、V2 合并规则和离线 CLI 边界见根目录 `SKILLS_V2.md` 与 `skills/migration-manifest.json`。`company-financial-analysis` 中的 Python 脚本以及 `macro-cycle-policy-analysis` 的 PDF helper 不会因为 Skill 被发现而获得执行权限。
 
+## Presets
+
+默认 preset 仍是 `finance-analyst`。设置 `NGFI_AGENT_PRESET` 为 `company-research`、`strategy-research` 或 `portfolio-risk` 可在 headless/Web profile 中选择职责隔离的治理 preset；其他值会在 runtime prepare 时拒绝。所有 preset 共享现有 20 个基础金融工具，但只增加职责所需的 research、strategy/signal 或 portfolio tools。
+
 ## 测试责任
 
 | 层级 | 位置 | 默认门禁 |

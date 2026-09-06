@@ -22,6 +22,7 @@ const originalEnvironment = {
   NGFI_LLM_PROVIDER: process.env.NGFI_LLM_PROVIDER,
   NGFI_LLM_MODEL: process.env.NGFI_LLM_MODEL,
   NGFI_LLM_BASE_URL: process.env.NGFI_LLM_BASE_URL,
+  NGFI_AGENT_PRESET: process.env.NGFI_AGENT_PRESET,
   NGFI_API_KEY: process.env.NGFI_API_KEY,
   DEEPSEEK_API_KEY: process.env.DEEPSEEK_API_KEY,
   ...Object.fromEntries([...DATA_PROVIDER_SECRET_ENV].map(name => [name, process.env[name]])),
@@ -47,6 +48,7 @@ describe('isolated runtime', () => {
     expect(runtime.environment.FINANCE2DSH_SKILLS_DIR).toBe(join(PROJECT_ROOT, 'skills'))
     expect(runtime.provider).toBe(DEFAULT_PROVIDER)
     expect(runtime.model).toBe(DEFAULT_MODEL)
+    expect(runtime.environment.NGFI_AGENT_PRESET).toBe('finance-analyst')
 
     const bundle = join(RUNTIME_HOME, 'profiles/finance-headless/node_modules/@finance2dsh/dsh-bundle')
     expect((await lstat(bundle)).isSymbolicLink()).toBe(true)
@@ -54,6 +56,15 @@ describe('isolated runtime', () => {
     expect(settings).toContain('provider: \"deepseek-official\"')
     expect(settings).toContain('apiKeyEnv: DEEPSEEK_API_KEY')
     expect(settings).not.toMatch(/access_token|api[_-]?key\s*:\s*(?!DEEPSEEK_API_KEY)/iu)
+  })
+
+  it('accepts only the four governed Agent presets', async () => {
+    process.env.NGFI_AGENT_PRESET = 'company-research'
+    await expect(prepareRuntime()).resolves.toMatchObject({
+      environment: expect.objectContaining({ NGFI_AGENT_PRESET: 'company-research' }),
+    })
+    process.env.NGFI_AGENT_PRESET = '../unsafe'
+    await expect(prepareRuntime()).rejects.toThrow(/Unsupported NGFI_AGENT_PRESET/u)
   })
 
   it('requires the selected credential only for real model calls', async () => {

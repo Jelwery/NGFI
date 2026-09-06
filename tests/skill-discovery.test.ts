@@ -27,6 +27,9 @@ describe('canonical skill filesystem', () => {
     expect(names).toContain('company-financial-analysis')
     expect(names).toContain('macro-cycle-policy-analysis')
     expect(names.filter((name: string) => name === 'investment-behavior-diagnosis')).toHaveLength(1)
+    expect(names).toEqual(expect.arrayContaining([
+      'company-research', 'strategy-research', 'portfolio-risk', 'thesis-review', 'adversarial-research',
+    ]))
     await provider.dispose()
   })
 })

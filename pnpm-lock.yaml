@@ -143,6 +143,9 @@ importers:
       '@deepseek-ai/dsh-agent':
         specifier: 0.1.1-rc.2
         version: 0.1.1-rc.2(c1537a8836b04097f168b024f1e38d85)
+      '@deepseek-ai/dsh-agent-default-model':
+        specifier: 0.1.1-rc.2
+        version: 0.1.1-rc.2(cffd0b3811dd3fb50ded7f3d23c3fd53)
       '@deepseek-ai/dsh-llm':
         specifier: 0.1.1-rc.2
         version: 0.1.1-rc.2(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-attachment@0.1.1-rc.2(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-brand@0.1.1-rc.2(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.1-rc.2(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.1-rc.2(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-brand@0.1.1-rc.2(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.1-rc.2(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.1-rc.2(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-timeout@0.1.1-rc.2(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.1-rc.2(@deepseek-ai/cordis@4.0.1)))
@@ -158,6 +161,9 @@ importers:
       '@finance2dsh/data-service':
         specifier: workspace:*
         version: link:../finance-data-service
+      '@finance2dsh/portfolio-risk':
+        specifier: workspace:*
+        version: link:../portfolio-risk
       '@finance2dsh/provider-astock':
         specifier: workspace:*
         version: link:../finance-provider-astock
@@ -176,12 +182,30 @@ importers:
       '@finance2dsh/provider-yfinance':
         specifier: workspace:*
         version: link:../finance-provider-yfinance
+      '@finance2dsh/research-audit':
+        specifier: workspace:*
+        version: link:../research-audit
       '@finance2dsh/research-core':
         specifier: workspace:*
         version: link:../research-core
       '@finance2dsh/research-workflow':
         specifier: workspace:*
         version: link:../research-workflow
+      '@finance2dsh/research-workspace':
+        specifier: workspace:*
+        version: link:../research-workspace
+      '@finance2dsh/signal-evaluation':
+        specifier: workspace:*
+        version: link:../signal-evaluation
+      '@finance2dsh/strategy-accumulation-breakout':
+        specifier: workspace:*
+        version: link:../strategy-accumulation-breakout
+      '@finance2dsh/strategy-core':
+        specifier: workspace:*
+        version: link:../strategy-core
+      '@finance2dsh/technical-analysis':
+        specifier: workspace:*
+        version: link:../technical-analysis
 
   packages/finance-core: {}
 

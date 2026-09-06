@@ -1,4 +1,8 @@
+import { existsSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { dirname, join, resolve } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
+import type {} from '@deepseek-ai/dsh-agent-default-model'
 import { defineTool, type ToolDefinition } from '@deepseek-ai/dsh-tools'
 import {
   calculateDcf,
@@ -16,6 +20,11 @@ import { createBehaviorTradeAuditTool } from './behavior-trade-audit.js'
 import { createDefaultAshareDataComposition, type AshareDataComposition } from './ashare-composition.js'
 import { ASHARE_TOOL_NAMES, createAshareFinanceTools } from './ashare-tools.js'
 import { rejectAshareTicker } from './ticker-policy.js'
+import { createDshSessionChatExecutor } from './adversarial-session-adapter.js'
+import { createPortfolioTools } from './portfolio-tools.js'
+import { createResearchTools } from './research-tools.js'
+import { createSignalTools } from './signal-tools.js'
+import { createStrategyTools } from './strategy-tools.js'
 
 export {
   BEHAVIOR_REFERENCE_TOPICS,
@@ -30,6 +39,26 @@ export {
   type DshSessionChatExecutorOptions,
 } from './adversarial-session-adapter.js'
 export { rejectAshareTicker } from './ticker-policy.js'
+export {
+  RESEARCH_TOOL_NAMES,
+  createResearchTools,
+  type ResearchToolOptions,
+} from './research-tools.js'
+export {
+  STRATEGY_TOOL_NAMES,
+  createStrategyTools,
+  type StrategyToolOptions,
+} from './strategy-tools.js'
+export {
+  SIGNAL_TOOL_NAMES,
+  createSignalTools,
+  type SignalToolOptions,
+} from './signal-tools.js'
+export {
+  PORTFOLIO_TOOL_NAMES,
+  createPortfolioTools,
+  type PortfolioToolOptions,
+} from './portfolio-tools.js'
 export {
   ASHARE_PROVIDER_IDS,
   createDefaultAshareDataComposition,
@@ -291,8 +320,28 @@ export function createAllFinanceTools(
   return [...createFinanceTools(provider), ...createAshareFinanceTools(ashare)]
 }
 
+export function createGovernedFinanceTools(options: { runtimeRoot: string; quantProjectRoot: string; adversarialExecutor?: import('@finance2dsh/research-workflow').AdversarialChatExecutor }): ToolDefinition[] {
+  return [
+    ...createResearchTools({ runtimeRoot: options.runtimeRoot, ...(options.adversarialExecutor === undefined ? {} : { adversarialExecutor: options.adversarialExecutor }) }),
+    ...createStrategyTools({ quantProjectRoot: options.quantProjectRoot }),
+    ...createSignalTools({ runtimeRoot: options.runtimeRoot }),
+    ...createPortfolioTools({ runtimeRoot: options.runtimeRoot }),
+  ]
+}
+
+function findQuantProjectRoot(): string {
+  let current = dirname(fileURLToPath(import.meta.url))
+  while (true) {
+    const candidate = join(current, 'packages', 'quant-research', 'pyproject.toml')
+    if (existsSync(candidate)) return dirname(candidate)
+    const parent = dirname(current)
+    if (parent === current) throw new Error('unable to locate the bundled quant-research project')
+    current = parent
+  }
+}
+
 export const name = 'finance-tools'
-export const inject = ['tools']
+export const inject = ['tools', 'agents', 'sessions', 'agentDefaultModel']
 
 declare module '@deepseek-ai/cordis' {
   interface Context {
@@ -303,7 +352,16 @@ declare module '@deepseek-ai/cordis' {
 export function apply(ctx: Context): () => Promise<void> {
   const provider = createYFinanceProvider()
   const ashare = createDefaultAshareDataComposition()
-  for (const tool of createAllFinanceTools(provider, ashare)) ctx.tools.register(tool)
+  const runtimeRoot = resolve(process.env.NGFI_RUNTIME_DATA_ROOT ?? join(process.cwd(), '.runtime', 'finance-data'))
+  const quantProjectRoot = findQuantProjectRoot()
+  const adversarialExecutor = createDshSessionChatExecutor({
+    agents: ctx.agents, sessions: ctx.sessions, selection: ctx.agentDefaultModel.currentSelection(),
+    cwd: process.cwd(), maxTokens: 8_192,
+  })
+  for (const tool of [
+    ...createAllFinanceTools(provider, ashare),
+    ...createGovernedFinanceTools({ runtimeRoot, quantProjectRoot, adversarialExecutor }),
+  ]) ctx.tools.register(tool)
   ctx.provide('financeTools', true)
   return () => ashare.close()
 }

@@ -85,6 +85,10 @@
     "@finance2dsh/research-core": "workspace:*",
     "@finance2dsh/research-workflow": "workspace:*",
     "@finance2dsh/research-workspace": "workspace:*",
+    "@finance2dsh/signal-evaluation": "workspace:*",
+    "@finance2dsh/strategy-accumulation-breakout": "workspace:*",
+    "@finance2dsh/strategy-core": "workspace:*",
+    "@finance2dsh/technical-analysis": "workspace:*",
     "tsx": "4.22.4",
     "typescript": "6.0.3",
     "vitest": "4.1.8"

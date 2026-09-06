@@ -1,0 +1,18 @@
+{
+  "sourceLibrary": "pandas",
+  "sourceVersion": "3.0.5",
+  "generation": "Series.rolling(4).mean() and Series.rolling(4).std(ddof=0)",
+  "values": [2, 4, 4, 4, 5, 5, 7, 9],
+  "period": 4,
+  "sma": [null, null, null, 3.5, 4.25, 4.5, 5.25, 6.5],
+  "populationStandardDeviation": [
+    null,
+    null,
+    null,
+    0.8660254037844386,
+    0.4330127018922193,
+    0.5,
+    1.0897247358851685,
+    1.6583123951777
+  ]
+}

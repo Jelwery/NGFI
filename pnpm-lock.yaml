@@ -78,6 +78,18 @@ importers:
       '@finance2dsh/research-workspace':
         specifier: workspace:*
         version: link:packages/research-workspace
+      '@finance2dsh/signal-evaluation':
+        specifier: workspace:*
+        version: link:packages/signal-evaluation
+      '@finance2dsh/strategy-accumulation-breakout':
+        specifier: workspace:*
+        version: link:packages/strategy-accumulation-breakout
+      '@finance2dsh/strategy-core':
+        specifier: workspace:*
+        version: link:packages/strategy-core
+      '@finance2dsh/technical-analysis':
+        specifier: workspace:*
+        version: link:packages/technical-analysis
       '@types/node':
         specifier: 22.20.0
         version: 22.20.0
@@ -229,6 +241,33 @@ importers:
       '@finance2dsh/research-core':
         specifier: workspace:*
         version: link:../research-core
+
+  packages/signal-evaluation:
+    dependencies:
+      '@finance2dsh/strategy-core':
+        specifier: workspace:*
+        version: link:../strategy-core
+
+  packages/strategy-accumulation-breakout:
+    dependencies:
+      '@finance2dsh/strategy-core':
+        specifier: workspace:*
+        version: link:../strategy-core
+      '@finance2dsh/technical-analysis':
+        specifier: workspace:*
+        version: link:../technical-analysis
+
+  packages/strategy-core:
+    dependencies:
+      '@finance2dsh/core':
+        specifier: workspace:*
+        version: link:../finance-core
+
+  packages/technical-analysis:
+    dependencies:
+      '@finance2dsh/strategy-core':
+        specifier: workspace:*
+        version: link:../strategy-core
 
 packages:
 

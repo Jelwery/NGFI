@@ -3,6 +3,21 @@
   "generatedAt": "2026-09-07",
   "capabilities": [
     {
+      "id": "runtime.adversarial-session-adapter",
+      "category": "runtime",
+      "ownerPackage": "packages/dsh-finance-tools",
+      "publicExports": ["createDshSessionChatExecutor"],
+      "status": "kernel-tested",
+      "tools": [],
+      "skills": [],
+      "presets": [],
+      "contractTests": ["tests/adversarial-dsh-adapter.test.ts"],
+      "goldenFixtures": ["tests/adversarial-dsh-adapter.test.ts"],
+      "upstream": [{"project": "NGFI local migration", "commit": "da101d13095c413e7904d4eb171afd11d01c97b5", "path": "packages/research-workflow/src/adversarial-review.ts"}],
+      "safetyBoundaries": ["one fresh DSH session per role", "all inherited tools are denied", "session disposal runs on success and failure"],
+      "knownLimitations": ["adapter is not itself an Agent tool", "real model execution remains opt-in"]
+    },
+    {
       "id": "portfolio.holdings-and-risk",
       "category": "portfolio",
       "ownerPackage": "packages/portfolio-risk",

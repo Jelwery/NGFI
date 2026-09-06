@@ -4,7 +4,7 @@ This document summarizes the machine-enforced inventory in `manifest.json`. The 
 
 | Status | Count | Meaning |
 |---|---:|---|
-| `kernel-tested` | 17 | Deterministic domain/provider capability with offline contract evidence; provider entries may be dormant or indirect. |
+| `kernel-tested` | 18 | Deterministic domain/provider/runtime capability with offline contract evidence; provider entries may be dormant or indirect. |
 | `agent-exposed` | 8 | Available through a declared Skill, tool, or preset and covered by composition/isolation contracts. |
 | `live-verified` | 0 | A dated live-provider/model run has been recorded in the manifest. |
 

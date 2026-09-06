@@ -25,6 +25,10 @@ export {
 } from './behavior-reference.js'
 export { createBehaviorMarketEvidenceTool } from './behavior-market-evidence.js'
 export { createBehaviorTradeAuditTool } from './behavior-trade-audit.js'
+export {
+  createDshSessionChatExecutor,
+  type DshSessionChatExecutorOptions,
+} from './adversarial-session-adapter.js'
 export { rejectAshareTicker } from './ticker-policy.js'
 export {
   ASHARE_PROVIDER_IDS,

@@ -31,7 +31,10 @@ describe('capability manifest', () => {
   })
 
   it('fails closed when an Agent tool disappears from the declaration', async () => {
-    const path = await changedManifest(manifest => { manifest.capabilities[0].tools = manifest.capabilities[0].tools.slice(1) })
+    const path = await changedManifest(manifest => {
+      const capability = manifest.capabilities.find((item: { tools?: string[] }) => (item.tools?.length ?? 0) > 0)
+      capability.tools = capability.tools.slice(1)
+    })
     expect(() => validate(path)).toThrow(/tool inventory mismatch/)
   })
 })

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "ngfi-a-stock-fixture-1",
+  "capturedAt": "2026-08-28T08:00:00Z",
+  "upstreamSource": "recorded-contract-fixture",
+  "sourceKind": "user",
+  "records": [
+    {"instrument": {"market": "CN", "exchange": "SSE", "symbol": "600519", "assetType": "equity"}, "name": "贵州茅台", "tradingDate": "2026-08-28", "observedAt": "2026-08-28T07:00:00Z", "open": 1468.0, "high": 1488.8, "low": 1460.01, "last": 1482.5, "previousClose": 1469.2, "volume": 26543, "turnover": 3928876543.0},
+    {"instrument": {"market": "CN", "exchange": "SZSE", "symbol": "000001", "assetType": "equity"}, "name": "平安银行", "tradingDate": "2026-08-28", "observedAt": "2026-08-28T07:00:00Z", "open": 12.31, "high": 12.52, "low": 12.21, "last": 12.47, "previousClose": 12.3, "volume": 823541, "turnover": 1023456789.0},
+    {"instrument": {"market": "CN", "exchange": "BSE", "symbol": "920021", "assetType": "equity"}, "name": "北交所样本", "tradingDate": "2026-08-28", "observedAt": "2026-08-28T07:00:00Z", "open": 18.1, "high": 18.9, "low": 17.95, "last": 18.7, "previousClose": 18.05, "volume": 54321, "turnover": 99887766.0},
+    {"instrument": {"market": "CN", "exchange": "SSE", "symbol": "000300", "assetType": "index"}, "name": "沪深300", "tradingDate": "2026-08-28", "observedAt": "2026-08-28T07:00:00Z", "open": 4251.2, "high": 4290.4, "low": 4242.1, "last": 4282.6, "previousClose": 4248.8, "volume": 189234567, "turnover": 386000000000.0},
+    {"instrument": {"market": "CN", "exchange": "SZSE", "symbol": "399006", "assetType": "index"}, "name": "创业板指", "tradingDate": "2026-08-28", "observedAt": "2026-08-28T07:00:00Z", "open": 2711.4, "high": 2750.1, "low": 2699.3, "last": 2741.8, "previousClose": 2708.2, "volume": 123456789, "turnover": 245000000000.0},
+    {"instrument": {"market": "CN", "exchange": "SSE", "symbol": "510050", "assetType": "etf"}, "name": "上证50ETF", "tradingDate": "2026-08-28", "observedAt": "2026-08-28T07:00:00Z", "open": 3.102, "high": 3.131, "low": 3.096, "last": 3.126, "previousClose": 3.099, "volume": 7823456, "turnover": 2435000000.0}
+  ]
+}

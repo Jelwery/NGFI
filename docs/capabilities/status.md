@@ -4,10 +4,10 @@ This document summarizes the machine-enforced inventory in `manifest.json`. The 
 
 | Status | Count | Meaning |
 |---|---:|---|
-| `kernel-tested` | 3 | Deterministic domain capability with offline contract evidence, not exposed to an Agent. |
-| `agent-exposed` | 5 | Available through a declared Skill, tool, or preset and covered by composition/isolation contracts. |
+| `kernel-tested` | 7 | Deterministic domain/provider capability with offline contract evidence; provider entries may be dormant or indirect. |
+| `agent-exposed` | 6 | Available through a declared Skill, tool, or preset and covered by composition/isolation contracts. |
 | `live-verified` | 0 | A dated live-provider/model run has been recorded in the manifest. |
 
-Current Agent surface: 12 `finance_*` tools, 9 canonical Skills, the `skill` loader, one `finance-analyst` preset, and headless/Web profiles. The new canonical data-v2 and routing/reconciliation kernels are intentionally not Agent-exposed yet. Neither status nor a directory name implies live provider availability.
+Current Agent surface: 20 `finance_*` tools (the original 12 plus 8 curated A-share tools), 10 canonical Skills, the `skill` loader, one `finance-analyst` preset, and headless/Web profiles. Provider availability remains visible through `finance_data_catalog`; neither a tool name nor a provider package implies live availability.
 
 The baseline deliberately distinguishes `missing`, `no-data`, `unsupported`, `unavailable`, `unauthorized`, `insufficient-permission`, `partial`, `stale`, `unfillable`, `insufficient`, and `failed/error`; later phases may add these statuses to new contracts but may not collapse them into empty or zero-valued success.

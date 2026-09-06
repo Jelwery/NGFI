@@ -18,6 +18,14 @@ export const FINANCE_TOOL_ALLOWLIST = [
   'finance_dcf',
   'finance_dcf_sensitivity',
   'finance_relative_valuation',
+  'finance_data_catalog',
+  'finance_cn_instrument',
+  'finance_cn_quote',
+  'finance_cn_bars',
+  'finance_cn_fundamentals',
+  'finance_cn_disclosures',
+  'finance_cn_market_activity',
+  'finance_cn_macro_index',
 ] as const
 
 export function apply(ctx: Context): void {

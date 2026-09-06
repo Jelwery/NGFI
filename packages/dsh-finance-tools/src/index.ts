@@ -13,6 +13,9 @@ import { createYFinanceProvider } from '@finance2dsh/provider-yfinance'
 import { createBehaviorReferenceTool } from './behavior-reference.js'
 import { createBehaviorMarketEvidenceTool } from './behavior-market-evidence.js'
 import { createBehaviorTradeAuditTool } from './behavior-trade-audit.js'
+import { createDefaultAshareDataComposition, type AshareDataComposition } from './ashare-composition.js'
+import { ASHARE_TOOL_NAMES, createAshareFinanceTools } from './ashare-tools.js'
+import { rejectAshareTicker } from './ticker-policy.js'
 
 export {
   BEHAVIOR_REFERENCE_TOPICS,
@@ -22,6 +25,20 @@ export {
 } from './behavior-reference.js'
 export { createBehaviorMarketEvidenceTool } from './behavior-market-evidence.js'
 export { createBehaviorTradeAuditTool } from './behavior-trade-audit.js'
+export { rejectAshareTicker } from './ticker-policy.js'
+export {
+  ASHARE_PROVIDER_IDS,
+  createDefaultAshareDataComposition,
+  type AshareDataComposition,
+  type AshareDataCompositionOptions,
+  type AshareProviderCatalogEntry,
+  type AshareProviderId,
+} from './ashare-composition.js'
+export {
+  ASHARE_TOOL_NAMES,
+  createAshareFinanceTools,
+  type AshareToolBackend,
+} from './ashare-tools.js'
 
 const JSON_OUTPUT = {
   schema: { type: 'json' as const },
@@ -52,6 +69,7 @@ export function createFinanceTools(provider: FinanceDataProvider): ToolDefinitio
       timeoutMs: 60_000,
       isConcurrencySafe: () => true,
       async execute(args, exec) {
+        rejectAshareTicker(args.ticker)
         return jsonSafe(await provider.securityReference(args.ticker, exec.signal)) as never
       },
     }),
@@ -65,6 +83,7 @@ export function createFinanceTools(provider: FinanceDataProvider): ToolDefinitio
       timeoutMs: 90_000,
       isConcurrencySafe: () => true,
       async execute(args, exec) {
+        rejectAshareTicker(args.ticker)
         return jsonSafe(await provider.fundamentals(args.ticker, exec.signal)) as never
       },
     }),
@@ -80,6 +99,7 @@ export function createFinanceTools(provider: FinanceDataProvider): ToolDefinitio
       timeoutMs: 60_000,
       isConcurrencySafe: () => true,
       async execute(args, exec) {
+        rejectAshareTicker(args.ticker)
         return jsonSafe(await provider.marketData(args.ticker, {
           ...(args.period === undefined ? {} : { period: args.period }),
           ...(args.interval === undefined ? {} : { interval: args.interval }),
@@ -97,6 +117,7 @@ export function createFinanceTools(provider: FinanceDataProvider): ToolDefinitio
       timeoutMs: 60_000,
       isConcurrencySafe: () => true,
       async execute(args, exec) {
+        rejectAshareTicker(args.ticker)
         return jsonSafe(await provider.estimates(args.ticker, exec.signal)) as never
       },
     }),
@@ -117,6 +138,7 @@ export function createFinanceTools(provider: FinanceDataProvider): ToolDefinitio
       isConcurrencySafe: () => true,
       async execute(args, exec) {
         if (args.peers.length < 1 || args.peers.length > 10) throw new RangeError('peers must contain 1-10 tickers')
+        for (const ticker of [args.ticker, ...args.peers]) rejectAshareTicker(ticker)
         const companies = await provider.comparables([args.ticker, ...args.peers], exec.signal)
         const target = companies[0]
         if (target === undefined) throw new Error('target data is unavailable')
@@ -257,6 +279,14 @@ export function createFinanceTools(provider: FinanceDataProvider): ToolDefinitio
   ]
 }
 
+/** Preserve the original twelve tools, then append the eight curated A-share tools. */
+export function createAllFinanceTools(
+  provider: FinanceDataProvider,
+  ashare: AshareDataComposition = createDefaultAshareDataComposition(),
+): ToolDefinition[] {
+  return [...createFinanceTools(provider), ...createAshareFinanceTools(ashare)]
+}
+
 export const name = 'finance-tools'
 export const inject = ['tools']
 
@@ -266,8 +296,10 @@ declare module '@deepseek-ai/cordis' {
   }
 }
 
-export function apply(ctx: Context): void {
+export function apply(ctx: Context): () => Promise<void> {
   const provider = createYFinanceProvider()
-  for (const tool of createFinanceTools(provider)) ctx.tools.register(tool)
+  const ashare = createDefaultAshareDataComposition()
+  for (const tool of createAllFinanceTools(provider, ashare)) ctx.tools.register(tool)
   ctx.provide('financeTools', true)
+  return () => ashare.close()
 }

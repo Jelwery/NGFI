@@ -7,6 +7,7 @@ import {
   type FinanceDataProvider,
   type MarketData,
 } from '@finance2dsh/core'
+import { rejectAshareTicker } from './ticker-policy.js'
 
 const CAVEAT = 'Market statistics describe a price path. A provider failure supplies no evidence, and market data cannot by itself establish a psychological bias, herding, FOMO, or a bubble.'
 
@@ -106,6 +107,8 @@ export function createBehaviorMarketEvidenceTool(provider: FinanceDataProvider):
     timeoutMs: 90_000,
     isConcurrencySafe: () => true,
     async execute(args, exec) {
+      rejectAshareTicker(args.ticker)
+      if (args.benchmark !== undefined) rejectAshareTicker(args.benchmark)
       return await fetchMarketEvidence(provider, args.ticker, args.benchmark, args.window, exec.signal) as never
     },
   })

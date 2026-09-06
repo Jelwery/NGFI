@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "ngfi-a-stock-fixture-1",
+  "capturedAt": "2026-08-28T08:00:00Z",
+  "upstreamSource": "recorded-contract-fixture",
+  "sourceKind": "user",
+  "records": [
+    {
+      "instrument": {"market": "CN", "exchange": "SSE", "symbol": "600519", "assetType": "equity"},
+      "name": "贵州茅台",
+      "providerSymbols": {"eastmoney": "1.600519", "sina": "sh600519"}
+    },
+    {
+      "instrument": {"market": "CN", "exchange": "SZSE", "symbol": "000001", "assetType": "equity"},
+      "name": "平安银行",
+      "providerSymbols": {"eastmoney": "0.000001", "sina": "sz000001"}
+    },
+    {
+      "instrument": {"market": "CN", "exchange": "BSE", "symbol": "920021", "assetType": "equity"},
+      "name": "北交所样本",
+      "providerSymbols": {"eastmoney": "0.920021", "canonical": "920021.BJ"}
+    },
+    {
+      "instrument": {"market": "CN", "exchange": "SSE", "symbol": "000300", "assetType": "index"},
+      "name": "沪深300",
+      "providerSymbols": {"eastmoney": "1.000300", "sina": "sh000300"}
+    },
+    {
+      "instrument": {"market": "CN", "exchange": "SZSE", "symbol": "399006", "assetType": "index"},
+      "name": "创业板指",
+      "providerSymbols": {"eastmoney": "0.399006", "sina": "sz399006"}
+    },
+    {
+      "instrument": {"market": "CN", "exchange": "SSE", "symbol": "510050", "assetType": "etf"},
+      "name": "上证50ETF",
+      "providerSymbols": {"eastmoney": "1.510050", "sina": "sh510050"}
+    }
+  ]
+}

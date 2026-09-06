@@ -12,6 +12,11 @@
         "path": "packages/combinatorial-optimization",
         "project": "cne6-engine",
         "dependencies": "production (--no-dev)"
+      },
+      {
+        "path": "packages/finance-provider-tdx",
+        "project": "finance2dsh-tdx-runner",
+        "dependencies": "production (--no-dev)"
       }
     ]
   },
@@ -2784,6 +2789,14 @@
       "name": "cffi",
       "version": "2.1.1",
       "license": "MIT-0",
+      "project": "finance2dsh-tdx-runner",
+      "marker": "platform_python_implementation != 'PyPy'"
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "cffi",
+      "version": "2.1.1",
+      "license": "MIT-0",
       "project": "finance2dsh-yfinance-runner"
     },
     {
@@ -2802,12 +2815,26 @@
     },
     {
       "ecosystem": "pypi",
+      "name": "click",
+      "version": "8.5.0",
+      "license": "BSD-3-Clause",
+      "project": "finance2dsh-tdx-runner"
+    },
+    {
+      "ecosystem": "pypi",
       "name": "colorama",
       "version": "0.4.6",
       "license": "BSD-3-Clause",
       "project": "cne6-engine",
       "marker": "sys_platform == 'win32'",
       "review": "Platform-conditional wheel license reviewed manually; package is not installed on this host."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "cryptography",
+      "version": "50.0.1",
+      "license": "Apache-2.0 OR BSD-3-Clause",
+      "project": "finance2dsh-tdx-runner"
     },
     {
       "ecosystem": "pypi",
@@ -2836,6 +2863,13 @@
       "version": "2.0.0",
       "license": "MIT",
       "project": "cne6-engine"
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "et-xmlfile",
+      "version": "2.0.0",
+      "license": "MIT",
+      "project": "finance2dsh-yfinance-runner"
     },
     {
       "ecosystem": "pypi",
@@ -2937,6 +2971,13 @@
       "name": "numpy",
       "version": "2.5.2",
       "license": "BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0",
+      "project": "finance2dsh-tdx-runner"
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "numpy",
+      "version": "2.5.2",
+      "license": "BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0",
       "project": "finance2dsh-yfinance-runner"
     },
     {
@@ -2948,10 +2989,24 @@
     },
     {
       "ecosystem": "pypi",
+      "name": "openpyxl",
+      "version": "3.1.5",
+      "license": "MIT",
+      "project": "finance2dsh-yfinance-runner"
+    },
+    {
+      "ecosystem": "pypi",
       "name": "pandas",
       "version": "3.0.5",
       "license": "PSF-2.0",
       "project": "cne6-engine"
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "pandas",
+      "version": "3.0.5",
+      "license": "PSF-2.0",
+      "project": "finance2dsh-tdx-runner"
     },
     {
       "ecosystem": "pypi",
@@ -3032,8 +3087,24 @@
       "name": "pycparser",
       "version": "3.0",
       "license": "BSD-3-Clause",
+      "project": "finance2dsh-tdx-runner",
+      "marker": "implementation_name != 'PyPy' and platform_python_implementation != 'PyPy'"
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "pycparser",
+      "version": "3.0",
+      "license": "BSD-3-Clause",
       "project": "finance2dsh-yfinance-runner",
       "marker": "implementation_name != 'PyPy'"
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "pytdx",
+      "version": "1.72",
+      "license": "LicenseRef-pytdx-usage-notice",
+      "project": "finance2dsh-tdx-runner",
+      "review": "Wheel and upstream repository omit an OSI license; the upstream usage notice was manually reviewed and must be re-reviewed on upgrade."
     },
     {
       "ecosystem": "pypi",
@@ -3041,6 +3112,14 @@
       "version": "2.9.0.post0",
       "license": "BSD-3-Clause OR Apache-2.0",
       "project": "cne6-engine",
+      "review": "Legacy metadata declares the two OSI-approved alternatives as classifiers."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "python-dateutil",
+      "version": "2.9.0.post0",
+      "license": "BSD-3-Clause OR Apache-2.0",
+      "project": "finance2dsh-tdx-runner",
       "review": "Legacy metadata declares the two OSI-approved alternatives as classifiers."
     },
     {
@@ -3115,6 +3194,13 @@
       "name": "six",
       "version": "1.17.0",
       "license": "MIT",
+      "project": "finance2dsh-tdx-runner"
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "six",
+      "version": "1.17.0",
+      "license": "MIT",
       "project": "finance2dsh-yfinance-runner"
     },
     {
@@ -3173,6 +3259,15 @@
       "name": "tzdata",
       "version": "2026.3",
       "license": "Apache-2.0",
+      "project": "finance2dsh-tdx-runner",
+      "marker": "sys_platform == 'emscripten' or sys_platform == 'win32'",
+      "review": "Platform-conditional PyPI tzdata package license reviewed manually."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "tzdata",
+      "version": "2026.3",
+      "license": "Apache-2.0",
       "project": "finance2dsh-yfinance-runner",
       "marker": "sys_platform == 'emscripten' or sys_platform == 'win32'",
       "review": "Platform-conditional PyPI tzdata package license reviewed manually."
@@ -3211,6 +3306,13 @@
       "version": "2.0.2",
       "license": "BSD-3-Clause",
       "project": "cne6-engine"
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "xlrd",
+      "version": "2.0.2",
+      "license": "BSD-3-Clause",
+      "project": "finance2dsh-yfinance-runner"
     },
     {
       "ecosystem": "pypi",

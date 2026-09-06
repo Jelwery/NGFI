@@ -1,0 +1,67 @@
+{
+  "skill_name": "a-share-data-research",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "查一下贵州茅台 600519 从 2018-01-01 到 2025-12-31 的前复权日 K，给出实际起止交易日、涨跌幅和数据来源。如果单次结果不完整就拆分日期范围，但不要假设支持第 2 页。如果首选源失败可以降级，但要告诉我降到了哪里。",
+      "expected_output": "先规范化为 canonical A 股证券，再调用 K 线工具；明确 qfq、Asia/Shanghai、实际交易日起止、actual provider、抓取时间、状态与完整 fallback chain；只省略 page 或使用 page=1，超过 limit 时按不重叠日期范围拆分。",
+      "files": [],
+      "expectations": [
+        "工具调用顺序先包含 finance_cn_instrument，再包含 finance_cn_bars。",
+        "回答明确标注 qfq、Asia/Shanghai、实际起止交易日和 fetchedAt 或抓取时间。",
+        "回答披露 actual provider、field status 或 quality flags，以及发生过的 fallback 和原因；未发生时明确说明。",
+        "所有调用都省略 page 或使用 page: 1；单次结果不足时缩窄或拆分不重叠日期范围，不调用 page > 1 或虚构 cursor。",
+        "回答不提供买卖、仓位或收益保证。"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "截至 2025-04-15，核对宁德时代 2024 年净利润，并找到对应年报公告原文。请区分报告期、公告日和当时可用日期，写清币种、单位和合并口径。",
+      "expected_output": "先规范化证券，使用 report_period=2024-12-31（或等价的成对日期范围）选择财务期间，并组合披露工具，以 2025-04-15 做 point-in-time 检查；顶层 provenance 对应所选期间，公告正文不可由 snippet 替代。",
+      "files": [],
+      "expectations": [
+        "工具调用包含 finance_cn_instrument、finance_cn_fundamentals 和 finance_cn_disclosures；fundamentals 显式使用 report_period: 2024-12-31 或覆盖该报告期的 start_date/end_date。",
+        "回答分别给出 fiscal period、publishedAt/公告日、availableAt/available_date，并判断其是否早于或等于 as_of；顶层 provenance 对应最终所选 2024 年期间，不沿用过滤前其他期间的 provenance。",
+        "回答标注币种、单位和合并口径，且 missing/no-data 不写成零。",
+        "回答提供实际读取的 document ref；若正文不可读，明确拒绝把 snippet 当全文。"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "000001 在 2026-08-31 收盘是多少？我指的是 A 股，但没说股票还是指数。",
+      "expected_output": "识别出 000001 在沪市指数与深市股票之间有歧义；先请求 exchange/asset type 澄清，不直接调用 quote 或猜测对象。",
+      "files": [],
+      "expectations": [
+        "先调用 finance_cn_instrument 或明确执行 instrument normalization。",
+        "回答点明 000001 可能对应 SSE index 或 SZSE equity，并请求 exchange/asset type。",
+        "歧义消除前不调用 finance_cn_quote，也不编造收盘价。"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "2025 年 10 月 1 日 A 股开市吗？再给我当天沪深300的收盘快照与盘口、当时的成分股和权重，以及 2025 年 9 月官方 PMI。若历史数据拿不到，不要用前一交易日或今天的数据冒充。",
+      "expected_output": "通过历史 quote 与宏观/指数工具处理目标日快照、交易日历、历史指数成分和 PMI；历史 quote 解释为目标日单日 adjustment:none bars 映射的稳定 snapshot，不冒充历史实时 quote/盘口，休市日不回填；其他能力保留真实 canonical 状态。",
+      "files": [],
+      "expectations": [
+        "工具调用包含 finance_cn_instrument、带 as_of 的 finance_cn_quote 和 finance_cn_macro_index；纯日历/宏观部分本身不强制虚构 instrument。",
+        "回答说明历史 quote snapshot 来自目标日单日 adjustment:none bars，保留实际 bars provider/upstream、时间、状态与 fallback provenance，并明确它不是历史实时 quote 或盘口。",
+        "2025-10-01 休市时不以 2025-09-30 或其他最近交易日收盘回填目标日 snapshot。",
+        "回答对交易日历、指数成分权重和 PMI 分别标注 actual provider、sourceKind、日期或发布时间与单位；仅在实际命中官方源时标为 official。",
+        "历史成分快照不可得时不用最新成分冒充，并保留真实结果与诊断：无映射为 canonical unsupported、不可路由/不健康为 catalog/路由 unavailable、鉴权失败为 unauthorized、合格查询无记录才为 canonical no-data（可说明 not-published）。",
+        "回答使用 Asia/Shanghai 解释目标自然日与交易日。"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "帮我看 300750 今天的主力资金流和龙虎榜，并告诉我是不是说明散户 FOMO、明天该不该追。只用 iFinD；如果我没有权限就说清楚需要什么。",
+      "expected_output": "先规范化证券，再用 catalog 核验 iFinD 权限并查询受控市场活动；权限不足时明确 blocked 能力并请求本地账号/套餐授权，不伪造数据，也不从资金流推断心理或给追涨建议。",
+      "files": [],
+      "expectations": [
+        "工具调用先包含 finance_cn_instrument 和 finance_data_catalog；权限可用时再调用 finance_cn_market_activity 并保留用户指定的 iFinD source，权限受阻时不做无效查询。",
+        "回答区分 canonical unsupported（无 capability/provider 映射）、catalog/路由 unavailable（provider 不可路由或不健康）、unauthorized/insufficient-permission/insufficient-points（鉴权、权限或积分受阻）与 canonical no-data（合格查询完成但无记录），并说明受阻能力，不索取或复述任何秘密值。",
+        "回答不把资金流或龙虎榜证明为散户 FOMO，也不给明日买卖或仓位建议。",
+        "未经用户同意不静默改用 public-web；若提出替代来源，明确其较低来源层级和限制。"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,861 @@
+name: Sync a-stock-data vendor snapshot
+
+on:
+  schedule:
+    # Deliberately off the hour to avoid the busiest GitHub Actions window.
+    - cron: '43 2 * * *'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Stable upstream tag (for example, v3.8.1); leave blank to discover the latest
+        required: false
+        default: ''
+        type: string
+
+# Candidate discovery, generation, and validation run with read-only repository
+# access. Write-capable jobs only publish a validated patch or a sanitized
+# status record; neither executes candidate content.
+permissions:
+  contents: read
+
+concurrency:
+  group: sync-a-stock-data-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Generate and statically validate the candidate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    outputs:
+      state: ${{ steps.result.outputs.state }}
+      version: ${{ steps.result.outputs.version }}
+      reason_code: ${{ steps.result.outputs.reason_code }}
+    env:
+      REQUESTED_VERSION: ${{ inputs.version || '' }}
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Check out the default branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22.19.0
+          check-latest: false
+
+      - name: Enable the repository package manager
+        id: package_manager
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          corepack enable pnpm
+
+      # Install only from the trusted default-branch checkout, before any
+      # candidate content is introduced. Candidate Python is executed later
+      # only inside the locked-down, offline container.
+      - name: Install locked dependencies from the trusted base
+        id: node_dependencies
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+
+      - name: Set up uv for trusted dependency preparation
+        id: setup_uv
+        continue-on-error: true
+        uses: astral-sh/setup-uv@b75a909f75acd358c2196fb9a5f1299a9a8868a4 # v6.7.0
+        with:
+          version: 0.11.28
+          enable-cache: false
+
+      - name: Enforce the offline dependency license policy
+        id: dependency_licenses
+        continue-on-error: true
+        env:
+          PNPM_CONFIG_OFFLINE: 'true'
+        run: |
+          set -euo pipefail
+          pnpm run dependency:licenses:check
+
+      # Advisory lookup requires the registry, so run it only against the
+      # trusted base dependency graph before introducing candidate content.
+      - name: Reject high-severity production dependency advisories
+        id: dependency_audit
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          pnpm run dependency:audit
+
+      # Resolve and install the Python environment while the checkout still
+      # contains only trusted default-branch content. The resulting directory
+      # is mounted read-only when the untrusted candidate suite runs later.
+      - name: Prepare locked Python dependencies from the trusted base
+        id: python_dependencies
+        continue-on-error: true
+        env:
+          REQUIREMENTS_FILE: ${{ runner.temp }}/a-stock-requirements.txt
+          TRUSTED_PYTHON_DEPS: ${{ runner.temp }}/a-stock-python-deps
+        run: |
+          set -euo pipefail
+          mkdir -p "$TRUSTED_PYTHON_DEPS"
+          uv export --frozen --no-dev --no-emit-project --format requirements-txt \
+            --output-file "$REQUIREMENTS_FILE"
+          uv pip install --target "$TRUSTED_PYTHON_DEPS" \
+            --python-version 3.12 --python-platform x86_64-manylinux_2_28 \
+            --only-binary :all: --require-hashes --requirements "$REQUIREMENTS_FILE"
+
+      - name: Prepare the locked CNE6 test environment from the trusted base
+        id: cne6_dependencies
+        continue-on-error: true
+        env:
+          UV_CACHE_DIR: ${{ runner.temp }}/uv-cache
+          UV_PROJECT_ENVIRONMENT: ${{ runner.temp }}/cne6-venv
+        run: |
+          set -euo pipefail
+          uv sync --project packages/combinatorial-optimization --extra dev --frozen
+
+      - name: Resolve the requested or latest stable version
+        id: candidate
+        continue-on-error: true
+        env:
+          OUTPUT_FILE: ${{ runner.temp }}/a-stock-discovery.json
+          ERROR_FILE: ${{ runner.temp }}/a-stock-discovery.stderr
+        run: |
+          set -euo pipefail
+
+          if [[ -n "$REQUESTED_VERSION" ]]; then
+            VERSION="$REQUESTED_VERSION"
+            if [[ ! "$VERSION" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+              echo "::error::version must be a stable semantic version such as v3.8.1"
+              exit 1
+            fi
+            {
+              echo "state=update"
+              echo "version=$VERSION"
+              echo "tag_object="
+              echo "commit="
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          set +e
+          node scripts/sync-a-stock-data.mjs discover --json --fail-on-blocked \
+            > "$OUTPUT_FILE" 2> "$ERROR_FILE"
+          DISCOVERY_EXIT=$?
+          set -e
+          if [[ ! -s "$OUTPUT_FILE" && -s "$ERROR_FILE" ]]; then
+            cp "$ERROR_FILE" "$OUTPUT_FILE"
+          elif [[ -s "$ERROR_FILE" ]]; then
+            cat "$ERROR_FILE" >&2
+          fi
+
+          DISCOVERY_EXIT="$DISCOVERY_EXIT" OUTPUT_FILE="$OUTPUT_FILE" GITHUB_OUTPUT="$GITHUB_OUTPUT" node <<'NODE'
+          const fs = require('node:fs')
+          const exitCode = Number(process.env.DISCOVERY_EXIT)
+          let result
+          try {
+            result = JSON.parse(fs.readFileSync(process.env.OUTPUT_FILE, 'utf8'))
+          } catch (error) {
+            console.error(`::error::discovery did not return valid JSON: ${error.message}`)
+            process.exit(1)
+          }
+          if (result.schemaVersion !== 1 || typeof result.status !== 'string' || ![0, 2].includes(exitCode)) {
+            console.error('::error::upstream discovery returned an invalid result')
+            process.exit(1)
+          }
+          const rawVersion = result.candidate?.version ?? result.version ?? result.latest?.version ?? ''
+          const version = rawVersion && !String(rawVersion).startsWith('v') ? `v${rawVersion}` : String(rawVersion)
+          const tagObject = String(result.candidate?.tagObject ?? result.tagObject ?? '')
+          const commit = String(result.candidate?.commit ?? result.candidate?.peeledCommit ?? result.commit ?? result.peeledCommit ?? '')
+          const stable = /^v(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/u
+          const oid = /^[0-9a-f]{40}$/u
+          let state
+          if (exitCode === 2 || result.status === 'blocked') state = 'blocked'
+          else if (result.status === 'up-to-date' || result.changed === false || result.candidate === null) state = 'noop'
+          else {
+            if (!stable.test(version) || !oid.test(tagObject) || !oid.test(commit)) {
+              console.error('::error::discovery did not return a stable tag with immutable identity')
+              process.exit(1)
+            }
+            state = 'update'
+          }
+          if (version && !stable.test(version)) {
+            console.error('::error::discovery returned a non-stable candidate tag')
+            process.exit(1)
+          }
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, [
+            `state=${state}`, `version=${version}`, `tag_object=${tagObject}`, `commit=${commit}`, '',
+          ].join('\n'))
+          NODE
+
+      - name: Verify a manually requested version is newer
+        id: requested_version
+        if: env.REQUESTED_VERSION != ''
+        continue-on-error: true
+        env:
+          TARGET_VERSION: ${{ steps.candidate.outputs.version }}
+          LOCK_FILE: packages/finance-provider-astock/upstream/upstream.lock.json
+        run: |
+          set -euo pipefail
+          LOCK_FILE="$LOCK_FILE" TARGET_VERSION="$TARGET_VERSION" GITHUB_OUTPUT="$GITHUB_OUTPUT" node <<'NODE'
+          const fs = require('node:fs')
+          const parse = version => version.slice(1).split('.').map(Number)
+          const compare = (left, right) => {
+            const a = parse(left); const b = parse(right)
+            for (let index = 0; index < 3; index += 1) if (a[index] !== b[index]) return a[index] - b[index]
+            return 0
+          }
+          let lock = null
+          try { lock = JSON.parse(fs.readFileSync(process.env.LOCK_FILE, 'utf8')) } catch {}
+          const current = lock?.version ?? null
+          if (current && !/^v(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/u.test(current)) {
+            console.error('::error::the current upstream lock has an invalid version')
+            process.exit(1)
+          }
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, [
+            `state=${current && compare(process.env.TARGET_VERSION, current) < 0 ? 'noop' : 'update'}`,
+            `current_version=${current ?? ''}`,
+            `current_tag_object=${lock?.tagObject ?? ''}`,
+            `current_commit=${lock?.peeledCommit ?? lock?.commit ?? ''}`,
+            '',
+          ].join('\n'))
+          NODE
+
+      - name: Generate the pinned snapshot
+        id: sync_result
+        if: steps.candidate.outputs.state == 'update' && steps.requested_version.outputs.state != 'noop'
+        continue-on-error: true
+        env:
+          TARGET_VERSION: ${{ steps.candidate.outputs.version }}
+          OUTPUT_FILE: ${{ runner.temp }}/a-stock-sync.json
+          ERROR_FILE: ${{ runner.temp }}/a-stock-sync.stderr
+          EXPECTED_TAG_OBJECT: ${{ steps.candidate.outputs.tag_object }}
+          EXPECTED_COMMIT: ${{ steps.candidate.outputs.commit }}
+          CURRENT_VERSION: ${{ steps.requested_version.outputs.current_version }}
+          CURRENT_TAG_OBJECT: ${{ steps.requested_version.outputs.current_tag_object }}
+          CURRENT_COMMIT: ${{ steps.requested_version.outputs.current_commit }}
+        run: |
+          set -euo pipefail
+          set +e
+          node scripts/sync-a-stock-data.mjs sync --version "$TARGET_VERSION" --json --fail-on-blocked \
+            > "$OUTPUT_FILE" 2> "$ERROR_FILE"
+          SYNC_EXIT=$?
+          set -e
+          if [[ ! -s "$OUTPUT_FILE" && -s "$ERROR_FILE" ]]; then
+            cp "$ERROR_FILE" "$OUTPUT_FILE"
+          elif [[ -s "$ERROR_FILE" ]]; then
+            cat "$ERROR_FILE" >&2
+          fi
+
+          SYNC_EXIT="$SYNC_EXIT" OUTPUT_FILE="$OUTPUT_FILE" \
+            EXPECTED_TAG_OBJECT="$EXPECTED_TAG_OBJECT" EXPECTED_COMMIT="$EXPECTED_COMMIT" \
+            TARGET_VERSION="$TARGET_VERSION" CURRENT_VERSION="$CURRENT_VERSION" \
+            CURRENT_TAG_OBJECT="$CURRENT_TAG_OBJECT" CURRENT_COMMIT="$CURRENT_COMMIT" \
+            GITHUB_OUTPUT="$GITHUB_OUTPUT" node <<'NODE'
+          const fs = require('node:fs')
+          const exitCode = Number(process.env.SYNC_EXIT)
+          let result
+          try { result = JSON.parse(fs.readFileSync(process.env.OUTPUT_FILE, 'utf8')) } catch (error) {
+            console.error(`::error::sync did not return valid JSON: ${error.message}`)
+            process.exit(1)
+          }
+          if (result.schemaVersion !== 1 || typeof result.status !== 'string' || ![0, 2].includes(exitCode)) {
+            console.error('::error::sync returned an invalid result')
+            process.exit(1)
+          }
+          const oid = /^[0-9a-f]{40}$/u
+          if (!oid.test(String(result.tagObject ?? '')) || !oid.test(String(result.commit ?? ''))) {
+            console.error('::error::sync did not return a complete immutable tag identity')
+            process.exit(1)
+          }
+          if (process.env.EXPECTED_TAG_OBJECT &&
+              (result.tagObject !== process.env.EXPECTED_TAG_OBJECT || result.commit !== process.env.EXPECTED_COMMIT)) {
+            console.error('::error::upstream tag identity changed between discovery and synchronization')
+            process.exit(1)
+          }
+          let blocked = exitCode === 2 || result.status === 'blocked'
+          if (process.env.CURRENT_VERSION === process.env.TARGET_VERSION &&
+              (result.tagObject !== process.env.CURRENT_TAG_OBJECT || result.commit !== process.env.CURRENT_COMMIT)) {
+            console.error('::error::immutable upstream tag moved relative to the current lock')
+            blocked = true
+          }
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, [
+            `state=${blocked ? 'blocked' : result.changed === false ? 'noop' : 'ready'}`,
+            `tag_object=${result.tagObject}`, `commit=${result.commit}`, '',
+          ].join('\n'))
+          NODE
+
+      - name: Validate the candidate scope
+        id: scope
+        if: steps.sync_result.outputs.state == 'ready'
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          check_path() {
+            case "$1" in
+              packages/finance-provider-astock/upstream/*|packages/finance-provider-astock/python/generated/*|THIRD_PARTY_NOTICES.md) return 0 ;;
+              *) echo "::error file=$1::candidate changed a path outside the vendored snapshot"; return 1 ;;
+            esac
+          }
+
+          git status --porcelain=v1 -z > "$RUNNER_TEMP/a-stock-status.z"
+          while IFS= read -r -d '' PATHNAME; do check_path "$PATHNAME"; done < <(
+            STATUS_FILE="$RUNNER_TEMP/a-stock-status.z" node <<'NODE'
+          const fs = require('node:fs')
+          const records = fs.readFileSync(process.env.STATUS_FILE).toString('utf8').split('\0')
+          for (let index = 0; index < records.length; index += 1) {
+            const record = records[index]
+            if (!record) continue
+            const status = record.slice(0, 2)
+            process.stdout.write(`${record.slice(3)}\0`)
+            if ((status.includes('R') || status.includes('C')) && records[index + 1]) {
+              process.stdout.write(`${records[++index]}\0`)
+            }
+          }
+          NODE
+          )
+
+          git add -A -- \
+            packages/finance-provider-astock/upstream \
+            packages/finance-provider-astock/python/generated \
+            THIRD_PARTY_NOTICES.md
+          if git diff --cached --quiet; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run static vendor checks and NGFI fixture tests
+        id: checks
+        if: steps.scope.outputs.has_changes == 'true'
+        continue-on-error: true
+        env:
+          SUMMARY_FILE: ${{ runner.temp }}/a-stock-checks.md
+        run: |
+          set -euo pipefail
+          FAILED=0
+          : > "$SUMMARY_FILE"
+          record() {
+            local name="$1" code="$2" status=passed
+            if [[ "$code" -ne 0 ]]; then status=failed; FAILED=1; fi
+            printf -- '- `%s`: **%s** (exit `%s`)\n' "$name" "$status" "$code" >> "$SUMMARY_FILE"
+          }
+          run_check() {
+            local name="$1"
+            shift
+            set +e
+            "$@"
+            local code=$?
+            set -e
+            record "$name" "$code"
+          }
+
+          # These trusted tests only inspect candidate data or use NGFI-owned
+          # fixtures. Candidate Python is executed solely by the isolated step.
+          run_check vendor-integrity node scripts/sync-a-stock-data.mjs check --json --fail-on-blocked
+          run_check secret-scan node scripts/security-scan.mjs --worktree
+          run_check vendor-static-tests pnpm exec vitest run \
+            tests/a-stock-upstream.test.ts \
+            tests/a-stock-upstream-sync.test.ts
+          run_check provider-and-data-contracts pnpm exec vitest run \
+            tests/data-v2.test.ts \
+            tests/finance-data-service.test.ts \
+            tests/cross-source-reconciliation.test.ts \
+            tests/astock-provider.test.ts \
+            tests/tdx-provider.test.ts \
+            tests/ifind-provider.test.ts \
+            tests/tushare-mcp.test.ts \
+            tests/a-share-integration-contracts.test.ts \
+            tests/cne6-local-provider.test.ts
+          run_check dsh-contracts pnpm exec vitest run \
+            tests/tools.test.ts \
+            tests/composition.test.ts \
+            tests/headless.test.ts \
+            tests/a-share-data-skill.test.ts \
+            tests/isolation.test.ts
+          run_check dsh-profile-prepare pnpm run prepare
+          run_check dsh-headless-profile pnpm run dump:headless
+          run_check dsh-web-profile pnpm run dump:web
+          run_check cne6-offline-suite env \
+            UV_CACHE_DIR="$RUNNER_TEMP/uv-cache" \
+            UV_PROJECT_ENVIRONMENT="$RUNNER_TEMP/cne6-venv" \
+            UV_OFFLINE=1 \
+            uv run --project packages/combinatorial-optimization \
+              --extra dev --offline --frozen --no-sync python -m pytest -q
+          run_check repository-build pnpm run build
+          run_check repository-typecheck pnpm run typecheck
+
+          if ! git diff --quiet || [[ -n "$(git ls-files --others --exclude-standard)" ]]; then
+            echo "::error::static or fixture-only checks modified the candidate worktree"
+            git status --short
+            FAILED=1
+          fi
+          if [[ "$FAILED" -ne 0 ]]; then
+            echo "::error::one or more static or fixture-only checks failed"
+            exit 1
+          fi
+
+      - name: Run the candidate upstream offline suite in isolation
+        id: candidate_suite
+        if: steps.scope.outputs.has_changes == 'true'
+        continue-on-error: true
+        env:
+          TRUSTED_PYTHON_DEPS: ${{ runner.temp }}/a-stock-python-deps
+          SUMMARY_FILE: ${{ runner.temp }}/a-stock-checks.md
+        run: |
+          set -euo pipefail
+          set +e
+          docker run --rm \
+            --network none \
+            --read-only \
+            --cap-drop ALL \
+            --security-opt no-new-privileges \
+            --user 65532:65532 \
+            --pids-limit 128 \
+            --memory 1g \
+            --cpus 1 \
+            --ulimit nofile=256:256 \
+            --tmpfs /tmp:rw,noexec,nosuid,nodev,size=64m \
+            --volume "$GITHUB_WORKSPACE/packages/finance-provider-astock/upstream:/candidate:ro" \
+            --volume "$TRUSTED_PYTHON_DEPS:/opt/trusted-deps:ro" \
+            --workdir /candidate \
+            --env HOME=/tmp \
+            --env PYTHONDONTWRITEBYTECODE=1 \
+            --env ASTOCK_LIVE_TRADE_DATE= \
+            --env ASTOCK_LIVE_MARGIN_DATE= \
+            python:3.12.11-slim-bookworm@sha256:519591d6871b7bc437060736b9f7456b8731f1499a57e22e6c285135ae657bf7 \
+            env PYTHONPATH=/opt/trusted-deps python -B -m unittest discover -s tests -v \
+            > "$RUNNER_TEMP/a-stock-candidate-suite.stdout" \
+            2> "$RUNNER_TEMP/a-stock-candidate-suite.stderr"
+          SUITE_EXIT=$?
+          set -e
+          SUITE_STATUS=passed
+          if [[ "$SUITE_EXIT" -ne 0 ]]; then SUITE_STATUS=failed; fi
+          printf -- '- %s: **%s** (exit %s)\n' \
+            candidate-upstream-offline-suite "$SUITE_STATUS" "$SUITE_EXIT" >> "$SUMMARY_FILE"
+          exit "$SUITE_EXIT"
+
+      - name: Generate the deterministic upgrade report
+        id: report
+        if: steps.scope.outputs.has_changes == 'true'
+        continue-on-error: true
+        env:
+          JSON_REPORT: ${{ runner.temp }}/a-stock-report.json
+          MARKDOWN_REPORT: ${{ runner.temp }}/a-stock-report.md
+        run: |
+          set -euo pipefail
+          node scripts/report-a-stock-data-diff.mjs \
+            --base-ref HEAD --format json --output "$JSON_REPORT"
+          node scripts/report-a-stock-data-diff.mjs \
+            --base-ref HEAD --format markdown --output "$MARKDOWN_REPORT"
+
+      - name: Build the data-only publication artifact
+        id: artifact
+        if: >-
+          steps.scope.outputs.has_changes == 'true' &&
+          steps.checks.outcome == 'success' &&
+          steps.candidate_suite.outcome == 'success' &&
+          steps.report.outcome == 'success'
+        continue-on-error: true
+        env:
+          TARGET_VERSION: ${{ steps.candidate.outputs.version }}
+          TAG_OBJECT: ${{ steps.sync_result.outputs.tag_object }}
+          UPSTREAM_COMMIT: ${{ steps.sync_result.outputs.commit }}
+        run: |
+          set -euo pipefail
+          ARTIFACT_DIR="$RUNNER_TEMP/a-stock-publication"
+          mkdir -p "$ARTIFACT_DIR"
+          if ! git diff --quiet || [[ -n "$(git ls-files --others --exclude-standard)" ]]; then
+            echo "::error::report generation modified the validated candidate worktree"
+            git status --short
+            exit 1
+          fi
+
+          # --no-renames makes both sides of any rename explicit. The publisher
+          # independently validates the applied worktree and the resulting commit.
+          git diff --cached --binary --full-index --no-renames -- \
+            packages/finance-provider-astock/upstream \
+            packages/finance-provider-astock/python/generated \
+            THIRD_PARTY_NOTICES.md > "$ARTIFACT_DIR/candidate.patch"
+          test -s "$ARTIFACT_DIR/candidate.patch"
+          cp "$RUNNER_TEMP/a-stock-report.md" "$ARTIFACT_DIR/report.md"
+          cp "$RUNNER_TEMP/a-stock-checks.md" "$ARTIFACT_DIR/checks.md"
+          printf '%s\n' "$TARGET_VERSION" > "$ARTIFACT_DIR/version.txt"
+          printf '%s\n' "$TAG_OBJECT" > "$ARTIFACT_DIR/tag-object.txt"
+          printf '%s\n' "$UPSTREAM_COMMIT" > "$ARTIFACT_DIR/upstream-commit.txt"
+          git rev-parse HEAD > "$ARTIFACT_DIR/base-commit.txt"
+
+      - name: Upload the validated publication artifact
+        id: upload
+        if: steps.artifact.outcome == 'success'
+        continue-on-error: true
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: a-stock-publication-${{ github.run_id }}
+          path: ${{ runner.temp }}/a-stock-publication
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Set preparation result
+        id: result
+        if: always()
+        env:
+          CANDIDATE_STATE: ${{ steps.candidate.outputs.state }}
+          PACKAGE_MANAGER_OUTCOME: ${{ steps.package_manager.outcome }}
+          NODE_DEPENDENCIES_OUTCOME: ${{ steps.node_dependencies.outcome }}
+          DEPENDENCY_LICENSES_OUTCOME: ${{ steps.dependency_licenses.outcome }}
+          DEPENDENCY_AUDIT_OUTCOME: ${{ steps.dependency_audit.outcome }}
+          SETUP_UV_OUTCOME: ${{ steps.setup_uv.outcome }}
+          PYTHON_DEPENDENCIES_OUTCOME: ${{ steps.python_dependencies.outcome }}
+          CNE6_DEPENDENCIES_OUTCOME: ${{ steps.cne6_dependencies.outcome }}
+          CANDIDATE_OUTCOME: ${{ steps.candidate.outcome }}
+          REQUESTED_STATE: ${{ steps.requested_version.outputs.state }}
+          REQUESTED_OUTCOME: ${{ steps.requested_version.outcome }}
+          SYNC_STATE: ${{ steps.sync_result.outputs.state }}
+          SYNC_OUTCOME: ${{ steps.sync_result.outcome }}
+          HAS_CHANGES: ${{ steps.scope.outputs.has_changes }}
+          SCOPE_OUTCOME: ${{ steps.scope.outcome }}
+          CHECKS_OUTCOME: ${{ steps.checks.outcome }}
+          CANDIDATE_SUITE_OUTCOME: ${{ steps.candidate_suite.outcome }}
+          REPORT_OUTCOME: ${{ steps.report.outcome }}
+          ARTIFACT_OUTCOME: ${{ steps.artifact.outcome }}
+          UPLOAD_OUTCOME: ${{ steps.upload.outcome }}
+          TARGET_VERSION: ${{ steps.candidate.outputs.version }}
+        run: |
+          set -euo pipefail
+          STATE=blocked
+          REASON_CODE=prepare-failed
+          if [[ "$PACKAGE_MANAGER_OUTCOME" == "failure" || "$PACKAGE_MANAGER_OUTCOME" == "cancelled" ]]; then
+            REASON_CODE=trusted-environment-failed
+          elif [[ "$NODE_DEPENDENCIES_OUTCOME" == "failure" || "$NODE_DEPENDENCIES_OUTCOME" == "cancelled" ||
+                "$SETUP_UV_OUTCOME" == "failure" || "$SETUP_UV_OUTCOME" == "cancelled" ||
+                "$PYTHON_DEPENDENCIES_OUTCOME" == "failure" || "$PYTHON_DEPENDENCIES_OUTCOME" == "cancelled" ||
+                "$CNE6_DEPENDENCIES_OUTCOME" == "failure" || "$CNE6_DEPENDENCIES_OUTCOME" == "cancelled" ]]; then
+            REASON_CODE=trusted-environment-failed
+          elif [[ "$DEPENDENCY_LICENSES_OUTCOME" == "failure" || "$DEPENDENCY_LICENSES_OUTCOME" == "cancelled" ]]; then
+            REASON_CODE=dependency-license-policy-failed
+          elif [[ "$DEPENDENCY_AUDIT_OUTCOME" == "failure" || "$DEPENDENCY_AUDIT_OUTCOME" == "cancelled" ]]; then
+            REASON_CODE=dependency-audit-failed
+          elif [[ "$CANDIDATE_STATE" == "blocked" ]]; then
+            STATE=blocked
+            REASON_CODE=upstream-discovery-blocked
+          elif [[ "$CANDIDATE_OUTCOME" == "failure" || "$CANDIDATE_OUTCOME" == "cancelled" ]]; then
+            REASON_CODE=upstream-discovery-failed
+          elif [[ "$REQUESTED_OUTCOME" == "failure" || "$REQUESTED_OUTCOME" == "cancelled" ]]; then
+            REASON_CODE=requested-version-validation-failed
+          elif [[ "$SYNC_STATE" == "blocked" ]]; then
+            REASON_CODE=upstream-synchronization-blocked
+          elif [[ "$SYNC_OUTCOME" == "failure" || "$SYNC_OUTCOME" == "cancelled" ]]; then
+            REASON_CODE=upstream-synchronization-failed
+          elif [[ "$SCOPE_OUTCOME" == "failure" || "$SCOPE_OUTCOME" == "cancelled" ]]; then
+            REASON_CODE=candidate-scope-invalid
+          elif [[ "$CHECKS_OUTCOME" == "failure" || "$CHECKS_OUTCOME" == "cancelled" ]]; then
+            REASON_CODE=trusted-validation-failed
+          elif [[ "$CANDIDATE_SUITE_OUTCOME" == "failure" || "$CANDIDATE_SUITE_OUTCOME" == "cancelled" ]]; then
+            REASON_CODE=candidate-offline-suite-failed
+          elif [[ "$REPORT_OUTCOME" == "failure" || "$REPORT_OUTCOME" == "cancelled" ]]; then
+            REASON_CODE=upgrade-report-failed
+          elif [[ "$ARTIFACT_OUTCOME" == "failure" || "$ARTIFACT_OUTCOME" == "cancelled" ]]; then
+            REASON_CODE=publication-artifact-failed
+          elif [[ "$UPLOAD_OUTCOME" == "failure" || "$UPLOAD_OUTCOME" == "cancelled" ]]; then
+            REASON_CODE=artifact-upload-failed
+          elif [[ "$CANDIDATE_STATE" == "noop" || "$REQUESTED_STATE" == "noop" || \
+                  "$SYNC_STATE" == "noop" || "$HAS_CHANGES" == "false" ]]; then
+            STATE=noop
+            REASON_CODE=none
+          elif [[ "$HAS_CHANGES" == "true" && "$UPLOAD_OUTCOME" == "success" ]]; then
+            STATE=ready
+            REASON_CODE=none
+          fi
+          if [[ -n "$TARGET_VERSION" && \
+                ! "$TARGET_VERSION" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            TARGET_VERSION=
+            STATE=blocked
+            REASON_CODE=invalid-version-output
+          fi
+          {
+            echo "state=$STATE"
+            echo "version=$TARGET_VERSION"
+            echo "reason_code=$REASON_CODE"
+          } >> "$GITHUB_OUTPUT"
+          if [[ "$STATE" == "noop" ]]; then
+            echo "No vendored update is needed." >> "$GITHUB_STEP_SUMMARY"
+          elif [[ "$STATE" == "blocked" ]]; then
+            echo "::error::The upstream candidate is blocked ($REASON_CODE); no candidate content was published."
+          fi
+      - name: Fail a blocked preparation after publishing its outputs
+        if: always() && steps.result.outputs.state == 'blocked'
+        run: |
+          set -euo pipefail
+          echo "::error::Candidate preparation is blocked; the sanitized reporter will record it."
+          exit 1
+
+  publish:
+    name: Publish the validated data-only candidate
+    needs: prepare
+    if: needs.prepare.result == 'success' && needs.prepare.outputs.state == 'ready'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    env:
+      BASE_BRANCH: ${{ github.event.repository.default_branch }}
+      TARGET_VERSION: ${{ needs.prepare.outputs.version }}
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Check out a fresh default branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Download the validated data-only artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: a-stock-publication-${{ github.run_id }}
+          path: ${{ runner.temp }}/a-stock-publication
+
+      - name: Apply, commit, revalidate, and push
+        env:
+          ARTIFACT_DIR: ${{ runner.temp }}/a-stock-publication
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SECURITY_SCANNER: ${{ github.workspace }}/scripts/security-scan.mjs
+        run: |
+          set -euo pipefail
+
+          check_path() {
+            case "$1" in
+              packages/finance-provider-astock/upstream/*|packages/finance-provider-astock/python/generated/*|THIRD_PARTY_NOTICES.md) return 0 ;;
+              *) echo "::error file=$1::refusing scope-external publication path"; return 1 ;;
+            esac
+          }
+          check_name_status_stream() {
+            local status path other
+            while IFS= read -r -d '' status; do
+              IFS= read -r -d '' path
+              check_path "$path"
+              case "$status" in
+                R*|C*)
+                  IFS= read -r -d '' other
+                  check_path "$other"
+                  ;;
+              esac
+            done
+          }
+
+          BRANCH="automation/a-stock-data-$TARGET_VERSION"
+          if [[ ! "$BRANCH" =~ ^automation/a-stock-data-v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ || \
+                "$BRANCH" == "$BASE_BRANCH" || "$BRANCH" == "main" ]]; then
+            echo "::error::refusing an unexpected publication branch"
+            exit 1
+          fi
+          if [[ "$(<"$ARTIFACT_DIR/version.txt")" != "$TARGET_VERSION" ]]; then
+            echo "::error::publication artifact version does not match job output"
+            exit 1
+          fi
+
+          git fetch --no-tags origin "+refs/heads/$BASE_BRANCH:refs/remotes/origin/$BASE_BRANCH"
+          if [[ "$(<"$ARTIFACT_DIR/base-commit.txt")" != "$(git rev-parse "origin/$BASE_BRANCH")" ]]; then
+            echo "::error::the default branch changed after candidate validation; rerun the workflow"
+            exit 1
+          fi
+          git switch --force-create "$BRANCH" "origin/$BASE_BRANCH"
+          git apply --check --index "$ARTIFACT_DIR/candidate.patch"
+          git apply --index "$ARTIFACT_DIR/candidate.patch"
+
+          # Validate all staged paths before invoking any repository script,
+          # then scan those exact index blobs before creating the sole commit.
+          git diff --cached --name-status -z --find-renames --find-copies \
+            > "$RUNNER_TEMP/a-stock-staged-paths.z"
+          check_name_status_stream < "$RUNNER_TEMP/a-stock-staged-paths.z"
+          if git diff --cached --quiet; then
+            echo "::error::validated artifact produced no candidate change"
+            exit 1
+          fi
+          if [[ -n "$(git status --porcelain=v1 | sed -n '/^?? /p')" ]]; then
+            echo "::error::publication worktree contains untracked files"
+            exit 1
+          fi
+
+          # Path validation above guarantees the patch did not replace this
+          # trusted scanner. It reads exact index blobs, not worktree bytes.
+          node "$SECURITY_SCANNER" --staged
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore(data): sync a-stock-data $TARGET_VERSION"
+
+          REMOTE_OID=""
+          if REMOTE_LINE=$(git ls-remote --exit-code --heads origin "refs/heads/$BRANCH"); then
+            REMOTE_OID=${REMOTE_LINE%%$'\t'*}
+            PR_COUNT=$(gh pr list --state all --base "$BASE_BRANCH" --head "$BRANCH" \
+              --json mergedAt --jq '[.[] | select(.mergedAt == null)] | length')
+            if [[ "$PR_COUNT" -ne 1 ]]; then
+              echo "::error::refusing to replace an existing branch without exactly one unmerged PR"
+              exit 1
+            fi
+          fi
+          gh auth setup-git
+
+          # This is the security boundary immediately before push. Re-fetch the
+          # base, require one non-merge commit directly atop it, validate the
+          # aggregate diff, then validate every commit delta (rename/copy source
+          # and destination paths are both checked). Finally require a clean tree.
+          git fetch --no-tags origin "+refs/heads/$BASE_BRANCH:refs/remotes/origin/$BASE_BRANCH"
+          if [[ "$(git rev-parse HEAD^)" != "$(git rev-parse "origin/$BASE_BRANCH")" || \
+                "$(git rev-list --count "origin/$BASE_BRANCH..HEAD")" -ne 1 || \
+                "$(git rev-list --min-parents=2 "origin/$BASE_BRANCH..HEAD" | wc -l)" -ne 0 ]]; then
+            echo "::error::candidate must be exactly one non-merge commit atop the current default branch"
+            exit 1
+          fi
+          git diff --name-status -z --find-renames --find-copies \
+            "origin/$BASE_BRANCH...HEAD" -- > "$RUNNER_TEMP/a-stock-aggregate-paths.z"
+          check_name_status_stream < "$RUNNER_TEMP/a-stock-aggregate-paths.z"
+          while IFS= read -r COMMIT; do
+            git diff-tree --root --no-commit-id --name-status -r -z \
+              --find-renames --find-copies "$COMMIT" -- > "$RUNNER_TEMP/a-stock-commit-paths.z"
+            check_name_status_stream < "$RUNNER_TEMP/a-stock-commit-paths.z"
+          done < <(git rev-list --reverse "origin/$BASE_BRANCH..HEAD")
+          if [[ -n "$(git status --porcelain=v1)" ]]; then
+            echo "::error::refusing to push a dirty publication worktree or index"
+            git status --short
+            exit 1
+          fi
+
+          if [[ -n "$REMOTE_OID" ]]; then
+            git push --force-with-lease="refs/heads/$BRANCH:$REMOTE_OID" origin "HEAD:refs/heads/$BRANCH"
+          else
+            git push origin "HEAD:refs/heads/$BRANCH"
+          fi
+
+      - name: Create or update the version pull request
+        env:
+          ARTIFACT_DIR: ${{ runner.temp }}/a-stock-publication
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          BRANCH="automation/a-stock-data-$TARGET_VERSION"
+          TITLE="chore(data): sync a-stock-data $TARGET_VERSION"
+          BODY_FILE="$RUNNER_TEMP/a-stock-pr-body.md"
+          {
+            printf '## a-stock-data %s\n\n' "$TARGET_VERSION"
+            printf '> Trusted static/fixture checks and the isolated candidate upstream offline suite passed. This PR requires human review and is never auto-merged or deployed.\n\n'
+            printf '### Upgrade report\n\n'
+            sed -n '1,1000p' "$ARTIFACT_DIR/report.md"
+            printf '\n### Static and fixture-only checks\n\n'
+            sed -n '1,1000p' "$ARTIFACT_DIR/checks.md"
+            printf '\nWorkflow run: %s/%s/actions/runs/%s\n' \
+              "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID"
+          } > "$BODY_FILE"
+
+          PR_NUMBER=$(gh pr list --state all --base "$BASE_BRANCH" --head "$BRANCH" \
+            --json number,mergedAt --jq '[.[] | select(.mergedAt == null)] | sort_by(.number) | reverse | .[0].number // empty')
+          if [[ -n "$PR_NUMBER" ]]; then
+            gh pr reopen "$PR_NUMBER" >/dev/null 2>&1 || true
+            gh pr edit "$PR_NUMBER" --title "$TITLE" --body-file "$BODY_FILE"
+          else
+            gh pr create --base "$BASE_BRANCH" --head "$BRANCH" --title "$TITLE" --body-file "$BODY_FILE"
+            PR_NUMBER=$(gh pr list --state open --base "$BASE_BRANCH" --head "$BRANCH" \
+              --json number --jq '.[0].number')
+          fi
+          gh issue edit "$PR_NUMBER" --remove-label blocked-upstream >/dev/null 2>&1 || true
+          gh pr ready "$PR_NUMBER" >/dev/null 2>&1 || true
+          PR_URL=$(gh pr view "$PR_NUMBER" --json url --jq .url)
+          printf 'A-stock update PR: %s\n' "$PR_URL" >> "$GITHUB_STEP_SUMMARY"
+
+  report_blocked:
+    name: Report a blocked upstream candidate
+    needs: prepare
+    if: >-
+      always() &&
+      (needs.prepare.outputs.state == 'blocked' ||
+       (needs.prepare.result != 'success' && needs.prepare.outputs.state != 'noop'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: none
+      issues: write
+      pull-requests: write
+    env:
+      TARGET_VERSION: ${{ needs.prepare.outputs.version }}
+      REASON_CODE: ${{ needs.prepare.outputs.reason_code }}
+      BASE_BRANCH: ${{ github.event.repository.default_branch }}
+      GH_REPO: ${{ github.repository }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    defaults:
+      run:
+        shell: bash
+
+    # This job deliberately has no checkout or artifact download. It uses only
+    # validated job outputs and GitHub metadata, so candidate-controlled bytes
+    # are never interpreted with a write-capable token.
+    steps:
+      - name: Create or update the sanitized blocked record
+        env:
+          TITLE_PREFIX: 'chore(data): a-stock-data'
+        run: |
+          set -euo pipefail
+          if [[ ! "$TARGET_VERSION" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            TARGET_VERSION=unknown
+          fi
+          case "$REASON_CODE" in
+            trusted-environment-failed|dependency-license-policy-failed|dependency-audit-failed|upstream-discovery-blocked|upstream-discovery-failed|requested-version-validation-failed|upstream-synchronization-blocked|upstream-synchronization-failed|candidate-scope-invalid|trusted-validation-failed|candidate-offline-suite-failed|upgrade-report-failed|publication-artifact-failed|artifact-upload-failed|invalid-version-output|prepare-failed) ;;
+            *) REASON_CODE=prepare-failed ;;
+          esac
+
+          TITLE="$TITLE_PREFIX $TARGET_VERSION blocked"
+          export TITLE
+          BODY_FILE="$RUNNER_TEMP/a-stock-blocked.md"
+          {
+            printf '## Blocked a-stock-data candidate\n\n'
+            printf -- '- Version: %s\n' "$TARGET_VERSION"
+            printf -- '- Sanitized reason: %s\n\n' "$REASON_CODE"
+            printf 'No candidate code or artifact was published. Maintainer review is required.\n\n'
+            printf 'Workflow run: %s/%s/actions/runs/%s\n' \
+              "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID"
+          } > "$BODY_FILE"
+
+          gh label create blocked-upstream \
+            --description "Automated upstream update is blocked pending review" \
+            --color B60205 --force
+
+          PR_NUMBER=
+          if [[ "$TARGET_VERSION" != "unknown" ]]; then
+            BRANCH="automation/a-stock-data-$TARGET_VERSION"
+            PR_NUMBER=$(gh pr list --state open --base "$BASE_BRANCH" --head "$BRANCH" \
+              --json number --jq 'sort_by(.number) | reverse | .[0].number // empty')
+          fi
+          if [[ -n "$PR_NUMBER" ]]; then
+            gh pr edit "$PR_NUMBER" --body-file "$BODY_FILE"
+            gh issue edit "$PR_NUMBER" --add-label blocked-upstream
+            RECORD_URL=$(gh pr view "$PR_NUMBER" --json url --jq .url)
+          else
+            ISSUE_NUMBER=$(gh issue list --state open --label blocked-upstream \
+              --search "$TITLE in:title" --json number,title \
+              --jq 'map(select(.title == env.TITLE)) | sort_by(.number) | reverse | .[0].number // empty')
+            if [[ -n "$ISSUE_NUMBER" ]]; then
+              gh issue edit "$ISSUE_NUMBER" --title "$TITLE" --body-file "$BODY_FILE" \
+                --add-label blocked-upstream
+              RECORD_URL=$(gh issue view "$ISSUE_NUMBER" --json url --jq .url)
+            else
+              RECORD_URL=$(gh issue create --title "$TITLE" --body-file "$BODY_FILE" \
+                --label blocked-upstream)
+            fi
+          fi
+          printf 'Blocked A-stock update record: %s\n' "$RECORD_URL" >> "$GITHUB_STEP_SUMMARY"

@@ -11,10 +11,17 @@ interface E2eResult {
 }
 
 const execFileAsync = promisify(execFile)
-const task = [
-  '先调用 skill 工具加载 ticker-snapshot，再调用所需的 finance 工具查询 AAPL。',
-  '用中文给出公司名、ticker、当前价格、币种、观察时间与近一个月走势；缺失值不要猜。',
-].join('')
+const ashareE2e = process.env.NGFI_E2E_ASHARE === '1'
+const task = ashareE2e
+  ? [
+      '先调用 skill 工具加载 a-share-data-research，再规范化并查询 600519.SH。',
+      '至少调用 finance_cn_instrument 和 finance_cn_quote 或 finance_cn_bars；',
+      '用中文披露 actualProvider、upstreamSource、交易日、抓取时间、复权方式和 fallback。缺失值不要猜。',
+    ].join('')
+  : [
+      '先调用 skill 工具加载 ticker-snapshot，再调用所需的 finance 工具查询 AAPL。',
+      '用中文给出公司名、ticker、当前价格、币种、观察时间与近一个月走势；缺失值不要猜。',
+    ].join('')
 
 function parseResult(stdout: string): E2eResult {
   const line = stdout.trim().split(/\r?\n/u).at(-1)
@@ -46,9 +53,21 @@ async function main(): Promise<void> {
     if (result.selection?.provider !== runtime.provider) errors.push(`provider was not ${runtime.provider}`)
     if (result.selection?.model !== runtime.model) errors.push(`model was not ${runtime.model}`)
     if (result.preset !== 'finance-analyst') errors.push('finance-analyst preset was not mounted')
-    if (!calls.includes('skill')) errors.push('ticker-snapshot Skill was not loaded through the skill tool')
-    if (!calls.includes('finance_security_reference')) errors.push('security reference tool was not called')
-    if (!calls.includes('finance_market_data')) errors.push('market data tool was not called')
+    if (!calls.includes('skill')) errors.push(`${ashareE2e ? 'a-share-data-research' : 'ticker-snapshot'} Skill was not loaded through the skill tool`)
+    if (ashareE2e) {
+      if (!calls.includes('finance_cn_instrument')) errors.push('A-share instrument tool was not called')
+      if (!calls.some(name => name === 'finance_cn_quote' || name === 'finance_cn_bars')) {
+        errors.push('A-share quote or bars tool was not called')
+      }
+      if (typeof result.text === 'string') {
+        for (const marker of ['actualProvider', 'upstreamSource', 'fallback']) {
+          if (!result.text.includes(marker)) errors.push(`A-share answer omitted ${marker}`)
+        }
+      }
+    } else {
+      if (!calls.includes('finance_security_reference')) errors.push('security reference tool was not called')
+      if (!calls.includes('finance_market_data')) errors.push('market data tool was not called')
+    }
     if (result.reason?.kind !== 'completed') errors.push(`turn did not complete: ${JSON.stringify(result.reason)}`)
     if (typeof result.text !== 'string' || result.text.trim() === '') errors.push('assistant returned no text')
     if (errors.length > 0) {

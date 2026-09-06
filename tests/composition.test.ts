@@ -3,7 +3,11 @@ import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { promisify } from 'node:util'
 import { describe, expect, it } from 'vitest'
-import { createFinanceTools } from '@finance2dsh/dsh-tools'
+import {
+  ASHARE_TOOL_NAMES,
+  createAshareFinanceTools,
+  createFinanceTools,
+} from '@finance2dsh/dsh-tools'
 import type { FinanceDataProvider } from '@finance2dsh/core'
 import { FINANCE_TOOL_ALLOWLIST } from '../packages/dsh-finance-bundle/src/policy.js'
 import { PROJECT_ROOT, RUNTIME_HOME, prepareRuntime, resolveDshBin } from '../src/runtime.js'
@@ -46,7 +50,29 @@ async function dump(profile: string): Promise<string> {
 describe('DSH finance composition', () => {
   it('registers exactly the public V1 finance tool names', () => {
     expect(createFinanceTools(unusedProvider).map(tool => tool.name)).toEqual(EXPECTED_FINANCE_TOOLS)
-    expect(FINANCE_TOOL_ALLOWLIST).toEqual(['skill', ...EXPECTED_FINANCE_TOOLS])
+    const ashareTools = createAshareFinanceTools({
+      service: { execute: async () => { throw new Error('not used') } },
+      approvedProviderIds: [],
+      catalog: async () => [],
+    })
+    expect(ashareTools.map(tool => tool.name)).toEqual(ASHARE_TOOL_NAMES)
+    expect(FINANCE_TOOL_ALLOWLIST).toEqual([
+      'skill',
+      ...EXPECTED_FINANCE_TOOLS,
+      ...ASHARE_TOOL_NAMES,
+    ])
+  })
+
+  it.each([
+    ['finance_security_reference', { ticker: '600519.SS' }],
+    ['finance_fundamentals', { ticker: '000001.SZ' }],
+    ['finance_market_data', { ticker: '600519.SS' }],
+    ['finance_estimates', { ticker: '000001.SZ' }],
+    ['finance_comparables', { ticker: '600519.SS', peers: ['AAPL'] }],
+  ])('forces A-share ticker input away from generic tool %s', async (name, args) => {
+    const tool = createFinanceTools(unusedProvider).find(candidate => candidate.name === name)
+    await expect(tool?.execute(args as never, { signal: new AbortController().signal } as never))
+      .rejects.toThrow(/finance_cn_/i)
   })
 
   it('composes the headless profile with the public DeepSeek provider and project runner', async () => {

@@ -1,0 +1,6517 @@
+{
+  "schemaVersion": 1,
+  "upstream": {
+    "repository": "https://github.com/simonlin1212/a-stock-data.git",
+    "version": "v3.8.0",
+    "tagObject": "9f995e66ee792255e492a15627f98615627041c6",
+    "peeledCommit": "2012ce7cd0e75d379c5e6cbd3115514f300f3bc8",
+    "tree": "8a7a81801271bda328d6015ad6304e5c0960a01f"
+  },
+  "extraction": {
+    "specVersion": 1,
+    "selectors": [
+      {
+        "id": "official-data-core",
+        "fenceIndex": 51,
+        "bodySha256": "f04ff9a36319272af51036f9c2ecfb916cb78e4ff559c4e6a79a87bef3d79cb4"
+      },
+      {
+        "id": "official-data-backups",
+        "fenceIndex": 60,
+        "bodySha256": "f4e0f57ec421a2f8a7bd3f351dc71a2c2d66ea6ea67b74171955d28ef8089182"
+      }
+    ]
+  },
+  "summary": {
+    "advertisedCapabilities": 60,
+    "definitionOccurrences": 112,
+    "topLevelDefinitionOccurrences": 107,
+    "uniqueDefinitions": 111,
+    "generatedDefinitions": 16,
+    "statusCounts": {
+      "implemented-canonical": 5,
+      "implemented-experimental": 1,
+      "blocked-auth": 1,
+      "deferred-policy": 53,
+      "unsupported": 0
+    }
+  },
+  "capabilities": [
+    {
+      "id": "capability-001",
+      "section": "1.1",
+      "name": "tdx_client.bars / tdx_client.quotes / tdx_client.transaction",
+      "expression": "`tdx_client()` → `.bars()` / `.quotes()` / `.transaction()`",
+      "description": "K线(多周期,不复权) / 五档盘口 / 逐笔成交",
+      "upstreamCallables": [
+        "tdx_client.bars",
+        "tdx_client.quotes",
+        "tdx_client.transaction"
+      ],
+      "sourceIds": [
+        "mootdx"
+      ],
+      "status": "implemented-experimental",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "tdx_client.bars",
+          "status": "implemented-canonical",
+          "providerId": "tdx-community",
+          "operation": "market-bars",
+          "coverage": "full",
+          "implementation": "native-adapter",
+          "runtimeSourceIds": [
+            "mootdx"
+          ],
+          "sourceIds": [
+            "mootdx"
+          ]
+        },
+        {
+          "upstreamCallable": "tdx_client.quotes",
+          "status": "implemented-experimental",
+          "providerId": "tdx-community",
+          "operation": "quote",
+          "coverage": "partial",
+          "implementation": "native-adapter",
+          "runtimeSourceIds": [
+            "mootdx"
+          ],
+          "canonicalCapabilities": [
+            "quote"
+          ],
+          "unmappedCanonicalCapabilities": [
+            "order-book"
+          ],
+          "reason": "The canonical quote mapping exposes best bid/ask only, not the upstream five-level order book.",
+          "sourceIds": [
+            "mootdx"
+          ]
+        },
+        {
+          "upstreamCallable": "tdx_client.transaction",
+          "status": "unsupported",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "reason": "No curated transaction operation is registered.",
+          "sourceIds": []
+        }
+      ],
+      "reason": "TDX bars are routed, quotes expose only the canonical quote subset while order-book is not exposed, and transaction has no curated runtime operation."
+    },
+    {
+      "id": "capability-002",
+      "section": "1.2",
+      "name": "tencent_quote",
+      "expression": "`tencent_quote(codes)`",
+      "description": "实时价/PE/PB/市值/换手/涨跌停/指数/ETF（带 `is_stale` 僵尸报价标志）",
+      "upstreamCallables": [
+        "tencent_quote"
+      ],
+      "sourceIds": [
+        "tencent-finance"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "tencent_quote",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "replacementRuntime": {
+            "providerId": "a-stock-public",
+            "operation": "quote",
+            "runtimeSourceIds": [
+              "eastmoney-push2"
+            ]
+          },
+          "reason": "The curated quote operation uses East Money and does not invoke Tencent quote.",
+          "sourceIds": []
+        }
+      ],
+      "reason": "The canonical quote runtime uses East Money, not the inventoried Tencent endpoint."
+    },
+    {
+      "id": "capability-003",
+      "section": "1.3",
+      "name": "baidu_kline_with_ma",
+      "expression": "`baidu_kline_with_ma(code)`",
+      "description": "日K线带 MA5/10/20",
+      "upstreamCallables": [
+        "baidu_kline_with_ma"
+      ],
+      "sourceIds": [
+        "baidu-gushitong"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "baidu_kline_with_ma",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-004",
+      "section": "1.4",
+      "name": "sina_adjust_factor / apply_adjust",
+      "expression": "`sina_adjust_factor(code, kind)` / `apply_adjust(bars, factors)`",
+      "description": "复权因子 qfq/hfq + 套用到不复权K线",
+      "upstreamCallables": [
+        "sina_adjust_factor",
+        "apply_adjust"
+      ],
+      "sourceIds": [
+        "sina-finance"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "sina_adjust_factor",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        },
+        {
+          "upstreamCallable": "apply_adjust",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-005",
+      "section": "2.1",
+      "name": "eastmoney_reports",
+      "expression": "`eastmoney_reports(code)` / `download_pdf(rec)`",
+      "description": "个股研报+评级+三年EPS / 研报PDF",
+      "upstreamCallables": [
+        "eastmoney_reports"
+      ],
+      "sourceIds": [
+        "eastmoney-reportapi"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "eastmoney_reports",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-006",
+      "section": "2.1",
+      "name": "download_pdf",
+      "expression": "`eastmoney_reports(code)` / `download_pdf(rec)`",
+      "description": "个股研报+评级+三年EPS / 研报PDF",
+      "upstreamCallables": [
+        "download_pdf"
+      ],
+      "sourceIds": [
+        "eastmoney-reportapi"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "download_pdf",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-007",
+      "section": "2.2",
+      "name": "ths_eps_forecast",
+      "expression": "`ths_eps_forecast(code)`",
+      "description": "机构一致预期 EPS",
+      "upstreamCallables": [
+        "ths_eps_forecast"
+      ],
+      "sourceIds": [
+        "ths-basic"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "ths_eps_forecast",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-008",
+      "section": "2.3",
+      "name": "iwencai_search / iwencai_query",
+      "expression": "`iwencai_search(query)` / `iwencai_query(query)`",
+      "description": "NL 语义搜研报/选股（需 Key）",
+      "upstreamCallables": [
+        "iwencai_search",
+        "iwencai_query"
+      ],
+      "sourceIds": [
+        "iwencai"
+      ],
+      "status": "blocked-auth",
+      "generated": false,
+      "auth": "api-key",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "iwencai_search",
+          "status": "blocked-auth",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        },
+        {
+          "upstreamCallable": "iwencai_query",
+          "status": "blocked-auth",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "The upstream iWenCai entry requires authentication and has no configured curated runtime route."
+    },
+    {
+      "id": "capability-009",
+      "section": "3.1",
+      "name": "ths_hot_reason",
+      "expression": "`ths_hot_reason()`",
+      "description": "当日强势股+题材归因",
+      "upstreamCallables": [
+        "ths_hot_reason"
+      ],
+      "sourceIds": [
+        "ths-hot"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "ths_hot_reason",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-010",
+      "section": "3.2",
+      "name": "hsgt_realtime",
+      "expression": "`hsgt_realtime()`",
+      "description": "北向分钟流向（hgt 可用 / sgt 仅参考）",
+      "upstreamCallables": [
+        "hsgt_realtime"
+      ],
+      "sourceIds": [
+        "ths-hsgt"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "hsgt_realtime",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-011",
+      "section": "3.3",
+      "name": "eastmoney_concept_blocks",
+      "expression": "`eastmoney_concept_blocks(code)`",
+      "description": "个股所属板块/概念归属",
+      "upstreamCallables": [
+        "eastmoney_concept_blocks"
+      ],
+      "sourceIds": [
+        "eastmoney-push2"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "eastmoney_concept_blocks",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-012",
+      "section": "3.4",
+      "name": "eastmoney_fund_flow_minute",
+      "expression": "`eastmoney_fund_flow_minute(code)`",
+      "description": "个股资金流（分钟级）",
+      "upstreamCallables": [
+        "eastmoney_fund_flow_minute"
+      ],
+      "sourceIds": [
+        "eastmoney-push2"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "eastmoney_fund_flow_minute",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-013",
+      "section": "3.5",
+      "name": "dragon_tiger_board",
+      "expression": "`dragon_tiger_board(code, date)`",
+      "description": "个股龙虎榜+买卖席位 TOP5",
+      "upstreamCallables": [
+        "dragon_tiger_board"
+      ],
+      "sourceIds": [
+        "eastmoney-datacenter"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "dragon_tiger_board",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-014",
+      "section": "3.6",
+      "name": "lockup_expiry",
+      "expression": "`lockup_expiry(code, date)`",
+      "description": "解禁历史+未来90天待解禁",
+      "upstreamCallables": [
+        "lockup_expiry"
+      ],
+      "sourceIds": [
+        "eastmoney-datacenter"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "lockup_expiry",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-015",
+      "section": "3.7",
+      "name": "industry_comparison",
+      "expression": "`industry_comparison()`",
+      "description": "行业板块涨跌排名",
+      "upstreamCallables": [
+        "industry_comparison"
+      ],
+      "sourceIds": [
+        "eastmoney-push2"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "industry_comparison",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-016",
+      "section": "3.8",
+      "name": "board_fund_flow",
+      "expression": "`board_fund_flow(board_type, period)`",
+      "description": "板块资金流向（行业/概念/地域 × 今日/5日/10日，主力+四档）",
+      "upstreamCallables": [
+        "board_fund_flow"
+      ],
+      "sourceIds": [
+        "eastmoney-push2"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "board_fund_flow",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-017",
+      "section": "3.9",
+      "name": "daily_dragon_tiger",
+      "expression": "`daily_dragon_tiger(date)`",
+      "description": "全市场龙虎榜+净买额排名",
+      "upstreamCallables": [
+        "daily_dragon_tiger"
+      ],
+      "sourceIds": [
+        "eastmoney-datacenter"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "daily_dragon_tiger",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-018",
+      "section": "4.1",
+      "name": "margin_trading",
+      "expression": "`margin_trading(code)`",
+      "description": "融资融券明细",
+      "upstreamCallables": [
+        "margin_trading"
+      ],
+      "sourceIds": [
+        "eastmoney-datacenter"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "margin_trading",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-019",
+      "section": "4.2",
+      "name": "block_trade",
+      "expression": "`block_trade(code)`",
+      "description": "大宗交易+营业部",
+      "upstreamCallables": [
+        "block_trade"
+      ],
+      "sourceIds": [
+        "eastmoney-datacenter"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "block_trade",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-020",
+      "section": "4.3",
+      "name": "holder_num_change",
+      "expression": "`holder_num_change(code)`",
+      "description": "股东户数变化",
+      "upstreamCallables": [
+        "holder_num_change"
+      ],
+      "sourceIds": [
+        "eastmoney-datacenter"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "holder_num_change",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-021",
+      "section": "4.4",
+      "name": "dividend_history",
+      "expression": "`dividend_history(code)`",
+      "description": "分红送转历史",
+      "upstreamCallables": [
+        "dividend_history"
+      ],
+      "sourceIds": [
+        "eastmoney-datacenter"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "dividend_history",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-022",
+      "section": "4.5",
+      "name": "stock_fund_flow_120d",
+      "expression": "`stock_fund_flow_120d(code)`",
+      "description": "个股资金流（120日，日级）",
+      "upstreamCallables": [
+        "stock_fund_flow_120d"
+      ],
+      "sourceIds": [
+        "eastmoney-push2"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "stock_fund_flow_120d",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-023",
+      "section": "4.6",
+      "name": "chip_distribution",
+      "expression": "`chip_distribution(df)`",
+      "description": "筹码分布（获利比例/平均成本/90-70成本区间/筹码峰）",
+      "upstreamCallables": [
+        "chip_distribution"
+      ],
+      "sourceIds": [
+        "mootdx",
+        "baostock"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "chip_distribution",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-024",
+      "section": "5.1",
+      "name": "eastmoney_stock_news",
+      "expression": "`eastmoney_stock_news(code)`",
+      "description": "个股新闻",
+      "upstreamCallables": [
+        "eastmoney_stock_news"
+      ],
+      "sourceIds": [
+        "eastmoney-push2"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "eastmoney_stock_news",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-025",
+      "section": "5.2",
+      "name": "cls_telegraph",
+      "expression": "`cls_telegraph()`",
+      "description": "财联社电报（7×24，本地签名零key）",
+      "upstreamCallables": [
+        "cls_telegraph"
+      ],
+      "sourceIds": [
+        "cailianpress"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "cls_telegraph",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-026",
+      "section": "5.3",
+      "name": "eastmoney_global_news",
+      "expression": "`eastmoney_global_news()`",
+      "description": "全球资讯（7×24）",
+      "upstreamCallables": [
+        "eastmoney_global_news"
+      ],
+      "sourceIds": [
+        "eastmoney-push2"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "eastmoney_global_news",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-027",
+      "section": "6.1",
+      "name": "tdx_client.finance",
+      "expression": "`client.finance(symbol)`",
+      "description": "季报快照 37 字段",
+      "upstreamCallables": [
+        "tdx_client.finance"
+      ],
+      "sourceIds": [
+        "mootdx"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "tdx_client.finance",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-028",
+      "section": "6.2",
+      "name": "tdx_client.F10",
+      "expression": "`client.F10(symbol, name)`",
+      "description": "公司资料 9 大类文本",
+      "upstreamCallables": [
+        "tdx_client.F10"
+      ],
+      "sourceIds": [
+        "mootdx"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "tdx_client.F10",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-029",
+      "section": "6.3",
+      "name": "eastmoney_stock_info",
+      "expression": "`eastmoney_stock_info(code)`",
+      "description": "行业/股本/市值/上市日期",
+      "upstreamCallables": [
+        "eastmoney_stock_info"
+      ],
+      "sourceIds": [
+        "eastmoney-push2"
+      ],
+      "status": "implemented-canonical",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": "a-stock-public.instrument-reference",
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "eastmoney_stock_info",
+          "status": "implemented-canonical",
+          "providerId": "a-stock-public",
+          "operation": "instrument-reference",
+          "coverage": "curated",
+          "implementation": "native-adapter",
+          "runtimeSourceIds": [
+            "eastmoney-push2"
+          ],
+          "sourceIds": [
+            "eastmoney-push2"
+          ]
+        }
+      ],
+      "reason": null
+    },
+    {
+      "id": "capability-030",
+      "section": "6.4",
+      "name": "sina_financial_report",
+      "expression": "`sina_financial_report(code, type)`",
+      "description": "财报三表",
+      "upstreamCallables": [
+        "sina_financial_report"
+      ],
+      "sourceIds": [
+        "sina-finance"
+      ],
+      "status": "implemented-canonical",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": "a-stock-public.fundamentals",
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "sina_financial_report",
+          "status": "implemented-canonical",
+          "providerId": "a-stock-public",
+          "operation": "fundamentals",
+          "coverage": "curated",
+          "implementation": "native-adapter",
+          "runtimeSourceIds": [
+            "sina-finance"
+          ],
+          "sourceIds": [
+            "sina-finance"
+          ]
+        }
+      ],
+      "reason": null
+    },
+    {
+      "id": "capability-031",
+      "section": "6.5",
+      "name": "baostock_valuation_history",
+      "expression": "`baostock_valuation_history(code, s, e)`",
+      "description": "估值历史 PE/PB/PS/PCF + 换手率 + 停牌 + ST（**不支持北交所**）",
+      "upstreamCallables": [
+        "baostock_valuation_history"
+      ],
+      "sourceIds": [
+        "baostock"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "baostock_valuation_history",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-032",
+      "section": "6.6",
+      "name": "baostock_stock_basic",
+      "expression": "`baostock_stock_basic(code)`",
+      "description": "上市日 / **退市日** / 状态",
+      "upstreamCallables": [
+        "baostock_stock_basic"
+      ],
+      "sourceIds": [
+        "baostock"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "baostock_stock_basic",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-033",
+      "section": "6.7",
+      "name": "sw_industry_history / sw_industry_as_of",
+      "expression": "`sw_industry_history()` / `sw_industry_as_of(df, code, d)`",
+      "description": "申万行业**变迁史**（消除前视偏差，仅代码无中文名）",
+      "upstreamCallables": [
+        "sw_industry_history",
+        "sw_industry_as_of"
+      ],
+      "sourceIds": [
+        "sw-research"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "sw_industry_history",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        },
+        {
+          "upstreamCallable": "sw_industry_as_of",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-034",
+      "section": "7.1",
+      "name": "cninfo_announcements",
+      "expression": "`cninfo_announcements(code)`",
+      "description": "公告检索+PDF 下载",
+      "upstreamCallables": [
+        "cninfo_announcements"
+      ],
+      "sourceIds": [
+        "cninfo"
+      ],
+      "status": "implemented-canonical",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": "a-stock-public.disclosures",
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "cninfo_announcements",
+          "status": "implemented-canonical",
+          "providerId": "a-stock-public",
+          "operation": "disclosures",
+          "coverage": "curated",
+          "implementation": "native-adapter",
+          "runtimeSourceIds": [
+            "cninfo",
+            "szse-official"
+          ],
+          "sourceIds": [
+            "cninfo",
+            "szse-official"
+          ]
+        }
+      ],
+      "reason": null
+    },
+    {
+      "id": "capability-035",
+      "section": "7.2",
+      "name": "tdx_client.F10",
+      "expression": "`client.F10(symbol, name='最新提示')`",
+      "description": "最新公告摘要",
+      "upstreamCallables": [
+        "tdx_client.F10"
+      ],
+      "sourceIds": [
+        "mootdx"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "tdx_client.F10",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-036",
+      "section": "8.1",
+      "name": "em_zt_pool",
+      "expression": "`em_zt_pool` / `em_zb_pool` / `em_dt_pool` / `em_yzt_pool`",
+      "description": "涨停/炸板/跌停/昨涨停四池",
+      "upstreamCallables": [
+        "em_zt_pool"
+      ],
+      "sourceIds": [
+        "eastmoney-push2"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "em_zt_pool",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-037",
+      "section": "8.1",
+      "name": "em_zb_pool",
+      "expression": "`em_zt_pool` / `em_zb_pool` / `em_dt_pool` / `em_yzt_pool`",
+      "description": "涨停/炸板/跌停/昨涨停四池",
+      "upstreamCallables": [
+        "em_zb_pool"
+      ],
+      "sourceIds": [
+        "eastmoney-push2"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "em_zb_pool",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-038",
+      "section": "8.1",
+      "name": "em_dt_pool",
+      "expression": "`em_zt_pool` / `em_zb_pool` / `em_dt_pool` / `em_yzt_pool`",
+      "description": "涨停/炸板/跌停/昨涨停四池",
+      "upstreamCallables": [
+        "em_dt_pool"
+      ],
+      "sourceIds": [
+        "eastmoney-push2"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "em_dt_pool",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-039",
+      "section": "8.1",
+      "name": "em_yzt_pool",
+      "expression": "`em_zt_pool` / `em_zb_pool` / `em_dt_pool` / `em_yzt_pool`",
+      "description": "涨停/炸板/跌停/昨涨停四池",
+      "upstreamCallables": [
+        "em_yzt_pool"
+      ],
+      "sourceIds": [
+        "eastmoney-push2"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "em_yzt_pool",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-040",
+      "section": "8.2",
+      "name": "ths_limit_up_pool",
+      "expression": "`ths_limit_up_pool(date)`",
+      "description": "涨停原因题材+封板成功率+板型",
+      "upstreamCallables": [
+        "ths_limit_up_pool"
+      ],
+      "sourceIds": [
+        "ths-hot"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "ths_limit_up_pool",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-041",
+      "section": "8.3",
+      "name": "limit_up_sentiment",
+      "expression": "`limit_up_sentiment(date)`",
+      "description": "炸板率/连板高度/连板梯队",
+      "upstreamCallables": [
+        "limit_up_sentiment"
+      ],
+      "sourceIds": [
+        "eastmoney-push2"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "limit_up_sentiment",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-042",
+      "section": "8.4",
+      "name": "em_stock_monitor",
+      "expression": "`em_stock_monitor()`",
+      "description": "重点监控池（风险警示名单+生效时间窗）",
+      "upstreamCallables": [
+        "em_stock_monitor"
+      ],
+      "sourceIds": [
+        "eastmoney-push2"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "em_stock_monitor",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-043",
+      "section": "8.5",
+      "name": "em_price_anomaly",
+      "expression": "`em_price_anomaly()` / `em_price_anomaly_count()`",
+      "description": "日内异动明细 / 按标的聚合异动统计（严重异常波动）",
+      "upstreamCallables": [
+        "em_price_anomaly"
+      ],
+      "sourceIds": [
+        "eastmoney-push2"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "em_price_anomaly",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-044",
+      "section": "8.5",
+      "name": "em_price_anomaly_count",
+      "expression": "`em_price_anomaly()` / `em_price_anomaly_count()`",
+      "description": "日内异动明细 / 按标的聚合异动统计（严重异常波动）",
+      "upstreamCallables": [
+        "em_price_anomaly_count"
+      ],
+      "sourceIds": [
+        "eastmoney-push2"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "em_price_anomaly_count",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-045",
+      "section": "9.1",
+      "name": "sina_option_codes",
+      "expression": "`sina_option_codes` / `sina_option_tquote` / `sina_option_greeks`",
+      "description": "ETF期权合约清单 / T型报价 / 希腊字母+IV",
+      "upstreamCallables": [
+        "sina_option_codes"
+      ],
+      "sourceIds": [
+        "sina-finance"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "sina_option_codes",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-046",
+      "section": "9.1",
+      "name": "sina_option_tquote",
+      "expression": "`sina_option_codes` / `sina_option_tquote` / `sina_option_greeks`",
+      "description": "ETF期权合约清单 / T型报价 / 希腊字母+IV",
+      "upstreamCallables": [
+        "sina_option_tquote"
+      ],
+      "sourceIds": [
+        "sina-finance"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "sina_option_tquote",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-047",
+      "section": "9.1",
+      "name": "sina_option_greeks",
+      "expression": "`sina_option_codes` / `sina_option_tquote` / `sina_option_greeks`",
+      "description": "ETF期权合约清单 / T型报价 / 希腊字母+IV",
+      "upstreamCallables": [
+        "sina_option_greeks"
+      ],
+      "sourceIds": [
+        "sina-finance"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "sina_option_greeks",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-048",
+      "section": "10.1",
+      "name": "cninfo_irm",
+      "expression": "`cninfo_irm(code)`",
+      "description": "互动易问答（提问+公司回复）",
+      "upstreamCallables": [
+        "cninfo_irm"
+      ],
+      "sourceIds": [
+        "cninfo"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "cninfo_irm",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-049",
+      "section": "10.2",
+      "name": "ths_hot_list",
+      "expression": "`ths_hot_list()` / `em_hot_rank()` / `em_hot_concept(code)`",
+      "description": "热榜/人气榜/概念命中",
+      "upstreamCallables": [
+        "ths_hot_list"
+      ],
+      "sourceIds": [
+        "ths-hot"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "ths_hot_list",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-050",
+      "section": "10.2",
+      "name": "em_hot_rank",
+      "expression": "`ths_hot_list()` / `em_hot_rank()` / `em_hot_concept(code)`",
+      "description": "热榜/人气榜/概念命中",
+      "upstreamCallables": [
+        "em_hot_rank"
+      ],
+      "sourceIds": [
+        "eastmoney-push2"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "em_hot_rank",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-051",
+      "section": "10.2",
+      "name": "em_hot_concept",
+      "expression": "`ths_hot_list()` / `em_hot_rank()` / `em_hot_concept(code)`",
+      "description": "热榜/人气榜/概念命中",
+      "upstreamCallables": [
+        "em_hot_concept"
+      ],
+      "sourceIds": [
+        "eastmoney-push2"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "em_hot_concept",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-052",
+      "section": "11.1",
+      "name": "pboc_social_financing",
+      "expression": "`pboc_social_financing(year)`",
+      "description": "社会融资规模增量（月度12列）",
+      "upstreamCallables": [
+        "pboc_social_financing"
+      ],
+      "sourceIds": [
+        "pboc"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "pboc_social_financing",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-053",
+      "section": "11.2",
+      "name": "nbs_pmi",
+      "expression": "`nbs_pmi()`",
+      "description": "制造业/非制造业/综合 PMI + 大中小型企业",
+      "upstreamCallables": [
+        "nbs_pmi"
+      ],
+      "sourceIds": [
+        "nbs"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "nbs_pmi",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    },
+    {
+      "id": "capability-054",
+      "section": "12.1",
+      "name": "index_constituents",
+      "expression": "`index_constituents(index_code, provider)`",
+      "description": "最近公布的沪深北指数成分；csi/cni 显式选源",
+      "upstreamCallables": [
+        "index_constituents"
+      ],
+      "sourceIds": [
+        "csi",
+        "cni"
+      ],
+      "status": "implemented-canonical",
+      "generated": true,
+      "auth": "none",
+      "canonicalMapping": "a-stock-public.index",
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "index_constituents",
+          "status": "implemented-canonical",
+          "providerId": "a-stock-public",
+          "operation": "index",
+          "coverage": "full",
+          "implementation": "generated",
+          "generatedCallable": "index_constituents",
+          "runtimeSourceIds": [
+            "csi",
+            "cni"
+          ],
+          "sourceIds": [
+            "csi",
+            "cni"
+          ]
+        }
+      ],
+      "reason": null
+    },
+    {
+      "id": "capability-055",
+      "section": "12.2",
+      "name": "index_weights",
+      "expression": "`index_weights(index_code, provider)`",
+      "description": "最近公布的指数权重（百分数），保留真实日期",
+      "upstreamCallables": [
+        "index_weights"
+      ],
+      "sourceIds": [
+        "csi",
+        "cni"
+      ],
+      "status": "deferred-policy",
+      "generated": true,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "index_weights",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "generated-only",
+          "implementation": "generated",
+          "generatedCallable": "index_weights",
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Generated and importable for audited compatibility, but no curated provider operation invokes it."
+    },
+    {
+      "id": "capability-056",
+      "section": "12.3",
+      "name": "index_valuation",
+      "expression": "`index_valuation(index_code)`",
+      "description": "两种口径 PE、股息率；不含 PB",
+      "upstreamCallables": [
+        "index_valuation"
+      ],
+      "sourceIds": [
+        "csi"
+      ],
+      "status": "deferred-policy",
+      "generated": true,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "index_valuation",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "generated-only",
+          "implementation": "generated",
+          "generatedCallable": "index_valuation",
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Generated and importable for audited compatibility, but no curated provider operation invokes it."
+    },
+    {
+      "id": "capability-057",
+      "section": "12.4",
+      "name": "trading_calendar",
+      "expression": "`trading_calendar(year, month)`",
+      "description": "官方整月交易日历",
+      "upstreamCallables": [
+        "trading_calendar"
+      ],
+      "sourceIds": [
+        "szse-official"
+      ],
+      "status": "implemented-canonical",
+      "generated": true,
+      "auth": "none",
+      "canonicalMapping": "a-stock-public.trading-calendar",
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "trading_calendar",
+          "status": "implemented-canonical",
+          "providerId": "a-stock-public",
+          "operation": "trading-calendar",
+          "coverage": "full",
+          "implementation": "generated",
+          "generatedCallable": "trading_calendar",
+          "runtimeSourceIds": [
+            "szse-official"
+          ],
+          "sourceIds": [
+            "szse-official"
+          ]
+        }
+      ],
+      "reason": null
+    },
+    {
+      "id": "capability-058",
+      "section": "官方备胎扩展",
+      "name": "margin_trading_backup",
+      "expression": "`margin_trading_backup(date, exchange, code=None)`",
+      "description": "单所两融明细（先执行 §12 helper）",
+      "upstreamCallables": [
+        "margin_trading_backup"
+      ],
+      "sourceIds": [
+        "szse-official",
+        "sse-official"
+      ],
+      "status": "deferred-policy",
+      "generated": true,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "margin_trading_backup",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "generated-only",
+          "implementation": "generated",
+          "generatedCallable": "margin_trading_backup",
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Generated and importable for audited compatibility, but no curated provider operation invokes it."
+    },
+    {
+      "id": "capability-059",
+      "section": "官方备胎扩展",
+      "name": "bse_quote_backup",
+      "expression": "`bse_quote_backup(date, code=None)`",
+      "description": "北交所全板/单票当前快照（先执行 §12 helper）",
+      "upstreamCallables": [
+        "bse_quote_backup"
+      ],
+      "sourceIds": [
+        "bse-official"
+      ],
+      "status": "deferred-policy",
+      "generated": true,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "bse_quote_backup",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "generated-only",
+          "implementation": "generated",
+          "generatedCallable": "bse_quote_backup",
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Generated and importable for audited compatibility, but no curated provider operation invokes it."
+    },
+    {
+      "id": "capability-060",
+      "section": "备用源速查",
+      "name": "dragon_tiger_backup / fund_flow_backup / announcements_backup",
+      "expression": "`dragon_tiger_backup` / `fund_flow_backup` / `announcements_backup`",
+      "description": "龙虎榜/资金流/公告官方备胎（主源被封时降级）",
+      "upstreamCallables": [
+        "dragon_tiger_backup",
+        "fund_flow_backup",
+        "announcements_backup"
+      ],
+      "sourceIds": [
+        "sse-official",
+        "szse-official",
+        "sina-finance",
+        "eastmoney-push2"
+      ],
+      "status": "deferred-policy",
+      "generated": false,
+      "auth": "none",
+      "canonicalMapping": null,
+      "runtimeMappings": [
+        {
+          "upstreamCallable": "dragon_tiger_backup",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        },
+        {
+          "upstreamCallable": "fund_flow_backup",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        },
+        {
+          "upstreamCallable": "announcements_backup",
+          "status": "deferred-policy",
+          "providerId": null,
+          "operation": null,
+          "coverage": "none",
+          "implementation": null,
+          "runtimeSourceIds": [],
+          "sourceIds": []
+        }
+      ],
+      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+    }
+  ],
+  "functionInventory": [
+    {
+      "name": "_probe",
+      "kind": "function",
+      "fenceIndex": 1,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 381,
+        "endLine": 387,
+        "fenceIndex": 1,
+        "selectedBlock": null
+      },
+      "signature": "def _probe(ip, port, timeout=2.0):",
+      "signatureSha256": "e6e7e5cce281b20b8be20ff43369808382c2b0bc022e41b01dcd3ff4750deaef",
+      "bodySha256": "7c03ed101234b6784786435872a8389d0248723d7ec5a35764b6414ff907acde",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [],
+      "nonCapabilityReason": "private-helper"
+    },
+    {
+      "name": "_validate",
+      "kind": "function",
+      "fenceIndex": 1,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 389,
+        "endLine": 401,
+        "fenceIndex": 1,
+        "selectedBlock": null
+      },
+      "signature": "def _validate(client, market: str = 'std') -> bool:",
+      "signatureSha256": "abca2611b588809833fd62f123e6958d1ebce799efa1c59a64cdc86cfdbf7874",
+      "bodySha256": "49f3beb238ecd057c29160f7899047b5c18cf66411e92b70d4ba5b9988f6b519",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [],
+      "nonCapabilityReason": "private-helper"
+    },
+    {
+      "name": "tdx_client",
+      "kind": "function",
+      "fenceIndex": 1,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 403,
+        "endLine": 431,
+        "fenceIndex": 1,
+        "selectedBlock": null
+      },
+      "signature": "def tdx_client(market='std'):",
+      "signatureSha256": "f7816df71d446b53413e3678f78fbece486143593407baa1785cb00fe22f7661",
+      "bodySha256": "c810e5da0cddd4cdd8e1864453b7464511ba3f765c077420c544b3e4475c310e",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [],
+      "nonCapabilityReason": "supporting-public-callable"
+    },
+    {
+      "name": "get_prefix",
+      "kind": "function",
+      "fenceIndex": 2,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 444,
+        "endLine": 459,
+        "fenceIndex": 2,
+        "selectedBlock": null
+      },
+      "signature": "def get_prefix(code: str) -> str:",
+      "signatureSha256": "9879948764711040a078d21241b869612bbe21c109adcc6276c437b968bbfeb5",
+      "bodySha256": "173165103d1adcecaa2650c77f93ac2bf42ed83404b5b1db0b9d244c0dfed5ea",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [],
+      "nonCapabilityReason": "supporting-public-callable"
+    },
+    {
+      "name": "_natural_market",
+      "kind": "function",
+      "fenceIndex": 3,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 514,
+        "endLine": 521,
+        "fenceIndex": 3,
+        "selectedBlock": null
+      },
+      "signature": "def _natural_market(digits: str) -> str:",
+      "signatureSha256": "39a1a1a364ae8699aa617c68561203b6897a436cf9fb45a4e7a571bb09fc03cc",
+      "bodySha256": "a6bdc8afa58fad103947dca3c8379a6d09c2abb662279c1a49114b3ab3cb0c32",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [],
+      "nonCapabilityReason": "private-helper"
+    },
+    {
+      "name": "norm_ticker",
+      "kind": "function",
+      "fenceIndex": 3,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 523,
+        "endLine": 564,
+        "fenceIndex": 3,
+        "selectedBlock": null
+      },
+      "signature": "def norm_ticker(code: str, stock_only: bool = False) -> str:",
+      "signatureSha256": "98432104c5598d3d1639e870d92943f2e7c850c9e7f1bc6d7637a39c0d2241f8",
+      "bodySha256": "e2cf74ffbfb6d8dc0252cbc66106a36ce825734ef87d00bce6866ab936222878",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [],
+      "nonCapabilityReason": "supporting-public-callable"
+    },
+    {
+      "name": "em_market_code",
+      "kind": "function",
+      "fenceIndex": 3,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 579,
+        "endLine": 587,
+        "fenceIndex": 3,
+        "selectedBlock": null
+      },
+      "signature": "def em_market_code(code: str) -> int:",
+      "signatureSha256": "6c1ae0af506211728ffdfc166cb449108fb014d41fa706bf168bbca62b7e3981",
+      "bodySha256": "468d301823c5f5636604e180887577d264c0de08742120c390fa195a7f01d1c6",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [],
+      "nonCapabilityReason": "supporting-public-callable"
+    },
+    {
+      "name": "em_secid",
+      "kind": "function",
+      "fenceIndex": 3,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 590,
+        "endLine": 592,
+        "fenceIndex": 3,
+        "selectedBlock": null
+      },
+      "signature": "def em_secid(code: str) -> str:",
+      "signatureSha256": "4b7722fc35e8884f44bb04544587598fd01405f835480a3b9700a2c21045c878",
+      "bodySha256": "6a2703d9d91a459e842169f52106c391ca91907a58b3f688dd7b39f69bda25c4",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [],
+      "nonCapabilityReason": "supporting-public-callable"
+    },
+    {
+      "name": "em_get",
+      "kind": "function",
+      "fenceIndex": 4,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 631,
+        "endLine": 641,
+        "fenceIndex": 4,
+        "selectedBlock": null
+      },
+      "signature": "def em_get(url: str, params: Optional[dict] = None, headers: Optional[dict] = None,\n           timeout: int = 15, **kwargs):",
+      "signatureSha256": "64a9cc4c5ffa76c5bb98fce72d384bdb9d15432a2404fb8332d611d4996df774",
+      "bodySha256": "3aa7b249bcdc0679b1ae3ee6ed13b681f3ea1d071b54dac4dc0d77d7b9c217e1",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [],
+      "nonCapabilityReason": "supporting-public-callable"
+    },
+    {
+      "name": "eastmoney_datacenter",
+      "kind": "function",
+      "fenceIndex": 4,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 643,
+        "endLine": 657,
+        "fenceIndex": 4,
+        "selectedBlock": null
+      },
+      "signature": "def eastmoney_datacenter(report_name: str, columns: str = \"ALL\",\n                          filter_str: str = \"\", page_size: int = 50,\n                          sort_columns: str = \"\", sort_types: str = \"-1\") -> list[dict]:",
+      "signatureSha256": "e8dc85b12fb70ce46d2dbc58cce5d484d4404043fda68236cfc19e08b3f3c6c5",
+      "bodySha256": "2ed118dac6fdb8f93f0a73f6490e657b9433d0e8e86eece0aed92dbe94eacf92",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [],
+      "nonCapabilityReason": "supporting-public-callable"
+    },
+    {
+      "name": "tencent_quote",
+      "kind": "function",
+      "fenceIndex": 6,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 707,
+        "endLine": 782,
+        "fenceIndex": 6,
+        "selectedBlock": null
+      },
+      "signature": "def tencent_quote(codes: list[str]) -> dict[str, dict]:",
+      "signatureSha256": "992c2e8ea2f2f0085948093a6f530f68cbecc70e347a2c0fd4984f11e1def885",
+      "bodySha256": "25cd6b4b2e5b9184d3c9703e6f08d62f970aeb4e0d792b839b661e8cf2536f8c",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-002"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "baidu_kline_with_ma",
+      "kind": "function",
+      "fenceIndex": 7,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 837,
+        "endLine": 858,
+        "fenceIndex": 7,
+        "selectedBlock": null
+      },
+      "signature": "def baidu_kline_with_ma(code: str, start_time: str = \"\") -> dict:",
+      "signatureSha256": "5bec1538c5ecd4e9e5409d6def0ed138e2259d3ddd6624f8a4dcb07a54529ebf",
+      "bodySha256": "c9336a03b16f2548d3b1824cca1f0059c608f25a5c202274ced55079cbe153c1",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-003"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "sina_adjust_factor",
+      "kind": "function",
+      "fenceIndex": 8,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 881,
+        "endLine": 909,
+        "fenceIndex": 8,
+        "selectedBlock": null
+      },
+      "signature": "def sina_adjust_factor(code: str, kind: str = \"qfq\") -> list:",
+      "signatureSha256": "f8b015a7130fe426287ebaf25cfbfb4356ed2a9fc19be799d074764839ff2563",
+      "bodySha256": "f667cb4a33bfe3c46efa01561e812cc458f931bb280681059fff39e164edfbb9",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-004"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "apply_adjust",
+      "kind": "function",
+      "fenceIndex": 8,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 912,
+        "endLine": 989,
+        "fenceIndex": 8,
+        "selectedBlock": null
+      },
+      "signature": "def apply_adjust(bars, factors: list, kind: str = \"qfq\",\n                 price_keys=(\"open\", \"high\", \"low\", \"close\")):",
+      "signatureSha256": "39b9a278ea793cf37abe3368b21fad21ee957cb7078d44d06c20f59bfba827b3",
+      "bodySha256": "652c7456702e5b5b6993f34c716aefe34f052237404abc0f7c5bf48704d0f18c",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-004"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "eastmoney_reports",
+      "kind": "function",
+      "fenceIndex": 9,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 1050,
+        "endLine": 1085,
+        "fenceIndex": 9,
+        "selectedBlock": null
+      },
+      "signature": "def eastmoney_reports(code: str, max_pages: int = 5) -> list[dict]:",
+      "signatureSha256": "8d01c5a88ea9e976b3b6a18159cc668b3dce83b6d91e80a5533a112e0d519c02",
+      "bodySha256": "986668628cd880c0bc496dfa94475551bbf592df6dadc37762ea320120e08c62",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-005"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "download_pdf",
+      "kind": "function",
+      "fenceIndex": 9,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 1087,
+        "endLine": 1105,
+        "fenceIndex": 9,
+        "selectedBlock": null
+      },
+      "signature": "def download_pdf(record: dict, target_dir: str = \"./reports\") -> Optional[str]:",
+      "signatureSha256": "972a0c3655ba0fc4cde58bcafa09b7c95eba1e594d053b3afd0cdbadeda36336",
+      "bodySha256": "a44f3848c92b992955259a2abbee78287645509e39526b9224165329ee69778d",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-006"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "eastmoney_industry_reports",
+      "kind": "function",
+      "fenceIndex": 10,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 1136,
+        "endLine": 1161,
+        "fenceIndex": 10,
+        "selectedBlock": null
+      },
+      "signature": "def eastmoney_industry_reports(industry_code: str = \"*\", max_pages: int = 5,\n                               begin: str = \"\") -> list[dict]:",
+      "signatureSha256": "c4720c3c51b6987b9afd42f6184e5d2a0b686fe076c0aba7e59a638c4088a31c",
+      "bodySha256": "5ee0b5df09ea8df6924d97c819cce67a3455f058bc5ef20b39011bf5684dc9f1",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [],
+      "nonCapabilityReason": "supporting-public-callable"
+    },
+    {
+      "name": "ths_eps_forecast",
+      "kind": "function",
+      "fenceIndex": 11,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 1196,
+        "endLine": 1219,
+        "fenceIndex": 11,
+        "selectedBlock": null
+      },
+      "signature": "def ths_eps_forecast(code: str) -> pd.DataFrame:",
+      "signatureSha256": "af37f80ce36cc64a3287a5aff167aabbb26d5ee95433ced8beef84b972787fa4",
+      "bodySha256": "baffd15224dd2924301df281474de1a62d3f640c06b9c9d8a0175fdef1910794",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-007"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "_claw_headers",
+      "kind": "function",
+      "fenceIndex": 12,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 1240,
+        "endLine": 1249,
+        "fenceIndex": 12,
+        "selectedBlock": null
+      },
+      "signature": "def _claw_headers(call_type: str = \"normal\") -> dict:",
+      "signatureSha256": "992cefd7e1721f1dfc61f126c062a2f0673552db4e03dd044e0be15a7af7f17b",
+      "bodySha256": "253b7414ce6214f0ae8c9681e51989b1d6f08fd3077b6f22ffde2796e67e415e",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [],
+      "nonCapabilityReason": "private-helper"
+    },
+    {
+      "name": "iwencai_search",
+      "kind": "function",
+      "fenceIndex": 12,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 1251,
+        "endLine": 1277,
+        "fenceIndex": 12,
+        "selectedBlock": null
+      },
+      "signature": "def iwencai_search(query: str, channel: str = \"report\", size: int = 50) -> list[dict]:",
+      "signatureSha256": "cbe2d860d11ac066cd171aa98c2fa6d3022e9d0603a600e347b56f52cd8f223f",
+      "bodySha256": "e38458bd871d5dc3b1029546a8dfc446ebf111dd6bde74ebf3a72d6c5c98d49d",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-008"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "iwencai_query",
+      "kind": "function",
+      "fenceIndex": 12,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 1279,
+        "endLine": 1305,
+        "fenceIndex": 12,
+        "selectedBlock": null
+      },
+      "signature": "def iwencai_query(query: str, page: int = 1, limit: int = 50) -> list[dict]:",
+      "signatureSha256": "5d4e9ee3cb764d686da539dfd4f90dac8126c01523ca98495d80652b38f9d229",
+      "bodySha256": "a8d932693726f17eec9c04cba663a8a3a8b89bce8a9b2ef40f1ff2ad3e22f22f",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-008"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "dedup_articles",
+      "kind": "function",
+      "fenceIndex": 12,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 1307,
+        "endLine": 1315,
+        "fenceIndex": 12,
+        "selectedBlock": null
+      },
+      "signature": "def dedup_articles(articles: list[dict]) -> list[dict]:",
+      "signatureSha256": "12850d3507a6a9afa7aa05e54e7db1c69a98eb6d4d4a389ddd70c1d2947cb545",
+      "bodySha256": "bdf395a19b707f2bec70633f3eed441c1fcdea487aca49ee971d4ddd6c492cea",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [],
+      "nonCapabilityReason": "supporting-public-callable"
+    },
+    {
+      "name": "ths_hot_reason",
+      "kind": "function",
+      "fenceIndex": 13,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 1341,
+        "endLine": 1382,
+        "fenceIndex": 13,
+        "selectedBlock": null
+      },
+      "signature": "def ths_hot_reason(date: str = None) -> pd.DataFrame:",
+      "signatureSha256": "224ad3a2f1ac375c995c41925cfd9f18bf13eb133765fcdf261fbd7f9f45eb92",
+      "bodySha256": "460ec2eb6fb440b736c8aa009f389390be5deb681885c2cffa079316dda6b292",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-009"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "hsgt_realtime",
+      "kind": "function",
+      "fenceIndex": 14,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 1429,
+        "endLine": 1447,
+        "fenceIndex": 14,
+        "selectedBlock": null
+      },
+      "signature": "def hsgt_realtime() -> pd.DataFrame:",
+      "signatureSha256": "74b5bfe7ac95f325d79b9f6ac8491da8850bfa9f32cee187d4398bb49b2d4be4",
+      "bodySha256": "1e59fcb30a0ecc950940a048066c6e8eae28db68e8e00446d21288bf3cf72958",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-010"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "_northbound_cache_path",
+      "kind": "function",
+      "fenceIndex": 14,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 1451,
+        "endLine": 1455,
+        "fenceIndex": 14,
+        "selectedBlock": null
+      },
+      "signature": "def _northbound_cache_path() -> Path:",
+      "signatureSha256": "52c78bfc27870e5bacf4d773e70b90b8263589b15973ea40b81afd3baf36c96f",
+      "bodySha256": "f6cf9530f8a67687b9a50c071d97eb41c064be516f8d4c6c9255d20d300927d5",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [],
+      "nonCapabilityReason": "private-helper"
+    },
+    {
+      "name": "_save_northbound_snapshot",
+      "kind": "function",
+      "fenceIndex": 14,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 1457,
+        "endLine": 1470,
+        "fenceIndex": 14,
+        "selectedBlock": null
+      },
+      "signature": "def _save_northbound_snapshot(date: str, hgt: float, sgt: float):",
+      "signatureSha256": "25287456f016e9474842204124558489b283f799359b7601440347267703084b",
+      "bodySha256": "f5fbfe922adca4815c2ae90d1be59222ad666c2268f021090fd30595d6d028dc",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [],
+      "nonCapabilityReason": "private-helper"
+    },
+    {
+      "name": "_load_northbound_history",
+      "kind": "function",
+      "fenceIndex": 14,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 1472,
+        "endLine": 1478,
+        "fenceIndex": 14,
+        "selectedBlock": null
+      },
+      "signature": "def _load_northbound_history(n: int = 20) -> pd.DataFrame:",
+      "signatureSha256": "8759e550ddbf3b4a4fd2b63f769ac08c2f75d39f6cadfe943ce496e3803e7001",
+      "bodySha256": "e786b20d4631ad8e8c785608f37479629749919ea8ffc23b0e85bb938133ab27",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [],
+      "nonCapabilityReason": "private-helper"
+    },
+    {
+      "name": "eastmoney_concept_blocks",
+      "kind": "function",
+      "fenceIndex": 15,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 1502,
+        "endLine": 1538,
+        "fenceIndex": 15,
+        "selectedBlock": null
+      },
+      "signature": "def eastmoney_concept_blocks(code: str) -> dict:",
+      "signatureSha256": "08748401e3c96c931db76abafdf9cdab60a9214e5d2d180818a3481c574b32e8",
+      "bodySha256": "23781e0baf8790b69b77ccab0759dba88138c645a462395eb01deedfae7cc8b4",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-011"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "eastmoney_fund_flow_minute",
+      "kind": "function",
+      "fenceIndex": 16,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 1558,
+        "endLine": 1603,
+        "fenceIndex": 16,
+        "selectedBlock": null
+      },
+      "signature": "def eastmoney_fund_flow_minute(code: str) -> list[dict]:",
+      "signatureSha256": "73373a7fe4d9bb65a1ad5965fd0f62bd3200bc1122c2450107f33117e7b84d7e",
+      "bodySha256": "ed40cf0208a55340a8fe343c20b9f95c28febc36a219ef7a5fdfc1215e4e839e",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-012"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "dragon_tiger_board",
+      "kind": "function",
+      "fenceIndex": 17,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 1626,
+        "endLine": 1703,
+        "fenceIndex": 17,
+        "selectedBlock": null
+      },
+      "signature": "def dragon_tiger_board(code: str, trade_date: str, look_back: int = 30) -> dict:",
+      "signatureSha256": "8f51601c4ec49e79c237f5b5263d0312774516fcb6ed9dfa0415dd789f96d9c4",
+      "bodySha256": "59bc123badf1d495507f1a059d9ae3e870d0d8762bbe92dd8fe53f73c4730940",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-013"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "lockup_expiry",
+      "kind": "function",
+      "fenceIndex": 18,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 1723,
+        "endLine": 1764,
+        "fenceIndex": 18,
+        "selectedBlock": null
+      },
+      "signature": "def lockup_expiry(code: str, trade_date: str, forward_days: int = 90) -> dict:",
+      "signatureSha256": "f58f32d5f8bfdcf7a16c48b36e1eb5258636f6fcfe1b0c7001c293ef5556c909",
+      "bodySha256": "96eb714279f68207675f083c939dc74bcffabe9c424cccdad4e8779a1bd09cb3",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-014"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "industry_comparison",
+      "kind": "function",
+      "fenceIndex": 19,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 1790,
+        "endLine": 1826,
+        "fenceIndex": 19,
+        "selectedBlock": null
+      },
+      "signature": "def industry_comparison(top_n: int = 20) -> dict:",
+      "signatureSha256": "888f0c52346aa3cd5cccd436ff5239b0b87227c8c17d1ef0e53ba29ef0df716c",
+      "bodySha256": "03cdb8695b1baa565b156e3035393a5e35a06ee94d102e1ae7726dace0123b1e",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-015"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "board_fund_flow",
+      "kind": "function",
+      "fenceIndex": 20,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 1855,
+        "endLine": 1930,
+        "fenceIndex": 20,
+        "selectedBlock": null
+      },
+      "signature": "def board_fund_flow(board_type: str = \"industry\", period: str = \"today\",\n                    top_n: int = 20) -> dict:",
+      "signatureSha256": "e8ecdecc86496932f89da6c362e16ada77c9624858935547c327d0124334e915",
+      "bodySha256": "01cf9608cceabcc4bf6f8a778aea286023301dc4574c311f35fddab61c8d90f8",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-016"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "_page",
+      "kind": "function",
+      "fenceIndex": 20,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 1888,
+        "endLine": 1892,
+        "fenceIndex": 20,
+        "selectedBlock": null
+      },
+      "signature": "def _page(pn: int):",
+      "signatureSha256": "73181e945797eb89ceb8b77550c801a681bfb5617faa014cb29096738da5b5e4",
+      "bodySha256": "ec652bade70951fc805e29e2953dd5ce3d225876ce78c0f7973ec08675afd29c",
+      "topLevel": false,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [],
+      "nonCapabilityReason": "private-helper"
+    },
+    {
+      "name": "daily_dragon_tiger",
+      "kind": "function",
+      "fenceIndex": 21,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 1952,
+        "endLine": 1990,
+        "fenceIndex": 21,
+        "selectedBlock": null
+      },
+      "signature": "def daily_dragon_tiger(trade_date: str = None, min_net_buy: float = None) -> dict:",
+      "signatureSha256": "b2daca75e6da40a928ebd880213b657accc998302d3939561d9d108466358081",
+      "bodySha256": "9a082ecf65bf7e8275f9c731120f528c650d4bc67320089059faf1c9af3680a8",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-017"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "margin_trading",
+      "kind": "function",
+      "fenceIndex": 23,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 2041,
+        "endLine": 2064,
+        "fenceIndex": 23,
+        "selectedBlock": null
+      },
+      "signature": "def margin_trading(code: str, page_size: int = 30) -> list[dict]:",
+      "signatureSha256": "d21b173d4c9dd5cc4d38b46e43f3bad81a52d55864df63274730d869b912efba",
+      "bodySha256": "3b4b5d7a16e7d003c780d06ca869f48d5909e72ff996be5e39eabdd1676cf9fe",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-018"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "block_trade",
+      "kind": "function",
+      "fenceIndex": 24,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 2075,
+        "endLine": 2101,
+        "fenceIndex": 24,
+        "selectedBlock": null
+      },
+      "signature": "def block_trade(code: str, page_size: int = 20) -> list[dict]:",
+      "signatureSha256": "892861b4a15ccb4a258af1bbaff8c825fef78a2f15eec16baa606d86d2b65bae",
+      "bodySha256": "e1beb6b0d415fcab8111733301ec7caac91ffa8e87e432e6cbd2220400038b25",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-019"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "holder_num_change",
+      "kind": "function",
+      "fenceIndex": 25,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 2112,
+        "endLine": 2132,
+        "fenceIndex": 25,
+        "selectedBlock": null
+      },
+      "signature": "def holder_num_change(code: str, page_size: int = 10) -> list[dict]:",
+      "signatureSha256": "5ae394aa60e6318b777b2fc50cfcdd7dda88392e275d124c3ac0ecf8328b3e2c",
+      "bodySha256": "2948857a076dd391caaea3a7f742fe2159b158d23e38bcad4e6a70906242dca2",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-020"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "dividend_history",
+      "kind": "function",
+      "fenceIndex": 26,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 2144,
+        "endLine": 2164,
+        "fenceIndex": 26,
+        "selectedBlock": null
+      },
+      "signature": "def dividend_history(code: str, page_size: int = 20) -> list[dict]:",
+      "signatureSha256": "4ed34673cbbae832d14f5a8378c4fe204ea78e9b4aa0975b0bddeece64568811",
+      "bodySha256": "06389c11df414ee2d26e32b043b795fe7dc39e0f50782af55453e8cb2727adaf",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-021"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "stock_fund_flow_120d",
+      "kind": "function",
+      "fenceIndex": 27,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 2177,
+        "endLine": 2216,
+        "fenceIndex": 27,
+        "selectedBlock": null
+      },
+      "signature": "def stock_fund_flow_120d(code: str) -> list[dict]:",
+      "signatureSha256": "80acdc4033fa81052a2d7714aa3716efa5ad69e91f664c0a036e1eb82b82b667",
+      "bodySha256": "b07b6aec1a44b1a0b83edc47d8a37511c4b25ae1885dcf5d33f75558732498fd",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-022"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "_triangular_weights",
+      "kind": "function",
+      "fenceIndex": 28,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 2247,
+        "endLine": 2273,
+        "fenceIndex": 28,
+        "selectedBlock": null
+      },
+      "signature": "def _triangular_weights(grid: np.ndarray, low: float, high: float, avg: float) -> np.ndarray:",
+      "signatureSha256": "1353b2cec800cccb7fc3660a48d787a5f2955a8d8c563a5cd2596e953a8598ea",
+      "bodySha256": "0f480c6faec1cdf50aa056fc973ad729f96ca62a22daf4413c0d69536f0a39de",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [],
+      "nonCapabilityReason": "private-helper"
+    },
+    {
+      "name": "chip_distribution",
+      "kind": "function",
+      "fenceIndex": 28,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 2276,
+        "endLine": 2339,
+        "fenceIndex": 28,
+        "selectedBlock": null
+      },
+      "signature": "def chip_distribution(df: pd.DataFrame, grid_size: int = 300, decay: float = 1.0) -> dict:",
+      "signatureSha256": "4586e1bf033ace768630eebf03ca1e89cbb59e8f238ba3c04d3f6243819fb5d5",
+      "bodySha256": "2509f38085bc12d201ef06ca1f4f558cd0a0e0fb98c090823d2d23847be71313",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-023"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "price_at",
+      "kind": "function",
+      "fenceIndex": 28,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 2324,
+        "endLine": 2325,
+        "fenceIndex": 28,
+        "selectedBlock": null
+      },
+      "signature": "def price_at(q: float) -> float:",
+      "signatureSha256": "27efaf7214a452f75b13f9f495f07bd5bca31e3736aaa0300a40070411d1b83f",
+      "bodySha256": "cea59c3051cba92f9e8822cf1ae1971566ad6062ef37ceb84d781dda85dd2038",
+      "topLevel": false,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [],
+      "nonCapabilityReason": "nested-helper"
+    },
+    {
+      "name": "eastmoney_stock_news",
+      "kind": "function",
+      "fenceIndex": 29,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 2397,
+        "endLine": 2435,
+        "fenceIndex": 29,
+        "selectedBlock": null
+      },
+      "signature": "def eastmoney_stock_news(code: str, page_size: int = 20) -> list[dict]:",
+      "signatureSha256": "e75782721d7757bfb8e0df3cd3b3b850dec463b2a6e745cb2c2e04831257156a",
+      "bodySha256": "50b2cacb6295b9db23417582c2680fe333a8b422c8d7cc02acb4ba59564e13b7",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-024"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "cls_telegraph",
+      "kind": "function",
+      "fenceIndex": 30,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 2458,
+        "endLine": 2482,
+        "fenceIndex": 30,
+        "selectedBlock": null
+      },
+      "signature": "def cls_telegraph(page_size: int = 50) -> list[dict]:",
+      "signatureSha256": "b10f1fcd895c6dca9c77e9da4c29cd9d2a0a9f12be984dd743d85614103cd125",
+      "bodySha256": "57d903d433d096ec9063adf423ccf4141c0b456734ab1a794c5f0fdd636932cc",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-025"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "eastmoney_global_news",
+      "kind": "function",
+      "fenceIndex": 31,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 2497,
+        "endLine": 2520,
+        "fenceIndex": 31,
+        "selectedBlock": null
+      },
+      "signature": "def eastmoney_global_news(page_size: int = 50) -> list[dict]:",
+      "signatureSha256": "446e822b34fa0961d9bb87d9ace00b7baf543a15336c5055e2c1bbfcf2b94e06",
+      "bodySha256": "8f8ac237e0bf9286f83fd5633076cb7c5ef5b1d163836fb8efa811fb6d5cbe4d",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-026"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "eastmoney_stock_info",
+      "kind": "function",
+      "fenceIndex": 34,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 2576,
+        "endLine": 2601,
+        "fenceIndex": 34,
+        "selectedBlock": null
+      },
+      "signature": "def eastmoney_stock_info(code: str) -> dict:",
+      "signatureSha256": "538e8c4b6c6463af0446d2792dc7b7ab71e0527f21b482386157b1f96e944efc",
+      "bodySha256": "1a9ffff6d39f68b3609f357fecc5c9fa29761200d55023907a93566a98a92e32",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-029"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "sina_financial_report",
+      "kind": "function",
+      "fenceIndex": 35,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 2613,
+        "endLine": 2654,
+        "fenceIndex": 35,
+        "selectedBlock": null
+      },
+      "signature": "def sina_financial_report(code: str, report_type: str = \"lrb\", num: int = 8) -> list[dict]:",
+      "signatureSha256": "f8417cadc17fd079da382b0b6e2dbe934f27385cb461a9e87bc390f3fdc1e78b",
+      "bodySha256": "c1e80dffbc3862d4e167bbc3b697c933fc52b8835180152a19c855cee15a4294",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-030"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "bs_session",
+      "kind": "function",
+      "fenceIndex": 36,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 2688,
+        "endLine": 2696,
+        "fenceIndex": 36,
+        "selectedBlock": null
+      },
+      "signature": "def bs_session():",
+      "signatureSha256": "9058f13a6ffb2e8a633986ad9094ab65146ce338d27a82e812ed4324fda4e9ce",
+      "bodySha256": "8f1d7da7263973b4e4f117169b3441ea3690ec12dd957c1ac3903ef44cf7ca6f",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [],
+      "nonCapabilityReason": "supporting-public-callable"
+    },
+    {
+      "name": "_rs_to_df",
+      "kind": "function",
+      "fenceIndex": 36,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 2699,
+        "endLine": 2706,
+        "fenceIndex": 36,
+        "selectedBlock": null
+      },
+      "signature": "def _rs_to_df(rs) -> pd.DataFrame:",
+      "signatureSha256": "cf2cef80d563274e8602c78d50769c220137dc884d653318de99643ec8cd9a69",
+      "bodySha256": "f6a05292f2ac7205ca3cc3c6756b0bbcdf77a8a113e949201cf24acc7be54a72",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [],
+      "nonCapabilityReason": "private-helper"
+    },
+    {
+      "name": "_bs_code",
+      "kind": "function",
+      "fenceIndex": 36,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 2709,
+        "endLine": 2719,
+        "fenceIndex": 36,
+        "selectedBlock": null
+      },
+      "signature": "def _bs_code(code: str) -> str:",
+      "signatureSha256": "a4593da82d50a7c43cd9ead49bef2fb9b9bb1226ced762f22b98e8a533899275",
+      "bodySha256": "0d476b6c481ef3a28afb9f37550f3f4a526843a01385b2df13cf2a8b3f62f30d",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [],
+      "nonCapabilityReason": "private-helper"
+    },
+    {
+      "name": "baostock_valuation_history",
+      "kind": "function",
+      "fenceIndex": 36,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 2722,
+        "endLine": 2734,
+        "fenceIndex": 36,
+        "selectedBlock": null
+      },
+      "signature": "def baostock_valuation_history(code: str, start_date: str, end_date: str) -> pd.DataFrame:",
+      "signatureSha256": "a34ea4a3036783060fc732c12eb8c8a005b64a0e7f117d42ec2682a7bd73c468",
+      "bodySha256": "57110cc8309be3efe1488c61416714ebadd49fe20d69c64a9c2b32c9aea36c65",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-031"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "baostock_stock_basic",
+      "kind": "function",
+      "fenceIndex": 37,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 2768,
+        "endLine": 2773,
+        "fenceIndex": 37,
+        "selectedBlock": null
+      },
+      "signature": "def baostock_stock_basic(code: str) -> dict:",
+      "signatureSha256": "0451705c2a304e3a6698372225e96f564dd6db824264db673a9972389b5dbe41",
+      "bodySha256": "d69a40423572130a6b7e076f4b522e766131032b61cbee8cba8154b2c9f2efe8",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-032"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "sw_industry_history",
+      "kind": "function",
+      "fenceIndex": 38,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 2807,
+        "endLine": 2833,
+        "fenceIndex": 38,
+        "selectedBlock": null
+      },
+      "signature": "def sw_industry_history() -> pd.DataFrame:",
+      "signatureSha256": "ef27d4843e05f71fa3d1afe59b48000d68d57b169fde00c0dfc3efa899ca6698",
+      "bodySha256": "916f693c19b640c33a9607bd93aa949af598e82a4e9ebaefeab0c466e8b3d1b7",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-033"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "sw_industry_as_of",
+      "kind": "function",
+      "fenceIndex": 38,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 2836,
+        "endLine": 2846,
+        "fenceIndex": 38,
+        "selectedBlock": null
+      },
+      "signature": "def sw_industry_as_of(df: pd.DataFrame, code: str, as_of: str) -> Optional[dict]:",
+      "signatureSha256": "e793bc305017f6415b34dd8966dd1e0ea3f0ac578b85e1fa4bd9129235e95b82",
+      "bodySha256": "7f219bb9804f8bfce6fdf4a3dc9a21cec9f776e0be0533244f550cd83664b970",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-033"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "_cninfo_ts_to_date",
+      "kind": "function",
+      "fenceIndex": 39,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 2876,
+        "endLine": 2880,
+        "fenceIndex": 39,
+        "selectedBlock": null
+      },
+      "signature": "def _cninfo_ts_to_date(ts):",
+      "signatureSha256": "6dc9262348e56ac6e813149eec571bcf6969b2692d70f7324933e5ac018f6d2a",
+      "bodySha256": "f42f3f47374fb3feeccd5e646c411306353e5b7fbbce69de4463371bddc7bf0b",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [],
+      "nonCapabilityReason": "private-helper"
+    },
+    {
+      "name": "_cninfo_orgid",
+      "kind": "function",
+      "fenceIndex": 39,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 2885,
+        "endLine": 2903,
+        "fenceIndex": 39,
+        "selectedBlock": null
+      },
+      "signature": "def _cninfo_orgid(code: str) -> str:",
+      "signatureSha256": "cd21bf72da30d1d3d3a039b15661ffa5295640e2b4dd290e8bc48c51e4323173",
+      "bodySha256": "a596aa5f4d98effa91f10736e4d633320d50a369220e9096f0d070a6dc6130f6",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [],
+      "nonCapabilityReason": "private-helper"
+    },
+    {
+      "name": "cninfo_announcements",
+      "kind": "function",
+      "fenceIndex": 39,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 2905,
+        "endLine": 2945,
+        "fenceIndex": 39,
+        "selectedBlock": null
+      },
+      "signature": "def cninfo_announcements(code: str, page_size: int = 30) -> list[dict]:",
+      "signatureSha256": "e91b3470153f629d8f723213b3e5e7c4b7d4e4a3933a450c0c91020f0cf70f85",
+      "bodySha256": "f320e5b754b3854cf7fbda200fa78bf0db309633c3e8b9f98f9e705a7a0a85e4",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-034"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "_fmt_zt_time",
+      "kind": "function",
+      "fenceIndex": 41,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 2975,
+        "endLine": 2978,
+        "fenceIndex": 41,
+        "selectedBlock": null
+      },
+      "signature": "def _fmt_zt_time(t) -> str:",
+      "signatureSha256": "d07e794f05ec7f1e695190c7e17ce35f96c43e045fdfb02aa42cb8460e561ee2",
+      "bodySha256": "216e89661d81f86168772cd19bbd764e4a3b32974687d1e25ba3a666094fb3f5",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [],
+      "nonCapabilityReason": "private-helper"
+    },
+    {
+      "name": "_em_zt_api",
+      "kind": "function",
+      "fenceIndex": 41,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 2980,
+        "endLine": 2993,
+        "fenceIndex": 41,
+        "selectedBlock": null
+      },
+      "signature": "def _em_zt_api(endpoint: str, sort: str, date: str) -> list[dict]:",
+      "signatureSha256": "3a8867f061ed464d054ae5e6d679a1d18d0f56e6bb9b03a77d4790c01e85c574",
+      "bodySha256": "6a4e5d56f743d846bd20c0066847f1af6d9362a25114ab9ba7aa10a816be47b8",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [],
+      "nonCapabilityReason": "private-helper"
+    },
+    {
+      "name": "em_zt_pool",
+      "kind": "function",
+      "fenceIndex": 41,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 2995,
+        "endLine": 3008,
+        "fenceIndex": 41,
+        "selectedBlock": null
+      },
+      "signature": "def em_zt_pool(date: str) -> list[dict]:",
+      "signatureSha256": "a7d19566b679f6dc020c75e0a4963ef4a9f69ac4c713151b389fd1e6f4d1b4b0",
+      "bodySha256": "3bc44134f7196bf82d8fe586bb02b3517636ebea40de719ed04a3a9eafedd1a6",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-036"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "em_zb_pool",
+      "kind": "function",
+      "fenceIndex": 41,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 3010,
+        "endLine": 3021,
+        "fenceIndex": 41,
+        "selectedBlock": null
+      },
+      "signature": "def em_zb_pool(date: str) -> list[dict]:",
+      "signatureSha256": "d5a0adcf271a791956a2c6136e3e905850c4924c998ef4621b121264f4d0e0d3",
+      "bodySha256": "daf5d1bdc34146430b9c95c351cd9f3cc2aa7012e399d217fafd6fc8b1f4df82",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-037"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "em_dt_pool",
+      "kind": "function",
+      "fenceIndex": 41,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 3023,
+        "endLine": 3033,
+        "fenceIndex": 41,
+        "selectedBlock": null
+      },
+      "signature": "def em_dt_pool(date: str) -> list[dict]:",
+      "signatureSha256": "07be8e0e9f163f3ab7dbe2576b8719a0106918299617a92fabea100ae66e5f98",
+      "bodySha256": "bd3ab58357d6af84cbf025706aa1dc245743c2eee45c8cc6e9d99f0a4ce2165d",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-038"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "em_yzt_pool",
+      "kind": "function",
+      "fenceIndex": 41,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 3035,
+        "endLine": 3046,
+        "fenceIndex": 41,
+        "selectedBlock": null
+      },
+      "signature": "def em_yzt_pool(date: str) -> list[dict]:",
+      "signatureSha256": "2e8071f5aa0f467dfae55bf43191e9b82c00a0dcac0609b336c7bbb6e1d710cc",
+      "bodySha256": "8da9c0b7676bba94c4bc0b5c66f7edd55dcced0bd9ad5c646645e43e83b10462",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-039"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "ths_limit_up_pool",
+      "kind": "function",
+      "fenceIndex": 42,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 3062,
+        "endLine": 3087,
+        "fenceIndex": 42,
+        "selectedBlock": null
+      },
+      "signature": "def ths_limit_up_pool(date: str) -> list[dict]:",
+      "signatureSha256": "48c553348fa4bdb7bd1831b164ad2c0a08027e42b6049fe4c1eb836a9cca739b",
+      "bodySha256": "61d360fb985a028a53055b6fbc04888dbfd7e90e6d92ad8ca63f20a1545f7252",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-040"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "limit_up_sentiment",
+      "kind": "function",
+      "fenceIndex": 43,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 3099,
+        "endLine": 3109,
+        "fenceIndex": 43,
+        "selectedBlock": null
+      },
+      "signature": "def limit_up_sentiment(date: str) -> dict:",
+      "signatureSha256": "d02554fc610e6d376dec7e60eb135cb2dcad93485c4134c87bfc7209cad769c6",
+      "bodySha256": "39a1b7d596c3ddb9f36d357ef4b71eb2ce5f2e3c57132a3182420fd0d5c9b73d",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-041"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "cn_today",
+      "kind": "function",
+      "fenceIndex": 44,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 3132,
+        "endLine": 3134,
+        "fenceIndex": 44,
+        "selectedBlock": null
+      },
+      "signature": "def cn_today() -> str:",
+      "signatureSha256": "db0d54dd0dc35daa026b38d3b08dbcff2124d7af17874bce931f0e9a87fcd16b",
+      "bodySha256": "87895836fbede6a22fcfe58824145f93194d87c637a449baa7bec00349659c11",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [],
+      "nonCapabilityReason": "supporting-public-callable"
+    },
+    {
+      "name": "em_stock_monitor",
+      "kind": "function",
+      "fenceIndex": 44,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 3143,
+        "endLine": 3165,
+        "fenceIndex": 44,
+        "selectedBlock": null
+      },
+      "signature": "def em_stock_monitor(only_active: bool = True) -> list[dict]:",
+      "signatureSha256": "b01a2ef8d66f1f1770412cfb996632aaf78c9418905c1bccd160d1ec0d050d56",
+      "bodySha256": "1a60ce5fb441778480e998d7e6906265dfee498eadad9fb54d3a4841e638d840",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-042"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "_anomaly_market",
+      "kind": "function",
+      "fenceIndex": 45,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 3207,
+        "endLine": 3216,
+        "fenceIndex": 45,
+        "selectedBlock": null
+      },
+      "signature": "def _anomaly_market(code, m, board=None) -> str:",
+      "signatureSha256": "b7b0aba74c7bd76057e359f56add0f5163f7ada538c601aefebf1c4aad37bd98",
+      "bodySha256": "07e3dd081cef5b614f767322e8143997d8feb84f71cc76d34dfe3bc91764f21b",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [],
+      "nonCapabilityReason": "private-helper"
+    },
+    {
+      "name": "_anomaly_get",
+      "kind": "function",
+      "fenceIndex": 45,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 3218,
+        "endLine": 3226,
+        "fenceIndex": 45,
+        "selectedBlock": null
+      },
+      "signature": "def _anomaly_get(path: str, page_size: int, page_no: int, **extra) -> dict:",
+      "signatureSha256": "678497a4660960b8418819560516f326f4413dcea718eda0d8c112d3005304eb",
+      "bodySha256": "652af18b903b0024c5b81000557ceb7846ae73954c4275c37b61f015f7502133",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [],
+      "nonCapabilityReason": "private-helper"
+    },
+    {
+      "name": "em_price_anomaly",
+      "kind": "function",
+      "fenceIndex": 45,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 3228,
+        "endLine": 3246,
+        "fenceIndex": 45,
+        "selectedBlock": null
+      },
+      "signature": "def em_price_anomaly(page_size: int = 200, page_no: int = 1) -> dict:",
+      "signatureSha256": "34326a82fab6cc545a451e07e0a849e87543a69b5d8f3c0e19a10963f6a6c72c",
+      "bodySha256": "c69c5c4eca911990a55d3b728fb60fb74a8b176faa5a3b7234f4a6035ab69773",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-043"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "em_price_anomaly_count",
+      "kind": "function",
+      "fenceIndex": 45,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 3248,
+        "endLine": 3262,
+        "fenceIndex": 45,
+        "selectedBlock": null
+      },
+      "signature": "def em_price_anomaly_count(page_size: int = 50, page_no: int = 1,\n                           sort_key: str = \"\", sort_dir: str = \"\") -> dict:",
+      "signatureSha256": "1f5af3f062113d396eff6a0f4d55f71a0140e4a7b6efffb7a01de983c13f8ada",
+      "bodySha256": "35e577193473eab060345d8c7f2ff83f2dcf40ed59b8fd0f3a8160d5ab38a189",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-044"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "_opt_f",
+      "kind": "function",
+      "fenceIndex": 46,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 3299,
+        "endLine": 3301,
+        "fenceIndex": 46,
+        "selectedBlock": null
+      },
+      "signature": "def _opt_f(x):",
+      "signatureSha256": "806be197bb74e96b5f7e05616bda20d38457ea10dceee4f22e170e97f36c6d75",
+      "bodySha256": "586a59a42a9df6cc0b680447215f9bd3a5858f8238e1dcc84f7b6f5255ef46cd",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [],
+      "nonCapabilityReason": "private-helper"
+    },
+    {
+      "name": "_sina_opt_list",
+      "kind": "function",
+      "fenceIndex": 46,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 3303,
+        "endLine": 3308,
+        "fenceIndex": 46,
+        "selectedBlock": null
+      },
+      "signature": "def _sina_opt_list(param: str) -> list:",
+      "signatureSha256": "410dbe34545795d82885a3451cb5a548e234ec130a7bac384fcdacb571dd1514",
+      "bodySha256": "fb60dbbfd7e3e221e44b82ce5d8f355ef6bb734ca73791b7330cf03cab9ac624",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [],
+      "nonCapabilityReason": "private-helper"
+    },
+    {
+      "name": "sina_option_codes",
+      "kind": "function",
+      "fenceIndex": 46,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 3310,
+        "endLine": 3330,
+        "fenceIndex": 46,
+        "selectedBlock": null
+      },
+      "signature": "def sina_option_codes(underlying: str = \"510050\", call: bool = True) -> dict:",
+      "signatureSha256": "25672d80cd95dc49f08b23af1c10bd03638725283bcccc8646291f467a8fb9f0",
+      "bodySha256": "226772a446a94a95f76803674a4e1598176c9bca6ab2ebb946d2afb1d8927e49",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-045"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "sina_option_tquote",
+      "kind": "function",
+      "fenceIndex": 46,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 3332,
+        "endLine": 3343,
+        "fenceIndex": 46,
+        "selectedBlock": null
+      },
+      "signature": "def sina_option_tquote(code: str) -> dict:",
+      "signatureSha256": "468ebbe9770ee6b6b34d93798518631783918bbab3ce290d1f05b3b2b39a6d1a",
+      "bodySha256": "696c5d8e0a843619252616c2188f532b24a6d87af4db6299f939b6912be68f19",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-046"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "sina_option_greeks",
+      "kind": "function",
+      "fenceIndex": 46,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 3345,
+        "endLine": 3355,
+        "fenceIndex": 46,
+        "selectedBlock": null
+      },
+      "signature": "def sina_option_greeks(code: str) -> dict:",
+      "signatureSha256": "c48793b1dfa5e5a37919af46109014afe8d38bee38d4132fe002fc56f03ee652",
+      "bodySha256": "074be2ac06f3ef72ef170766471ba40ab7c48d851f7eb056304e3341dd5298b6",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-047"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "cninfo_irm",
+      "kind": "function",
+      "fenceIndex": 47,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 3380,
+        "endLine": 3407,
+        "fenceIndex": 47,
+        "selectedBlock": null
+      },
+      "signature": "def cninfo_irm(code: str, page_size: int = 30, page_num: int = 1) -> list[dict]:",
+      "signatureSha256": "984d724645c8cf5c85e26a084a189e36003e0c3c40b7cc9a4c3406d1256b6980",
+      "bodySha256": "869a0aa52cffb7f9aa3431a0e86114b898afedf08e0c7093f0dfe17e04c00733",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-048"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "ths_hot_list",
+      "kind": "function",
+      "fenceIndex": 48,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 3422,
+        "endLine": 3439,
+        "fenceIndex": 48,
+        "selectedBlock": null
+      },
+      "signature": "def ths_hot_list(period: str = \"hour\") -> list[dict]:",
+      "signatureSha256": "eabe3e28aa61acfca1c37f95cc2c21b76ef0b5383f9be9ae4c2c94a622ee11f0",
+      "bodySha256": "de556034bc0f969f17ade9b4e5be1e3b8ede996117a1891bc49d691a190e1711",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-049"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "em_hot_rank",
+      "kind": "function",
+      "fenceIndex": 48,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 3441,
+        "endLine": 3469,
+        "fenceIndex": 48,
+        "selectedBlock": null
+      },
+      "signature": "def em_hot_rank(top: int = 50) -> list[dict]:",
+      "signatureSha256": "655769d36d26c14e6b19a89ae9abc5cebf52934636e9227b7d00a763bdc6d258",
+      "bodySha256": "4d66b2cecc54652edc8d6aced0a25f6c3cc5314e66d3a76eed3087deb65b44e7",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-050"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "em_hot_concept",
+      "kind": "function",
+      "fenceIndex": 48,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 3471,
+        "endLine": 3484,
+        "fenceIndex": 48,
+        "selectedBlock": null
+      },
+      "signature": "def em_hot_concept(code: str) -> list[dict]:",
+      "signatureSha256": "aa7ef3b8928e77a67caec3ba9efce13d336e5888b07686f3b08342f0d028d136",
+      "bodySha256": "706d269efb74aa04db3ad48a578e8589552881b68337b315a9b68f853007e7e6",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-051"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "_macro_get",
+      "kind": "function",
+      "fenceIndex": 49,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 3526,
+        "endLine": 3530,
+        "fenceIndex": 49,
+        "selectedBlock": null
+      },
+      "signature": "def _macro_get(url: str, timeout: int = 30) -> str:",
+      "signatureSha256": "9908b78b65e3b6f030b5069eb91ea8fd6325d1a2b7f74c9dbe4155886954aff0",
+      "bodySha256": "cd37f125ac3f619ae2daeda5e8eb269c2aef997c9f531f9f1b4575ac9b1d7552",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 2,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [],
+      "nonCapabilityReason": "private-helper"
+    },
+    {
+      "name": "_abs_pbc",
+      "kind": "function",
+      "fenceIndex": 49,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 3533,
+        "endLine": 3534,
+        "fenceIndex": 49,
+        "selectedBlock": null
+      },
+      "signature": "def _abs_pbc(href: str) -> str:",
+      "signatureSha256": "183320f386d20032215db0981e2b48530447e63231e06341618d4b31360df951",
+      "bodySha256": "4c3e16632be5dd3c6dd6f85bd3b337c56f4f83f4102c25b8c6e22039cbbb2bdc",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [],
+      "nonCapabilityReason": "private-helper"
+    },
+    {
+      "name": "pboc_social_financing",
+      "kind": "function",
+      "fenceIndex": 49,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 3537,
+        "endLine": 3606,
+        "fenceIndex": 49,
+        "selectedBlock": null
+      },
+      "signature": "def pboc_social_financing(year: Optional[int] = None) -> pd.DataFrame:",
+      "signatureSha256": "3e08c6e33f17f5ffff32d53ee3a7e35c7ade89e36ea49d58270dc5e77346466c",
+      "bodySha256": "fe8ee4cacfcd0b59106fd7ead32c53220542568dec72169d6e4fec93d4af66ef",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-052"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "_month_label",
+      "kind": "function",
+      "fenceIndex": 49,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 3582,
+        "endLine": 3595,
+        "fenceIndex": 49,
+        "selectedBlock": null
+      },
+      "signature": "def _month_label(v):",
+      "signatureSha256": "0b454659dd95ce72f7f582a1f1145706dd2e032ca7bd77a6cb443126118da998",
+      "bodySha256": "f7120f6a6b8c964befc882921818b6a0077c33365869ed5ab0c685fede9e38eb",
+      "topLevel": false,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [],
+      "nonCapabilityReason": "private-helper"
+    },
+    {
+      "name": "_macro_get",
+      "kind": "function",
+      "fenceIndex": 50,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 3639,
+        "endLine": 3645,
+        "fenceIndex": 50,
+        "selectedBlock": null
+      },
+      "signature": "def _macro_get(url: str, timeout: int = 30) -> str:",
+      "signatureSha256": "9908b78b65e3b6f030b5069eb91ea8fd6325d1a2b7f74c9dbe4155886954aff0",
+      "bodySha256": "81ae525b204b833835d21cd83b399616ec17f186612c34556f88644d53cea2df",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 2,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [],
+      "nonCapabilityReason": "private-helper"
+    },
+    {
+      "name": "nbs_pmi",
+      "kind": "function",
+      "fenceIndex": 50,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 3648,
+        "endLine": 3716,
+        "fenceIndex": 50,
+        "selectedBlock": null
+      },
+      "signature": "def nbs_pmi() -> dict:",
+      "signatureSha256": "e4daa1c137e3e0095d568759011dff70c57384db8d0881a0d0d225ce6dd77b3e",
+      "bodySha256": "37fb5fb020d22055093f856215fe6075c759582d506d0158f1b171297f9f4af3",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-053"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "grab",
+      "kind": "function",
+      "fenceIndex": 50,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 3665,
+        "endLine": 3667,
+        "fenceIndex": 50,
+        "selectedBlock": null
+      },
+      "signature": "def grab(pat):",
+      "signatureSha256": "af171d25a3bd35ece4065cc1a73ea54732895b37b1386dc05fd12c4ee29ea861",
+      "bodySha256": "3e0c4f0b68c86d6f318de46049aa40fbef06cafcb1f34dd889592a7bb6a9b1fa",
+      "topLevel": false,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [],
+      "nonCapabilityReason": "nested-helper"
+    },
+    {
+      "name": "_official_code",
+      "kind": "function",
+      "fenceIndex": 51,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 3763,
+        "endLine": 3767,
+        "fenceIndex": 51,
+        "selectedBlock": "official-data-core"
+      },
+      "signature": "def _official_code(value):",
+      "signatureSha256": "6430ba3cd94d6970e0d75e84afe79943325dad106906db5c2ab49cc79fb079a1",
+      "bodySha256": "e346fca3e52117986c8f7810aca470a2cd20ef8e3fe7f87b812288f8b2f184cf",
+      "topLevel": true,
+      "disposition": "generated",
+      "occurrences": 1,
+      "generated": true,
+      "generatedLocations": [
+        {
+          "file": "python/generated/astock_upstream.py",
+          "bodyStartLine": 14,
+          "bodyEndLine": 18
+        }
+      ],
+      "capabilityIds": [],
+      "nonCapabilityReason": "private-helper"
+    },
+    {
+      "name": "_official_date",
+      "kind": "function",
+      "fenceIndex": 51,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 3770,
+        "endLine": 3773,
+        "fenceIndex": 51,
+        "selectedBlock": "official-data-core"
+      },
+      "signature": "def _official_date(value):",
+      "signatureSha256": "f7fe47449f958900006493ba20fb462702e1763d3db28f6c84081087ca32d90a",
+      "bodySha256": "c9b51f08c70b3f8233a34e972ac1ea848c0a32be73e8203eb95843de4315a02c",
+      "topLevel": true,
+      "disposition": "generated",
+      "occurrences": 1,
+      "generated": true,
+      "generatedLocations": [
+        {
+          "file": "python/generated/astock_upstream.py",
+          "bodyStartLine": 21,
+          "bodyEndLine": 24
+        }
+      ],
+      "capabilityIds": [],
+      "nonCapabilityReason": "private-helper"
+    },
+    {
+      "name": "_official_number",
+      "kind": "function",
+      "fenceIndex": 51,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 3776,
+        "endLine": 3784,
+        "fenceIndex": 51,
+        "selectedBlock": "official-data-core"
+      },
+      "signature": "def _official_number(value, required=False):",
+      "signatureSha256": "7f90133bc39f2bc365cbd45318d0c1dda36fb987db5063932df0f89fdf99fb21",
+      "bodySha256": "f5d8a6d28726bdc4f34b2d26390aa62dde4ef983ac6d0331baf69d943d60a94a",
+      "topLevel": true,
+      "disposition": "generated",
+      "occurrences": 1,
+      "generated": true,
+      "generatedLocations": [
+        {
+          "file": "python/generated/astock_upstream.py",
+          "bodyStartLine": 27,
+          "bodyEndLine": 35
+        }
+      ],
+      "capabilityIds": [],
+      "nonCapabilityReason": "private-helper"
+    },
+    {
+      "name": "_official_get",
+      "kind": "function",
+      "fenceIndex": 51,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 3787,
+        "endLine": 3794,
+        "fenceIndex": 51,
+        "selectedBlock": "official-data-core"
+      },
+      "signature": "def _official_get(url, params=None, referer=None):",
+      "signatureSha256": "2758cc195bc6d68da22fa5ff5678e0a2f78c47b4d12f1e15b6833ccff6932bc7",
+      "bodySha256": "51236f3db7795ee29afb3f895dc15909d1dfc7b1334cd3b5c5b4dcf007364c33",
+      "topLevel": true,
+      "disposition": "generated",
+      "occurrences": 1,
+      "generated": true,
+      "generatedLocations": [
+        {
+          "file": "python/generated/astock_upstream.py",
+          "bodyStartLine": 38,
+          "bodyEndLine": 45
+        }
+      ],
+      "capabilityIds": [],
+      "nonCapabilityReason": "private-helper"
+    },
+    {
+      "name": "_official_excel",
+      "kind": "function",
+      "fenceIndex": 51,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 3797,
+        "endLine": 3804,
+        "fenceIndex": 51,
+        "selectedBlock": "official-data-core"
+      },
+      "signature": "def _official_excel(response):",
+      "signatureSha256": "8b4941727560a88083235b1d9761953a446518137cfd42a1e0a21077b529adb2",
+      "bodySha256": "ec460ae10ede3e75f73d0e825bd6971c795f709a116fb2595630d02eb60e24db",
+      "topLevel": true,
+      "disposition": "generated",
+      "occurrences": 1,
+      "generated": true,
+      "generatedLocations": [
+        {
+          "file": "python/generated/astock_upstream.py",
+          "bodyStartLine": 48,
+          "bodyEndLine": 55
+        }
+      ],
+      "capabilityIds": [],
+      "nonCapabilityReason": "private-helper"
+    },
+    {
+      "name": "_official_columns",
+      "kind": "function",
+      "fenceIndex": 51,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 3807,
+        "endLine": 3810,
+        "fenceIndex": 51,
+        "selectedBlock": "official-data-core"
+      },
+      "signature": "def _official_columns(frame, names):",
+      "signatureSha256": "8a79ee870c48ae71b3d4460e1e7fa34c9bb46a0ab5af206cf34fd6654111138f",
+      "bodySha256": "0c7a917cb81d8fe92b85f9d5831be8e139af37dd6f4180c75db22bce007a0222",
+      "topLevel": true,
+      "disposition": "generated",
+      "occurrences": 1,
+      "generated": true,
+      "generatedLocations": [
+        {
+          "file": "python/generated/astock_upstream.py",
+          "bodyStartLine": 58,
+          "bodyEndLine": 61
+        }
+      ],
+      "capabilityIds": [],
+      "nonCapabilityReason": "private-helper"
+    },
+    {
+      "name": "_official_frame",
+      "kind": "function",
+      "fenceIndex": 51,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 3813,
+        "endLine": 3820,
+        "fenceIndex": 51,
+        "selectedBlock": "official-data-core"
+      },
+      "signature": "def _official_frame(rows, keys, source, url):",
+      "signatureSha256": "fc52548fd7fa8a926df4dc40bd6dec8a33e73717db454ea09e1da0d0635e3f44",
+      "bodySha256": "c9e8524cdd1256b01bd95d1e6df2e071eed47177442aaefcb54f904535c8fb4f",
+      "topLevel": true,
+      "disposition": "generated",
+      "occurrences": 1,
+      "generated": true,
+      "generatedLocations": [
+        {
+          "file": "python/generated/astock_upstream.py",
+          "bodyStartLine": 64,
+          "bodyEndLine": 71
+        }
+      ],
+      "capabilityIds": [],
+      "nonCapabilityReason": "private-helper"
+    },
+    {
+      "name": "_official_index_members",
+      "kind": "function",
+      "fenceIndex": 51,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 3823,
+        "endLine": 3876,
+        "fenceIndex": 51,
+        "selectedBlock": "official-data-core"
+      },
+      "signature": "def _official_index_members(index_code, provider, weights):",
+      "signatureSha256": "e6aae9f2150d3a25482674bec0d1a3123233ca69bff9aa7157009e8e10a232b2",
+      "bodySha256": "4051ef529b128a662b2dfd6d250f966e5685ddea96f76bc7dffc224a92d2b711",
+      "topLevel": true,
+      "disposition": "generated",
+      "occurrences": 1,
+      "generated": true,
+      "generatedLocations": [
+        {
+          "file": "python/generated/astock_upstream.py",
+          "bodyStartLine": 74,
+          "bodyEndLine": 127
+        }
+      ],
+      "capabilityIds": [],
+      "nonCapabilityReason": "private-helper"
+    },
+    {
+      "name": "index_constituents",
+      "kind": "function",
+      "fenceIndex": 51,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 3879,
+        "endLine": 3881,
+        "fenceIndex": 51,
+        "selectedBlock": "official-data-core"
+      },
+      "signature": "def index_constituents(index_code, provider=\"csi\"):",
+      "signatureSha256": "514f9cbfdbaad95d182ebaf42ccc79f3e41a7f31da0089ca466435094be54e9e",
+      "bodySha256": "b032f98f161bda67a7ec3d58a32e9ec978cfc036dce6eb1f18ef3c62a41c82ae",
+      "topLevel": true,
+      "disposition": "generated",
+      "occurrences": 1,
+      "generated": true,
+      "generatedLocations": [
+        {
+          "file": "python/generated/astock_upstream.py",
+          "bodyStartLine": 130,
+          "bodyEndLine": 132
+        }
+      ],
+      "capabilityIds": [
+        "capability-054"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "index_weights",
+      "kind": "function",
+      "fenceIndex": 51,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 3884,
+        "endLine": 3886,
+        "fenceIndex": 51,
+        "selectedBlock": "official-data-core"
+      },
+      "signature": "def index_weights(index_code, provider=\"csi\"):",
+      "signatureSha256": "1b04bffd7290bb8b9b101b7c5010a4d3fcfedf9f97306c9d2bc7738641148bfb",
+      "bodySha256": "99d6789cd781f75e3d2e2d3d12f134b8e4a766439778e4051f8be8f5704e2ed4",
+      "topLevel": true,
+      "disposition": "generated",
+      "occurrences": 1,
+      "generated": true,
+      "generatedLocations": [
+        {
+          "file": "python/generated/astock_upstream.py",
+          "bodyStartLine": 135,
+          "bodyEndLine": 137
+        }
+      ],
+      "capabilityIds": [
+        "capability-055"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "index_valuation",
+      "kind": "function",
+      "fenceIndex": 51,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 3889,
+        "endLine": 3907,
+        "fenceIndex": 51,
+        "selectedBlock": "official-data-core"
+      },
+      "signature": "def index_valuation(index_code):",
+      "signatureSha256": "4c0e0720c6e9fed1045bb0d881f3a547839bb9b40a4e38717cfaf53a8b14995d",
+      "bodySha256": "337b09b1fe7bef851409de60248341c414875a80f8a490d5ff106cf29a6ba67e",
+      "topLevel": true,
+      "disposition": "generated",
+      "occurrences": 1,
+      "generated": true,
+      "generatedLocations": [
+        {
+          "file": "python/generated/astock_upstream.py",
+          "bodyStartLine": 140,
+          "bodyEndLine": 158
+        }
+      ],
+      "capabilityIds": [
+        "capability-056"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "trading_calendar",
+      "kind": "function",
+      "fenceIndex": 51,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 3910,
+        "endLine": 3929,
+        "fenceIndex": 51,
+        "selectedBlock": "official-data-core"
+      },
+      "signature": "def trading_calendar(year, month):",
+      "signatureSha256": "2a3f0f29fad2fe0ff3e1e3290a957170d585631e3cd87db1fca66cdd25d42867",
+      "bodySha256": "95b9c8c69360fb8b5d262d7853abfce554d737f7483303fd77fe6757eac884fe",
+      "topLevel": true,
+      "disposition": "generated",
+      "occurrences": 1,
+      "generated": true,
+      "generatedLocations": [
+        {
+          "file": "python/generated/astock_upstream.py",
+          "bodyStartLine": 161,
+          "bodyEndLine": 180
+        }
+      ],
+      "capabilityIds": [
+        "capability-057"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "forward_pe",
+      "kind": "function",
+      "fenceIndex": 53,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 3958,
+        "endLine": 3962,
+        "fenceIndex": 53,
+        "selectedBlock": null
+      },
+      "signature": "def forward_pe(price: float, eps_forecast: float) -> float:",
+      "signatureSha256": "b2bff56b4c2227ea2d8f98cd58548e30d08099f08677081a28480a6ae5e7dccd",
+      "bodySha256": "a5a2b18ffb8de63967db68081834b03159f70f3474a38b0c30e5cdfeac26692a",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [],
+      "nonCapabilityReason": "supporting-public-callable"
+    },
+    {
+      "name": "pe_digestion",
+      "kind": "function",
+      "fenceIndex": 54,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 3970,
+        "endLine": 3980,
+        "fenceIndex": 54,
+        "selectedBlock": null
+      },
+      "signature": "def pe_digestion(current_pe: float, cagr: float, target_pe: float = 30) -> float:",
+      "signatureSha256": "c976a864c3a789f9c841800d7efe29706035e04c9f6075113195083ad7334549",
+      "bodySha256": "c0be09b05d480c5638a8f9bbc13e9a2972d0e42828273fa7b438e386f1fceee7",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [],
+      "nonCapabilityReason": "supporting-public-callable"
+    },
+    {
+      "name": "calc_peg",
+      "kind": "function",
+      "fenceIndex": 55,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 3986,
+        "endLine": 3995,
+        "fenceIndex": 55,
+        "selectedBlock": null
+      },
+      "signature": "def calc_peg(pe: float, cagr: float) -> float:",
+      "signatureSha256": "1509ea512aa187e657399722ae25a578be2b99c58ef2b93e8ac3fe81d91a819e",
+      "bodySha256": "9d8a3e4db4e64c93feaa49e9db67e6d297b96a4c5cc479d86a100ce3d31c0468",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [],
+      "nonCapabilityReason": "supporting-public-callable"
+    },
+    {
+      "name": "full_valuation",
+      "kind": "function",
+      "fenceIndex": 56,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 4024,
+        "endLine": 4086,
+        "fenceIndex": 56,
+        "selectedBlock": null
+      },
+      "signature": "def full_valuation(code: str) -> dict:",
+      "signatureSha256": "beb2acd3d67436cc5d0790af06b5dda11b2da625e55f28bcbf47fc251d1ef239",
+      "bodySha256": "62fb723198203328d0e788d132ef4f7a4537b9ddb8ca9ae837c1712817ed00cf",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [],
+      "nonCapabilityReason": "supporting-public-callable"
+    },
+    {
+      "name": "_pick",
+      "kind": "function",
+      "fenceIndex": 56,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 4050,
+        "endLine": 4054,
+        "fenceIndex": 56,
+        "selectedBlock": null
+      },
+      "signature": "def _pick(row, name):",
+      "signatureSha256": "efeb4a69896f4ec08d63ca7b62cf7792312b62ff5091f65ac7dbd5009a8330d9",
+      "bodySha256": "696f3ead815f1097926afa4f5be6b840f19026931478a12f84b20553530b8a25",
+      "topLevel": false,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [],
+      "nonCapabilityReason": "private-helper"
+    },
+    {
+      "name": "_official_total",
+      "kind": "function",
+      "fenceIndex": 60,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 4212,
+        "endLine": 4215,
+        "fenceIndex": 60,
+        "selectedBlock": "official-data-backups"
+      },
+      "signature": "def _official_total(value):",
+      "signatureSha256": "b21a04ef2a24fda0487c3526f9e6ed69fbf61968b6c4be5d19b2f0c3ff7ac550",
+      "bodySha256": "ead00c59d4a986d8dee9f0860e99c4dfeb04ff3437516e63047a8c837b0b218a",
+      "topLevel": true,
+      "disposition": "generated",
+      "occurrences": 1,
+      "generated": true,
+      "generatedLocations": [
+        {
+          "file": "python/generated/astock_upstream.py",
+          "bodyStartLine": 186,
+          "bodyEndLine": 189
+        }
+      ],
+      "capabilityIds": [],
+      "nonCapabilityReason": "private-helper"
+    },
+    {
+      "name": "_official_margin_code",
+      "kind": "function",
+      "fenceIndex": 60,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 4218,
+        "endLine": 4223,
+        "fenceIndex": 60,
+        "selectedBlock": "official-data-backups"
+      },
+      "signature": "def _official_margin_code(value, exchange):",
+      "signatureSha256": "c2a7827f67711ae76c3f0d689ef9fa9efa205140f9ddc49f55f0d543e92aa03b",
+      "bodySha256": "afd04e2f829e58050bc407c0fec5e5b8018147b54603670a5167dcfb28c4757d",
+      "topLevel": true,
+      "disposition": "generated",
+      "occurrences": 1,
+      "generated": true,
+      "generatedLocations": [
+        {
+          "file": "python/generated/astock_upstream.py",
+          "bodyStartLine": 192,
+          "bodyEndLine": 197
+        }
+      ],
+      "capabilityIds": [],
+      "nonCapabilityReason": "private-helper"
+    },
+    {
+      "name": "margin_trading_backup",
+      "kind": "function",
+      "fenceIndex": 60,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 4226,
+        "endLine": 4271,
+        "fenceIndex": 60,
+        "selectedBlock": "official-data-backups"
+      },
+      "signature": "def margin_trading_backup(trade_date, exchange, code=None):",
+      "signatureSha256": "dcaae954b8df9e3bbac0868ddc3706546afb6afff6c0f3b0e495ee0fe8b7e951",
+      "bodySha256": "1cddc75c673d835212d6b07ff19cf23943694e55b36c7945768f88efc079a849",
+      "topLevel": true,
+      "disposition": "generated",
+      "occurrences": 1,
+      "generated": true,
+      "generatedLocations": [
+        {
+          "file": "python/generated/astock_upstream.py",
+          "bodyStartLine": 200,
+          "bodyEndLine": 245
+        }
+      ],
+      "capabilityIds": [
+        "capability-058"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "bse_quote_backup",
+      "kind": "function",
+      "fenceIndex": 60,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 4274,
+        "endLine": 4335,
+        "fenceIndex": 60,
+        "selectedBlock": "official-data-backups"
+      },
+      "signature": "def bse_quote_backup(trade_date, code=None):",
+      "signatureSha256": "e0208cfe6eb50ae2f807e9a5e21c6a0dd338afc8e18195c821a1be823205bb67",
+      "bodySha256": "c714a2bf5af354c71387d611a23bfb7e104384ebda1e0296af6159f9749bc302",
+      "topLevel": true,
+      "disposition": "generated",
+      "occurrences": 1,
+      "generated": true,
+      "generatedLocations": [
+        {
+          "file": "python/generated/astock_upstream.py",
+          "bodyStartLine": 248,
+          "bodyEndLine": 309
+        }
+      ],
+      "capabilityIds": [
+        "capability-059"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "dragon_tiger_backup",
+      "kind": "function",
+      "fenceIndex": 62,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 4409,
+        "endLine": 4428,
+        "fenceIndex": 62,
+        "selectedBlock": null
+      },
+      "signature": "def dragon_tiger_backup(trade_date: str) -> dict:",
+      "signatureSha256": "d40724ab3eac158df7ee7ca2a0e56061c0b84500dde6f361698ab9b8bbec4fc2",
+      "bodySha256": "5c68da7500dc859f192d3d2ed9b9e0d199f0dae6a62ce1716f87e9b64d9513f5",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-060"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "fund_flow_backup",
+      "kind": "function",
+      "fenceIndex": 62,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 4430,
+        "endLine": 4442,
+        "fenceIndex": 62,
+        "selectedBlock": null
+      },
+      "signature": "def fund_flow_backup(code: str, days: int = 60) -> list:",
+      "signatureSha256": "dfcfd01a6d9a200a00a7a6417a0b2a507fc78cf0d8628f567a50359066caa848",
+      "bodySha256": "fe707f0320de1b27b41909131b42d2ce23aa612d39539afb4f6a66d200afa182",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-060"
+      ],
+      "nonCapabilityReason": null
+    },
+    {
+      "name": "announcements_backup",
+      "kind": "function",
+      "fenceIndex": 62,
+      "sourceLocation": {
+        "file": "SKILL.md",
+        "startLine": 4444,
+        "endLine": 4464,
+        "fenceIndex": 62,
+        "selectedBlock": null
+      },
+      "signature": "def announcements_backup(code: str, page_size: int = 20) -> list:",
+      "signatureSha256": "2db05e0a6951b2f1202c926235b935480bd94092b73c54cc63737061863d91de",
+      "bodySha256": "e6585620af1711a85c3db0163cac999af715e0fc6632240973e8bd624c283e07",
+      "topLevel": true,
+      "disposition": "inventory-only",
+      "occurrences": 1,
+      "generated": false,
+      "generatedLocations": [],
+      "capabilityIds": [
+        "capability-060"
+      ],
+      "nonCapabilityReason": null
+    }
+  ],
+  "diagnostics": {
+    "duplicateDefinitions": [
+      {
+        "name": "_macro_get",
+        "count": 2,
+        "approved": true,
+        "strategy": "keep-last"
+      }
+    ],
+    "importConflicts": [
+      {
+        "binding": "urllib",
+        "statements": [
+          "import urllib.request",
+          "import json, urllib.request, ssl"
+        ],
+        "entries": [
+          {
+            "binding": "urllib",
+            "statement": "import urllib.request",
+            "fenceIndex": 6
+          },
+          {
+            "binding": "urllib",
+            "statement": "import urllib.request",
+            "fenceIndex": 56
+          },
+          {
+            "binding": "urllib",
+            "statement": "import json, urllib.request, ssl",
+            "fenceIndex": 62
+          }
+        ]
+      },
+      {
+        "binding": "json",
+        "statements": [
+          "import json",
+          "import json, urllib.request, ssl"
+        ],
+        "entries": [
+          {
+            "binding": "json",
+            "statement": "import json",
+            "fenceIndex": 8
+          },
+          {
+            "binding": "json",
+            "statement": "import json",
+            "fenceIndex": 12
+          },
+          {
+            "binding": "json",
+            "statement": "import json",
+            "fenceIndex": 29
+          },
+          {
+            "binding": "json",
+            "statement": "import json",
+            "fenceIndex": 60
+          },
+          {
+            "binding": "json",
+            "statement": "import json, urllib.request, ssl",
+            "fenceIndex": 62
+          }
+        ]
+      },
+      {
+        "binding": "date",
+        "statements": [
+          "from datetime import date, timedelta   # 注意用 date/timedelta，不要 import datetime 模块：",
+          "from datetime import date, timedelta   # 本块单独拷贝也能跑；勿写成 import datetime（会被 §3+ 的"
+        ],
+        "entries": [
+          {
+            "binding": "date",
+            "statement": "from datetime import date, timedelta   # 注意用 date/timedelta，不要 import datetime 模块：",
+            "fenceIndex": 9
+          },
+          {
+            "binding": "date",
+            "statement": "from datetime import date, timedelta   # 本块单独拷贝也能跑；勿写成 import datetime（会被 §3+ 的",
+            "fenceIndex": 10
+          }
+        ]
+      },
+      {
+        "binding": "datetime",
+        "statements": [
+          "from datetime import datetime, timedelta",
+          "from datetime import datetime",
+          "from datetime import datetime, timedelta, timezone   # 不要 import datetime 模块：§8.2 的 `from datetime import datetime` 会遮蔽它",
+          "from datetime import datetime, timezone"
+        ],
+        "entries": [
+          {
+            "binding": "datetime",
+            "statement": "from datetime import datetime, timedelta",
+            "fenceIndex": 17
+          },
+          {
+            "binding": "datetime",
+            "statement": "from datetime import datetime, timedelta",
+            "fenceIndex": 18
+          },
+          {
+            "binding": "datetime",
+            "statement": "from datetime import datetime",
+            "fenceIndex": 21
+          },
+          {
+            "binding": "datetime",
+            "statement": "from datetime import datetime",
+            "fenceIndex": 30
+          },
+          {
+            "binding": "datetime",
+            "statement": "from datetime import datetime",
+            "fenceIndex": 39
+          },
+          {
+            "binding": "datetime",
+            "statement": "from datetime import datetime",
+            "fenceIndex": 42
+          },
+          {
+            "binding": "datetime",
+            "statement": "from datetime import datetime, timedelta, timezone   # 不要 import datetime 模块：§8.2 的 `from datetime import datetime` 会遮蔽它",
+            "fenceIndex": 44
+          },
+          {
+            "binding": "datetime",
+            "statement": "from datetime import datetime",
+            "fenceIndex": 47
+          },
+          {
+            "binding": "datetime",
+            "statement": "from datetime import datetime, timezone",
+            "fenceIndex": 51
+          }
+        ]
+      },
+      {
+        "binding": "timedelta",
+        "statements": [
+          "from datetime import datetime, timedelta",
+          "from datetime import datetime, timedelta, timezone   # 不要 import datetime 模块：§8.2 的 `from datetime import datetime` 会遮蔽它"
+        ],
+        "entries": [
+          {
+            "binding": "timedelta",
+            "statement": "from datetime import datetime, timedelta",
+            "fenceIndex": 17
+          },
+          {
+            "binding": "timedelta",
+            "statement": "from datetime import datetime, timedelta",
+            "fenceIndex": 18
+          },
+          {
+            "binding": "timedelta",
+            "statement": "from datetime import datetime, timedelta, timezone   # 不要 import datetime 模块：§8.2 的 `from datetime import datetime` 会遮蔽它",
+            "fenceIndex": 44
+          }
+        ]
+      }
+    ],
+    "assignmentCollisions": [
+      {
+        "name": "UA",
+        "entries": [
+          {
+            "name": "UA",
+            "line": 5,
+            "source": "UA = \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36\"",
+            "fenceIndex": 4
+          },
+          {
+            "name": "UA",
+            "line": 11,
+            "source": "UA = \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36\"",
+            "fenceIndex": 9
+          }
+        ],
+        "approved": true,
+        "strategy": "dedupe-identical"
+      },
+      {
+        "name": "client",
+        "entries": [
+          {
+            "name": "client",
+            "line": 3,
+            "source": "client = tdx_client()  # 见 Prerequisites 的 tdx_client() helper（规避 0.11.x BESTIP bug；等价 Quotes.factory(market='std')）",
+            "fenceIndex": 5
+          },
+          {
+            "name": "client",
+            "line": 3,
+            "source": "client = tdx_client()  # 见 Prerequisites 的 tdx_client() helper（规避 0.11.x BESTIP bug；等价 Quotes.factory(market='std')）",
+            "fenceIndex": 32
+          },
+          {
+            "name": "client",
+            "line": 3,
+            "source": "client = tdx_client()  # 见 Prerequisites 的 tdx_client() helper（规避 0.11.x BESTIP bug；等价 Quotes.factory(market='std')）",
+            "fenceIndex": 33
+          },
+          {
+            "name": "client",
+            "line": 2,
+            "source": "client = tdx_client()  # 见 Prerequisites 的 tdx_client() helper（规避 0.11.x BESTIP bug；等价 Quotes.factory(market='std')）",
+            "fenceIndex": 40
+          }
+        ],
+        "approved": false,
+        "strategy": null
+      },
+      {
+        "name": "quotes",
+        "entries": [
+          {
+            "name": "quotes",
+            "line": 19,
+            "source": "quotes = client.quotes(symbol=['688017', '300476'])",
+            "fenceIndex": 5
+          },
+          {
+            "name": "quotes",
+            "line": 81,
+            "source": "quotes = tencent_quote([\"688017\", \"300476\", \"002463\"])",
+            "fenceIndex": 6
+          },
+          {
+            "name": "quotes",
+            "line": 8,
+            "source": "quotes = tencent_quote([code])",
+            "fenceIndex": 59
+          }
+        ],
+        "approved": false,
+        "strategy": null
+      },
+      {
+        "name": "data",
+        "entries": [
+          {
+            "name": "data",
+            "line": 27,
+            "source": "data = baidu_kline_with_ma(\"600519\")",
+            "fenceIndex": 7
+          },
+          {
+            "name": "data",
+            "line": 84,
+            "source": "data = dragon_tiger_board(\"002475\", \"2026-05-17\")",
+            "fenceIndex": 17
+          },
+          {
+            "name": "data",
+            "line": 47,
+            "source": "data = lockup_expiry(\"002475\", \"2026-05-17\")",
+            "fenceIndex": 18
+          },
+          {
+            "name": "data",
+            "line": 42,
+            "source": "data = industry_comparison(20)",
+            "fenceIndex": 19
+          },
+          {
+            "name": "data",
+            "line": 44,
+            "source": "data = daily_dragon_tiger(\"2026-05-16\")",
+            "fenceIndex": 21
+          },
+          {
+            "name": "data",
+            "line": 50,
+            "source": "data = daily_dragon_tiger(\"2026-05-16\", min_net_buy=5000)",
+            "fenceIndex": 21
+          },
+          {
+            "name": "data",
+            "line": 27,
+            "source": "data = margin_trading(\"600519\")",
+            "fenceIndex": 23
+          },
+          {
+            "name": "data",
+            "line": 30,
+            "source": "data = block_trade(\"600519\")",
+            "fenceIndex": 24
+          },
+          {
+            "name": "data",
+            "line": 24,
+            "source": "data = holder_num_change(\"600519\")",
+            "fenceIndex": 25
+          },
+          {
+            "name": "data",
+            "line": 24,
+            "source": "data = dividend_history(\"600519\")",
+            "fenceIndex": 26
+          },
+          {
+            "name": "data",
+            "line": 45,
+            "source": "data = stock_fund_flow_120d(\"600519\")",
+            "fenceIndex": 27
+          }
+        ],
+        "approved": false,
+        "strategy": null
+      },
+      {
+        "name": "reports",
+        "entries": [
+          {
+            "name": "reports",
+            "line": 71,
+            "source": "reports = eastmoney_reports(\"688017\")",
+            "fenceIndex": 9
+          },
+          {
+            "name": "reports",
+            "line": 33,
+            "source": "reports = eastmoney_industry_reports(\"*\", max_pages=2)",
+            "fenceIndex": 10
+          }
+        ],
+        "approved": false,
+        "strategy": null
+      },
+      {
+        "name": "df",
+        "entries": [
+          {
+            "name": "df",
+            "line": 31,
+            "source": "df = ths_eps_forecast(\"688017\")",
+            "fenceIndex": 11
+          },
+          {
+            "name": "df",
+            "line": 48,
+            "source": "df = ths_hot_reason(\"2026-05-09\")",
+            "fenceIndex": 13
+          },
+          {
+            "name": "df",
+            "line": 66,
+            "source": "df = hsgt_realtime()",
+            "fenceIndex": 14
+          },
+          {
+            "name": "df",
+            "line": 58,
+            "source": "df = baostock_valuation_history(\"600519\", \"2016-01-04\", \"2026-08-18\")",
+            "fenceIndex": 36
+          },
+          {
+            "name": "df",
+            "line": 97,
+            "source": "df = pboc_social_financing()          # 最新年（只含已发布月份）",
+            "fenceIndex": 49
+          }
+        ],
+        "approved": false,
+        "strategy": null
+      },
+      {
+        "name": "articles",
+        "entries": [
+          {
+            "name": "articles",
+            "line": 87,
+            "source": "articles = iwencai_search(\"人形机器人 行星滚柱丝杠 2026\", channel=\"report\", size=50)",
+            "fenceIndex": 12
+          },
+          {
+            "name": "articles",
+            "line": 88,
+            "source": "articles = dedup_articles(articles)",
+            "fenceIndex": 12
+          }
+        ],
+        "approved": false,
+        "strategy": null
+      },
+      {
+        "name": "hist",
+        "entries": [
+          {
+            "name": "hist",
+            "line": 76,
+            "source": "hist = _load_northbound_history(20)",
+            "fenceIndex": 14
+          },
+          {
+            "name": "hist",
+            "line": 106,
+            "source": "hist = pboc_social_financing(2024)    # 指定年份",
+            "fenceIndex": 49
+          }
+        ],
+        "approved": false,
+        "strategy": null
+      },
+      {
+        "name": "blocks",
+        "entries": [
+          {
+            "name": "blocks",
+            "line": 40,
+            "source": "blocks = eastmoney_concept_blocks(\"600519\")",
+            "fenceIndex": 15
+          },
+          {
+            "name": "blocks",
+            "line": 16,
+            "source": "blocks = eastmoney_concept_blocks(code)",
+            "fenceIndex": 59
+          }
+        ],
+        "approved": false,
+        "strategy": null
+      },
+      {
+        "name": "news",
+        "entries": [
+          {
+            "name": "news",
+            "line": 46,
+            "source": "news = eastmoney_stock_news(\"688017\")",
+            "fenceIndex": 29
+          },
+          {
+            "name": "news",
+            "line": 32,
+            "source": "news = cls_telegraph()",
+            "fenceIndex": 30
+          },
+          {
+            "name": "news",
+            "line": 31,
+            "source": "news = eastmoney_global_news()",
+            "fenceIndex": 31
+          }
+        ],
+        "approved": false,
+        "strategy": null
+      },
+      {
+        "name": "anns",
+        "entries": [
+          {
+            "name": "anns",
+            "line": 76,
+            "source": "anns = cninfo_announcements(\"688017\")",
+            "fenceIndex": 39
+          },
+          {
+            "name": "anns",
+            "line": 64,
+            "source": "anns = announcements_backup(\"000858\")     # 深市走深交所, 沪市走东财",
+            "fenceIndex": 62
+          }
+        ],
+        "approved": false,
+        "strategy": null
+      },
+      {
+        "name": "c",
+        "entries": [
+          {
+            "name": "c",
+            "line": 85,
+            "source": "c = em_price_anomaly_count(page_size=50)",
+            "fenceIndex": 45
+          },
+          {
+            "name": "c",
+            "line": 66,
+            "source": "c = codes[near][len(codes[near]) // 2]      # 中间档≈平值附近",
+            "fenceIndex": 46
+          }
+        ],
+        "approved": false,
+        "strategy": null
+      },
+      {
+        "name": "hot",
+        "entries": [
+          {
+            "name": "hot",
+            "line": 91,
+            "source": "hot = [s for s in a[\"items\"] if s[\"code\"] in monitor_codes]",
+            "fenceIndex": 45
+          },
+          {
+            "name": "hot",
+            "line": 70,
+            "source": "hot = em_hot_rank(10)        # 东财人气榜 TOP10",
+            "fenceIndex": 48
+          }
+        ],
+        "approved": false,
+        "strategy": null
+      },
+      {
+        "name": "_UA",
+        "entries": [
+          {
+            "name": "_UA",
+            "line": 8,
+            "source": "_UA = {\"User-Agent\": \"Mozilla/5.0\"}",
+            "fenceIndex": 49
+          },
+          {
+            "name": "_UA",
+            "line": 6,
+            "source": "_UA = {\"User-Agent\": \"Mozilla/5.0\"}",
+            "fenceIndex": 50
+          }
+        ],
+        "approved": true,
+        "strategy": "dedupe-identical"
+      },
+      {
+        "name": "flow",
+        "entries": [
+          {
+            "name": "flow",
+            "line": 20,
+            "source": "flow = eastmoney_fund_flow_minute(code)",
+            "fenceIndex": 59
+          },
+          {
+            "name": "flow",
+            "line": 63,
+            "source": "flow = fund_flow_backup(\"600519\", 60)     # 近60日资金流",
+            "fenceIndex": 62
+          }
+        ],
+        "approved": false,
+        "strategy": null
+      }
+    ],
+    "crossBlockReferences": [
+      {
+        "fenceIndex": 1,
+        "name": "bars"
+      },
+      {
+        "fenceIndex": 1,
+        "name": "c"
+      },
+      {
+        "fenceIndex": 1,
+        "name": "client"
+      },
+      {
+        "fenceIndex": 1,
+        "name": "df"
+      },
+      {
+        "fenceIndex": 1,
+        "name": "quotes"
+      },
+      {
+        "fenceIndex": 2,
+        "name": "c"
+      },
+      {
+        "fenceIndex": 2,
+        "name": "code"
+      },
+      {
+        "fenceIndex": 3,
+        "name": "code"
+      },
+      {
+        "fenceIndex": 3,
+        "name": "get_prefix"
+      },
+      {
+        "fenceIndex": 4,
+        "name": "d"
+      },
+      {
+        "fenceIndex": 4,
+        "name": "json"
+      },
+      {
+        "fenceIndex": 4,
+        "name": "Optional"
+      },
+      {
+        "fenceIndex": 4,
+        "name": "r"
+      },
+      {
+        "fenceIndex": 5,
+        "name": "bars"
+      },
+      {
+        "fenceIndex": 5,
+        "name": "date"
+      },
+      {
+        "fenceIndex": 5,
+        "name": "tdx_client"
+      },
+      {
+        "fenceIndex": 6,
+        "name": "c"
+      },
+      {
+        "fenceIndex": 6,
+        "name": "code"
+      },
+      {
+        "fenceIndex": 6,
+        "name": "codes"
+      },
+      {
+        "fenceIndex": 6,
+        "name": "data"
+      },
+      {
+        "fenceIndex": 6,
+        "name": "p"
+      },
+      {
+        "fenceIndex": 6,
+        "name": "q"
+      },
+      {
+        "fenceIndex": 6,
+        "name": "result"
+      },
+      {
+        "fenceIndex": 6,
+        "name": "SH_INDEX"
+      },
+      {
+        "fenceIndex": 7,
+        "name": "code"
+      },
+      {
+        "fenceIndex": 7,
+        "name": "d"
+      },
+      {
+        "fenceIndex": 7,
+        "name": "json"
+      },
+      {
+        "fenceIndex": 7,
+        "name": "r"
+      },
+      {
+        "fenceIndex": 7,
+        "name": "result"
+      },
+      {
+        "fenceIndex": 8,
+        "name": "c"
+      },
+      {
+        "fenceIndex": 8,
+        "name": "code"
+      },
+      {
+        "fenceIndex": 8,
+        "name": "data"
+      },
+      {
+        "fenceIndex": 8,
+        "name": "get_prefix"
+      },
+      {
+        "fenceIndex": 8,
+        "name": "it"
+      },
+      {
+        "fenceIndex": 8,
+        "name": "k"
+      },
+      {
+        "fenceIndex": 8,
+        "name": "norm_ticker"
+      },
+      {
+        "fenceIndex": 8,
+        "name": "pd"
+      },
+      {
+        "fenceIndex": 8,
+        "name": "r"
+      },
+      {
+        "fenceIndex": 8,
+        "name": "text"
+      },
+      {
+        "fenceIndex": 9,
+        "name": "code"
+      },
+      {
+        "fenceIndex": 9,
+        "name": "d"
+      },
+      {
+        "fenceIndex": 9,
+        "name": "datetime"
+      },
+      {
+        "fenceIndex": 9,
+        "name": "em_get"
+      },
+      {
+        "fenceIndex": 9,
+        "name": "json"
+      },
+      {
+        "fenceIndex": 9,
+        "name": "norm_ticker"
+      },
+      {
+        "fenceIndex": 9,
+        "name": "Optional"
+      },
+      {
+        "fenceIndex": 9,
+        "name": "r"
+      },
+      {
+        "fenceIndex": 9,
+        "name": "timedelta"
+      },
+      {
+        "fenceIndex": 10,
+        "name": "d"
+      },
+      {
+        "fenceIndex": 10,
+        "name": "datetime"
+      },
+      {
+        "fenceIndex": 10,
+        "name": "days"
+      },
+      {
+        "fenceIndex": 10,
+        "name": "download_pdf"
+      },
+      {
+        "fenceIndex": 10,
+        "name": "em_get"
+      },
+      {
+        "fenceIndex": 10,
+        "name": "json"
+      },
+      {
+        "fenceIndex": 10,
+        "name": "r"
+      },
+      {
+        "fenceIndex": 10,
+        "name": "REPORT_API"
+      },
+      {
+        "fenceIndex": 10,
+        "name": "timedelta"
+      },
+      {
+        "fenceIndex": 11,
+        "name": "c"
+      },
+      {
+        "fenceIndex": 11,
+        "name": "code"
+      },
+      {
+        "fenceIndex": 11,
+        "name": "io"
+      },
+      {
+        "fenceIndex": 11,
+        "name": "norm_ticker"
+      },
+      {
+        "fenceIndex": 11,
+        "name": "r"
+      },
+      {
+        "fenceIndex": 11,
+        "name": "text"
+      },
+      {
+        "fenceIndex": 12,
+        "name": "a"
+      },
+      {
+        "fenceIndex": 12,
+        "name": "data"
+      },
+      {
+        "fenceIndex": 12,
+        "name": "r"
+      },
+      {
+        "fenceIndex": 13,
+        "name": "data"
+      },
+      {
+        "fenceIndex": 13,
+        "name": "date"
+      },
+      {
+        "fenceIndex": 13,
+        "name": "datetime"
+      },
+      {
+        "fenceIndex": 13,
+        "name": "json"
+      },
+      {
+        "fenceIndex": 13,
+        "name": "r"
+      },
+      {
+        "fenceIndex": 14,
+        "name": "d"
+      },
+      {
+        "fenceIndex": 14,
+        "name": "date"
+      },
+      {
+        "fenceIndex": 14,
+        "name": "json"
+      },
+      {
+        "fenceIndex": 14,
+        "name": "p"
+      },
+      {
+        "fenceIndex": 14,
+        "name": "r"
+      },
+      {
+        "fenceIndex": 15,
+        "name": "code"
+      },
+      {
+        "fenceIndex": 15,
+        "name": "d"
+      },
+      {
+        "fenceIndex": 15,
+        "name": "em_get"
+      },
+      {
+        "fenceIndex": 15,
+        "name": "em_market_code"
+      },
+      {
+        "fenceIndex": 15,
+        "name": "it"
+      },
+      {
+        "fenceIndex": 15,
+        "name": "json"
+      },
+      {
+        "fenceIndex": 15,
+        "name": "r"
+      },
+      {
+        "fenceIndex": 15,
+        "name": "UA"
+      },
+      {
+        "fenceIndex": 16,
+        "name": "code"
+      },
+      {
+        "fenceIndex": 16,
+        "name": "d"
+      },
+      {
+        "fenceIndex": 16,
+        "name": "em_get"
+      },
+      {
+        "fenceIndex": 16,
+        "name": "em_secid"
+      },
+      {
+        "fenceIndex": 16,
+        "name": "json"
+      },
+      {
+        "fenceIndex": 16,
+        "name": "r"
+      },
+      {
+        "fenceIndex": 16,
+        "name": "UA"
+      },
+      {
+        "fenceIndex": 17,
+        "name": "code"
+      },
+      {
+        "fenceIndex": 17,
+        "name": "days"
+      },
+      {
+        "fenceIndex": 17,
+        "name": "eastmoney_datacenter"
+      },
+      {
+        "fenceIndex": 17,
+        "name": "r"
+      },
+      {
+        "fenceIndex": 17,
+        "name": "s"
+      },
+      {
+        "fenceIndex": 18,
+        "name": "code"
+      },
+      {
+        "fenceIndex": 18,
+        "name": "days"
+      },
+      {
+        "fenceIndex": 18,
+        "name": "eastmoney_datacenter"
+      },
+      {
+        "fenceIndex": 19,
+        "name": "d"
+      },
+      {
+        "fenceIndex": 19,
+        "name": "em_get"
+      },
+      {
+        "fenceIndex": 19,
+        "name": "json"
+      },
+      {
+        "fenceIndex": 19,
+        "name": "r"
+      },
+      {
+        "fenceIndex": 19,
+        "name": "UA"
+      },
+      {
+        "fenceIndex": 20,
+        "name": "em_get"
+      },
+      {
+        "fenceIndex": 20,
+        "name": "it"
+      },
+      {
+        "fenceIndex": 20,
+        "name": "json"
+      },
+      {
+        "fenceIndex": 20,
+        "name": "r"
+      },
+      {
+        "fenceIndex": 20,
+        "name": "UA"
+      },
+      {
+        "fenceIndex": 21,
+        "name": "eastmoney_datacenter"
+      },
+      {
+        "fenceIndex": 21,
+        "name": "s"
+      },
+      {
+        "fenceIndex": 21,
+        "name": "stocks"
+      },
+      {
+        "fenceIndex": 22,
+        "name": "hsgt_realtime"
+      },
+      {
+        "fenceIndex": 22,
+        "name": "industry_comparison"
+      },
+      {
+        "fenceIndex": 22,
+        "name": "r"
+      },
+      {
+        "fenceIndex": 22,
+        "name": "ths_hot_reason"
+      },
+      {
+        "fenceIndex": 23,
+        "name": "code"
+      },
+      {
+        "fenceIndex": 23,
+        "name": "d"
+      },
+      {
+        "fenceIndex": 23,
+        "name": "eastmoney_datacenter"
+      },
+      {
+        "fenceIndex": 24,
+        "name": "code"
+      },
+      {
+        "fenceIndex": 24,
+        "name": "d"
+      },
+      {
+        "fenceIndex": 24,
+        "name": "eastmoney_datacenter"
+      },
+      {
+        "fenceIndex": 25,
+        "name": "code"
+      },
+      {
+        "fenceIndex": 25,
+        "name": "d"
+      },
+      {
+        "fenceIndex": 25,
+        "name": "eastmoney_datacenter"
+      },
+      {
+        "fenceIndex": 26,
+        "name": "code"
+      },
+      {
+        "fenceIndex": 26,
+        "name": "d"
+      },
+      {
+        "fenceIndex": 26,
+        "name": "eastmoney_datacenter"
+      },
+      {
+        "fenceIndex": 27,
+        "name": "code"
+      },
+      {
+        "fenceIndex": 27,
+        "name": "d"
+      },
+      {
+        "fenceIndex": 27,
+        "name": "em_get"
+      },
+      {
+        "fenceIndex": 27,
+        "name": "em_market_code"
+      },
+      {
+        "fenceIndex": 27,
+        "name": "json"
+      },
+      {
+        "fenceIndex": 27,
+        "name": "klines"
+      },
+      {
+        "fenceIndex": 27,
+        "name": "r"
+      },
+      {
+        "fenceIndex": 27,
+        "name": "UA"
+      },
+      {
+        "fenceIndex": 28,
+        "name": "_bs_code"
+      },
+      {
+        "fenceIndex": 28,
+        "name": "_rs_to_df"
+      },
+      {
+        "fenceIndex": 28,
+        "name": "bs_session"
+      },
+      {
+        "fenceIndex": 28,
+        "name": "c"
+      },
+      {
+        "fenceIndex": 28,
+        "name": "d"
+      },
+      {
+        "fenceIndex": 28,
+        "name": "df"
+      },
+      {
+        "fenceIndex": 28,
+        "name": "q"
+      },
+      {
+        "fenceIndex": 29,
+        "name": "a"
+      },
+      {
+        "fenceIndex": 29,
+        "name": "articles"
+      },
+      {
+        "fenceIndex": 29,
+        "name": "code"
+      },
+      {
+        "fenceIndex": 29,
+        "name": "d"
+      },
+      {
+        "fenceIndex": 29,
+        "name": "em_get"
+      },
+      {
+        "fenceIndex": 29,
+        "name": "r"
+      },
+      {
+        "fenceIndex": 29,
+        "name": "text"
+      },
+      {
+        "fenceIndex": 29,
+        "name": "UA"
+      },
+      {
+        "fenceIndex": 30,
+        "name": "d"
+      },
+      {
+        "fenceIndex": 30,
+        "name": "json"
+      },
+      {
+        "fenceIndex": 30,
+        "name": "k"
+      },
+      {
+        "fenceIndex": 30,
+        "name": "r"
+      },
+      {
+        "fenceIndex": 30,
+        "name": "UA"
+      },
+      {
+        "fenceIndex": 31,
+        "name": "d"
+      },
+      {
+        "fenceIndex": 31,
+        "name": "em_get"
+      },
+      {
+        "fenceIndex": 31,
+        "name": "json"
+      },
+      {
+        "fenceIndex": 31,
+        "name": "r"
+      },
+      {
+        "fenceIndex": 31,
+        "name": "UA"
+      },
+      {
+        "fenceIndex": 32,
+        "name": "quotes"
+      },
+      {
+        "fenceIndex": 32,
+        "name": "tdx_client"
+      },
+      {
+        "fenceIndex": 33,
+        "name": "quotes"
+      },
+      {
+        "fenceIndex": 33,
+        "name": "tdx_client"
+      },
+      {
+        "fenceIndex": 33,
+        "name": "text"
+      },
+      {
+        "fenceIndex": 34,
+        "name": "code"
+      },
+      {
+        "fenceIndex": 34,
+        "name": "d"
+      },
+      {
+        "fenceIndex": 34,
+        "name": "em_get"
+      },
+      {
+        "fenceIndex": 34,
+        "name": "em_market_code"
+      },
+      {
+        "fenceIndex": 34,
+        "name": "json"
+      },
+      {
+        "fenceIndex": 34,
+        "name": "r"
+      },
+      {
+        "fenceIndex": 34,
+        "name": "UA"
+      },
+      {
+        "fenceIndex": 35,
+        "name": "code"
+      },
+      {
+        "fenceIndex": 35,
+        "name": "get_prefix"
+      },
+      {
+        "fenceIndex": 35,
+        "name": "it"
+      },
+      {
+        "fenceIndex": 35,
+        "name": "json"
+      },
+      {
+        "fenceIndex": 35,
+        "name": "r"
+      },
+      {
+        "fenceIndex": 35,
+        "name": "UA"
+      },
+      {
+        "fenceIndex": 36,
+        "name": "bs_code"
+      },
+      {
+        "fenceIndex": 36,
+        "name": "c"
+      },
+      {
+        "fenceIndex": 36,
+        "name": "code"
+      },
+      {
+        "fenceIndex": 37,
+        "name": "_bs_code"
+      },
+      {
+        "fenceIndex": 37,
+        "name": "_rs_to_df"
+      },
+      {
+        "fenceIndex": 37,
+        "name": "bs"
+      },
+      {
+        "fenceIndex": 37,
+        "name": "bs_code"
+      },
+      {
+        "fenceIndex": 37,
+        "name": "bs_session"
+      },
+      {
+        "fenceIndex": 37,
+        "name": "code"
+      },
+      {
+        "fenceIndex": 37,
+        "name": "df"
+      },
+      {
+        "fenceIndex": 38,
+        "name": "BytesIO"
+      },
+      {
+        "fenceIndex": 38,
+        "name": "code"
+      },
+      {
+        "fenceIndex": 38,
+        "name": "d"
+      },
+      {
+        "fenceIndex": 38,
+        "name": "df"
+      },
+      {
+        "fenceIndex": 38,
+        "name": "r"
+      },
+      {
+        "fenceIndex": 39,
+        "name": "a"
+      },
+      {
+        "fenceIndex": 39,
+        "name": "code"
+      },
+      {
+        "fenceIndex": 39,
+        "name": "d"
+      },
+      {
+        "fenceIndex": 39,
+        "name": "data"
+      },
+      {
+        "fenceIndex": 39,
+        "name": "json"
+      },
+      {
+        "fenceIndex": 39,
+        "name": "r"
+      },
+      {
+        "fenceIndex": 39,
+        "name": "s"
+      },
+      {
+        "fenceIndex": 39,
+        "name": "UA"
+      },
+      {
+        "fenceIndex": 40,
+        "name": "quotes"
+      },
+      {
+        "fenceIndex": 40,
+        "name": "tdx_client"
+      },
+      {
+        "fenceIndex": 41,
+        "name": "date"
+      },
+      {
+        "fenceIndex": 41,
+        "name": "em_get"
+      },
+      {
+        "fenceIndex": 41,
+        "name": "json"
+      },
+      {
+        "fenceIndex": 41,
+        "name": "p"
+      },
+      {
+        "fenceIndex": 41,
+        "name": "r"
+      },
+      {
+        "fenceIndex": 41,
+        "name": "s"
+      },
+      {
+        "fenceIndex": 41,
+        "name": "UA"
+      },
+      {
+        "fenceIndex": 42,
+        "name": "date"
+      },
+      {
+        "fenceIndex": 42,
+        "name": "info"
+      },
+      {
+        "fenceIndex": 42,
+        "name": "it"
+      },
+      {
+        "fenceIndex": 42,
+        "name": "json"
+      },
+      {
+        "fenceIndex": 42,
+        "name": "r"
+      },
+      {
+        "fenceIndex": 42,
+        "name": "requests"
+      },
+      {
+        "fenceIndex": 42,
+        "name": "s"
+      },
+      {
+        "fenceIndex": 42,
+        "name": "UA"
+      },
+      {
+        "fenceIndex": 43,
+        "name": "date"
+      },
+      {
+        "fenceIndex": 43,
+        "name": "em_dt_pool"
+      },
+      {
+        "fenceIndex": 43,
+        "name": "em_zb_pool"
+      },
+      {
+        "fenceIndex": 43,
+        "name": "em_zt_pool"
+      },
+      {
+        "fenceIndex": 43,
+        "name": "zt"
+      },
+      {
+        "fenceIndex": 44,
+        "name": "date"
+      },
+      {
+        "fenceIndex": 44,
+        "name": "em_get"
+      },
+      {
+        "fenceIndex": 44,
+        "name": "json"
+      },
+      {
+        "fenceIndex": 44,
+        "name": "r"
+      },
+      {
+        "fenceIndex": 44,
+        "name": "s"
+      },
+      {
+        "fenceIndex": 44,
+        "name": "timezone"
+      },
+      {
+        "fenceIndex": 45,
+        "name": "code"
+      },
+      {
+        "fenceIndex": 45,
+        "name": "d"
+      },
+      {
+        "fenceIndex": 45,
+        "name": "em_get"
+      },
+      {
+        "fenceIndex": 45,
+        "name": "em_stock_monitor"
+      },
+      {
+        "fenceIndex": 45,
+        "name": "json"
+      },
+      {
+        "fenceIndex": 45,
+        "name": "r"
+      },
+      {
+        "fenceIndex": 45,
+        "name": "s"
+      },
+      {
+        "fenceIndex": 46,
+        "name": "code"
+      },
+      {
+        "fenceIndex": 46,
+        "name": "json"
+      },
+      {
+        "fenceIndex": 46,
+        "name": "q"
+      },
+      {
+        "fenceIndex": 46,
+        "name": "r"
+      },
+      {
+        "fenceIndex": 46,
+        "name": "text"
+      },
+      {
+        "fenceIndex": 46,
+        "name": "UA"
+      },
+      {
+        "fenceIndex": 47,
+        "name": "code"
+      },
+      {
+        "fenceIndex": 47,
+        "name": "data"
+      },
+      {
+        "fenceIndex": 47,
+        "name": "it"
+      },
+      {
+        "fenceIndex": 47,
+        "name": "json"
+      },
+      {
+        "fenceIndex": 47,
+        "name": "pd"
+      },
+      {
+        "fenceIndex": 47,
+        "name": "q"
+      },
+      {
+        "fenceIndex": 47,
+        "name": "UA"
+      },
+      {
+        "fenceIndex": 48,
+        "name": "code"
+      },
+      {
+        "fenceIndex": 48,
+        "name": "data"
+      },
+      {
+        "fenceIndex": 48,
+        "name": "get_prefix"
+      },
+      {
+        "fenceIndex": 48,
+        "name": "it"
+      },
+      {
+        "fenceIndex": 48,
+        "name": "json"
+      },
+      {
+        "fenceIndex": 48,
+        "name": "r"
+      },
+      {
+        "fenceIndex": 48,
+        "name": "requests"
+      },
+      {
+        "fenceIndex": 48,
+        "name": "s"
+      },
+      {
+        "fenceIndex": 48,
+        "name": "UA"
+      },
+      {
+        "fenceIndex": 49,
+        "name": "BytesIO"
+      },
+      {
+        "fenceIndex": 49,
+        "name": "c"
+      },
+      {
+        "fenceIndex": 49,
+        "name": "r"
+      },
+      {
+        "fenceIndex": 49,
+        "name": "text"
+      },
+      {
+        "fenceIndex": 50,
+        "name": "k"
+      },
+      {
+        "fenceIndex": 50,
+        "name": "r"
+      },
+      {
+        "fenceIndex": 50,
+        "name": "result"
+      },
+      {
+        "fenceIndex": 50,
+        "name": "text"
+      },
+      {
+        "fenceIndex": 51,
+        "name": "c"
+      },
+      {
+        "fenceIndex": 51,
+        "name": "code"
+      },
+      {
+        "fenceIndex": 51,
+        "name": "data"
+      },
+      {
+        "fenceIndex": 51,
+        "name": "date"
+      },
+      {
+        "fenceIndex": 51,
+        "name": "io"
+      },
+      {
+        "fenceIndex": 51,
+        "name": "json"
+      },
+      {
+        "fenceIndex": 51,
+        "name": "weights"
+      },
+      {
+        "fenceIndex": 52,
+        "name": "index_constituents"
+      },
+      {
+        "fenceIndex": 52,
+        "name": "index_valuation"
+      },
+      {
+        "fenceIndex": 52,
+        "name": "index_weights"
+      },
+      {
+        "fenceIndex": 52,
+        "name": "trading_calendar"
+      },
+      {
+        "fenceIndex": 56,
+        "name": "c"
+      },
+      {
+        "fenceIndex": 56,
+        "name": "cnt"
+      },
+      {
+        "fenceIndex": 56,
+        "name": "code"
+      },
+      {
+        "fenceIndex": 56,
+        "name": "data"
+      },
+      {
+        "fenceIndex": 56,
+        "name": "df"
+      },
+      {
+        "fenceIndex": 56,
+        "name": "ths_eps_forecast"
+      },
+      {
+        "fenceIndex": 57,
+        "name": "code"
+      },
+      {
+        "fenceIndex": 57,
+        "name": "full_valuation"
+      },
+      {
+        "fenceIndex": 57,
+        "name": "r"
+      },
+      {
+        "fenceIndex": 58,
+        "name": "a"
+      },
+      {
+        "fenceIndex": 58,
+        "name": "eastmoney_reports"
+      },
+      {
+        "fenceIndex": 58,
+        "name": "iwencai_search"
+      },
+      {
+        "fenceIndex": 58,
+        "name": "q"
+      },
+      {
+        "fenceIndex": 58,
+        "name": "s"
+      },
+      {
+        "fenceIndex": 58,
+        "name": "stocks"
+      },
+      {
+        "fenceIndex": 59,
+        "name": "d"
+      },
+      {
+        "fenceIndex": 59,
+        "name": "dragon_tiger_board"
+      },
+      {
+        "fenceIndex": 59,
+        "name": "eastmoney_concept_blocks"
+      },
+      {
+        "fenceIndex": 59,
+        "name": "eastmoney_fund_flow_minute"
+      },
+      {
+        "fenceIndex": 59,
+        "name": "holder_num_change"
+      },
+      {
+        "fenceIndex": 59,
+        "name": "lockup_expiry"
+      },
+      {
+        "fenceIndex": 59,
+        "name": "margin_trading"
+      },
+      {
+        "fenceIndex": 59,
+        "name": "stock_fund_flow_120d"
+      },
+      {
+        "fenceIndex": 59,
+        "name": "tencent_quote"
+      },
+      {
+        "fenceIndex": 59,
+        "name": "ths_eps_forecast"
+      },
+      {
+        "fenceIndex": 60,
+        "name": "_official_code"
+      },
+      {
+        "fenceIndex": 60,
+        "name": "_official_columns"
+      },
+      {
+        "fenceIndex": 60,
+        "name": "_official_date"
+      },
+      {
+        "fenceIndex": 60,
+        "name": "_official_excel"
+      },
+      {
+        "fenceIndex": 60,
+        "name": "_official_frame"
+      },
+      {
+        "fenceIndex": 60,
+        "name": "_official_get"
+      },
+      {
+        "fenceIndex": 60,
+        "name": "_official_number"
+      },
+      {
+        "fenceIndex": 60,
+        "name": "code"
+      },
+      {
+        "fenceIndex": 60,
+        "name": "data"
+      },
+      {
+        "fenceIndex": 60,
+        "name": "re"
+      },
+      {
+        "fenceIndex": 60,
+        "name": "requests"
+      },
+      {
+        "fenceIndex": 60,
+        "name": "text"
+      },
+      {
+        "fenceIndex": 61,
+        "name": "bse_quote_backup"
+      },
+      {
+        "fenceIndex": 61,
+        "name": "code"
+      },
+      {
+        "fenceIndex": 61,
+        "name": "margin_trading_backup"
+      },
+      {
+        "fenceIndex": 62,
+        "name": "a"
+      },
+      {
+        "fenceIndex": 62,
+        "name": "code"
+      },
+      {
+        "fenceIndex": 62,
+        "name": "d"
+      },
+      {
+        "fenceIndex": 62,
+        "name": "data"
+      },
+      {
+        "fenceIndex": 62,
+        "name": "days"
+      },
+      {
+        "fenceIndex": 62,
+        "name": "r"
+      },
+      {
+        "fenceIndex": 62,
+        "name": "UA"
+      }
+    ]
+  }
+}

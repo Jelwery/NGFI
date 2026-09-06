@@ -101,6 +101,17 @@ describe('finance_behavior_market_evidence adapter', () => {
     expect(result.observation.benchmark).toBeNull()
     expect(result.providerErrors).toEqual([expect.objectContaining({ request: 'benchmark', ticker: 'BENCH' })])
   })
+
+  it.each([
+    { ticker: '600519.SS' },
+    { ticker: 'AAPL', benchmark: '000300.SH' },
+  ])('rejects A-share target or benchmark identifiers before calling the global provider', async args => {
+    const marketData = vi.fn(async (ticker: string) => market(ticker))
+    const tool = createBehaviorMarketEvidenceTool(provider(marketData))
+
+    await expect(tool.execute({ ...args, window: 20 }, exec)).rejects.toThrow(/finance_cn_/i)
+    expect(marketData).not.toHaveBeenCalled()
+  })
 })
 
 describe('finance_behavior_trade_audit adapter', () => {

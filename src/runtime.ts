@@ -24,6 +24,19 @@ const CREDENTIAL_ENV_BY_PROVIDER = {
   'openai-compatible': 'NGFI_API_KEY',
 } as const
 
+export const DATA_PROVIDER_SECRET_ENV = new Set([
+  'TUSHARE_TOKEN',
+  'TUSHARE_MCP_URL',
+  'TDX_DATA_KEY',
+  'TDX_COMMUNITY_SERVERS',
+  'IFIND_MCP_URL',
+  'IFIND_MCP_CREDENTIAL',
+  'IWENCAI_API_KEY',
+])
+const DEFAULT_DATA_SECRETS_PATH = join(RUNTIME_HOME, 'secrets', 'a-share-data.env')
+const DEFAULT_PROJECT_ENV_PATH = join(PROJECT_ROOT, '.env')
+const MAX_DATA_SECRETS_BYTES = 64 * 1024
+
 type SupportedProvider = keyof typeof CREDENTIAL_ENV_BY_PROVIDER
 
 export interface PreparedRuntime {
@@ -55,12 +68,55 @@ function parseDotEnv(text: string): Map<string, string> {
   return values
 }
 
-async function projectEnvironment(): Promise<{ environment: NodeJS.ProcessEnv; fromFile: Set<string> }> {
+export async function loadDataProviderSecrets(
+  environment: NodeJS.ProcessEnv,
+  path = DEFAULT_DATA_SECRETS_PATH,
+): Promise<Set<string>> {
+  const loaded = new Set<string>()
+  let metadata
+  try {
+    metadata = await lstat(path)
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return loaded
+    throw error
+  }
+  if (!metadata.isFile() || metadata.isSymbolicLink()) {
+    throw new Error('A-share data secrets path must be a regular file, not a symlink')
+  }
+  if (metadata.size > MAX_DATA_SECRETS_BYTES) {
+    throw new Error('A-share data secrets file exceeds 64 KiB')
+  }
+  if (process.platform !== 'win32' && (metadata.mode & 0o777) !== 0o600) {
+    throw new Error('A-share data secrets file must have mode 0600')
+  }
+  const values = parseDotEnv(await readFile(path, 'utf8'))
+  for (const [key, value] of values) {
+    if (!DATA_PROVIDER_SECRET_ENV.has(key)) {
+      throw new Error(`Unsupported key in A-share data secrets file: ${key}`)
+    }
+    if (environment[key] === undefined) {
+      environment[key] = value
+      loaded.add(key)
+    }
+  }
+  return loaded
+}
+
+async function projectEnvironment(
+  dataSecretsPath = DEFAULT_DATA_SECRETS_PATH,
+  projectEnvPath = DEFAULT_PROJECT_ENV_PATH,
+): Promise<{ environment: NodeJS.ProcessEnv; fromFile: Set<string> }> {
   const environment: NodeJS.ProcessEnv = { ...process.env }
   const fromFile = new Set<string>()
   try {
-    const values = parseDotEnv(await readFile(join(PROJECT_ROOT, '.env'), 'utf8'))
+    const values = parseDotEnv(await readFile(projectEnvPath, 'utf8'))
     for (const [key, value] of values) {
+      if (DATA_PROVIDER_SECRET_ENV.has(key)) {
+        throw new Error(
+          `A-share data secret ${key} is not allowed in the project .env; `
+          + 'use the process environment or .runtime/secrets/a-share-data.env (mode 0600)',
+        )
+      }
       if (environment[key] === undefined) {
         environment[key] = value
         fromFile.add(key)
@@ -69,6 +125,7 @@ async function projectEnvironment(): Promise<{ environment: NodeJS.ProcessEnv; f
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
   }
+  for (const key of await loadDataProviderSecrets(environment, dataSecretsPath)) fromFile.add(key)
   return { environment, fromFile }
 }
 
@@ -211,8 +268,13 @@ async function materializeProfile(name: typeof PROFILE_NAMES[number]): Promise<v
   }
 }
 
-export async function prepareRuntime(options: { requireCredential?: boolean } = {}): Promise<PreparedRuntime> {
-  const loaded = await projectEnvironment()
+export async function prepareRuntime(
+  options: { requireCredential?: boolean; dataSecretsPath?: string; projectEnvPath?: string } = {},
+): Promise<PreparedRuntime> {
+  const loaded = await projectEnvironment(
+    options.dataSecretsPath ?? DEFAULT_DATA_SECRETS_PATH,
+    options.projectEnvPath ?? DEFAULT_PROJECT_ENV_PATH,
+  )
   const provider = resolveProvider(loaded.environment)
   const model = requiredText(loaded.environment, 'NGFI_LLM_MODEL', defaultModelFor(provider))
   if (model === '') throw new Error('NGFI_LLM_MODEL is required for the openai-compatible provider')

@@ -1,0 +1,4 @@
+# Immutable/generated a-stock snapshot bytes are hash-governed; do not rewrite
+# line endings or apply whitespace heuristics to these provenance artifacts.
+packages/finance-provider-astock/upstream/** -text -whitespace
+packages/finance-provider-astock/python/generated/blocks/** -text -whitespace

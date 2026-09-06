@@ -1,0 +1,632 @@
+{
+  "schemaVersion": 1,
+  "warning": "Audit-only raw Python fences. Do not import or execute these files as a package.",
+  "upstream": {
+    "repository": "https://github.com/simonlin1212/a-stock-data.git",
+    "version": "v3.8.0",
+    "commit": "2012ce7cd0e75d379c5e6cbd3115514f300f3bc8"
+  },
+  "count": 62,
+  "blocks": [
+    {
+      "index": 1,
+      "file": "block-001.py",
+      "heading": "### mootdx 客户端（必读，规避 0.11.x BESTIP 空串 bug）",
+      "sourceStartLine": 370,
+      "sourceEndLine": 433,
+      "bodySha256": "bdeefdfac06fc7132dfc2345436a14d4d631b61f094106ffabfb99dfdca517ab",
+      "fileSha256": "bdeefdfac06fc7132dfc2345436a14d4d631b61f094106ffabfb99dfdca517ab",
+      "selectedBlock": null
+    },
+    {
+      "index": 2,
+      "file": "block-002.py",
+      "heading": "### 市场前缀规则（全局通用）",
+      "sourceStartLine": 441,
+      "sourceEndLine": 460,
+      "bodySha256": "46006f12beffc8b79864a783171fcc70a80411c9f2de90a3311354766cd358cc",
+      "fileSha256": "46006f12beffc8b79864a783171fcc70a80411c9f2de90a3311354766cd358cc",
+      "selectedBlock": null
+    },
+    {
+      "index": 3,
+      "file": "block-003.py",
+      "heading": "### Ticker 格式归一化",
+      "sourceStartLine": 502,
+      "sourceEndLine": 592,
+      "bodySha256": "f6dc565aa41e2b8e69a78270267fd7deadc65140f35674847fd2f4f1bba12d71",
+      "fileSha256": "f6dc565aa41e2b8e69a78270267fd7deadc65140f35674847fd2f4f1bba12d71",
+      "selectedBlock": null
+    },
+    {
+      "index": 4,
+      "file": "block-004.py",
+      "heading": "### 东财数据中心统一查询（共用 helper）",
+      "sourceStartLine": 600,
+      "sourceEndLine": 657,
+      "bodySha256": "129b5aebc91fe8f9dfbdfc44335d22dda32b2236c42d6325a1830c94e8284b60",
+      "fileSha256": "129b5aebc91fe8f9dfbdfc44335d22dda32b2236c42d6325a1830c94e8284b60",
+      "selectedBlock": null
+    },
+    {
+      "index": 5,
+      "file": "block-005.py",
+      "heading": "### 1.1 mootdx — K线 + 五档盘口 + 逐笔成交",
+      "sourceStartLine": 669,
+      "sourceEndLine": 695,
+      "bodySha256": "0d65aae24797724cee619ecda8700073c48ebd3ac0d3c102f441576b1685480e",
+      "fileSha256": "0d65aae24797724cee619ecda8700073c48ebd3ac0d3c102f441576b1685480e",
+      "selectedBlock": null
+    },
+    {
+      "index": 6,
+      "file": "block-006.py",
+      "heading": "### 1.2 腾讯财经 API — PE/PB/市值/换手率/涨跌停/指数/ETF",
+      "sourceStartLine": 705,
+      "sourceEndLine": 793,
+      "bodySha256": "6ec80528f719d0a9440fca29771c9204c61644f27be0e7a951167c5f4f6127fb",
+      "fileSha256": "6ec80528f719d0a9440fca29771c9204c61644f27be0e7a951167c5f4f6127fb",
+      "selectedBlock": null
+    },
+    {
+      "index": 7,
+      "file": "block-007.py",
+      "heading": "### 1.3 百度股市通 K线 — 带MA5/MA10/MA20（V3.0 新增）",
+      "sourceStartLine": 835,
+      "sourceEndLine": 864,
+      "bodySha256": "1173725a4c4ec1667466d0e37566df93fe523bfde66da9ea54dd52393e426941",
+      "fileSha256": "1173725a4c4ec1667466d0e37566df93fe523bfde66da9ea54dd52393e426941",
+      "selectedBlock": null
+    },
+    {
+      "index": 8,
+      "file": "block-008.py",
+      "heading": "### 1.4 新浪复权因子 — qfq / hfq（V3.7.0 新增）",
+      "sourceStartLine": 875,
+      "sourceEndLine": 1002,
+      "bodySha256": "6643f0d8c90f8b2abddebaaed4d5d8aec03ca09dfb4cfabf476491f6242d9614",
+      "fileSha256": "6643f0d8c90f8b2abddebaaed4d5d8aec03ca09dfb4cfabf476491f6242d9614",
+      "selectedBlock": null
+    },
+    {
+      "index": 9,
+      "file": "block-009.py",
+      "heading": "### 2.1 东财研报 API — 研报列表 + PDF下载（主力）",
+      "sourceStartLine": 1038,
+      "sourceEndLine": 1111,
+      "bodySha256": "08e3f9ac962e18e274434b395817e2dec1f6ffe51e7b547d313bd5d8d4286c50",
+      "fileSha256": "08e3f9ac962e18e274434b395817e2dec1f6ffe51e7b547d313bd5d8d4286c50",
+      "selectedBlock": null
+    },
+    {
+      "index": 10,
+      "file": "block-010.py",
+      "heading": "#### 行业研报列表（qType=1）",
+      "sourceStartLine": 1133,
+      "sourceEndLine": 1173,
+      "bodySha256": "8208f51d54618f27704ebc2611e49f445232dd6260785d544c322f40ccc24381",
+      "fileSha256": "8208f51d54618f27704ebc2611e49f445232dd6260785d544c322f40ccc24381",
+      "selectedBlock": null
+    },
+    {
+      "index": 11,
+      "file": "block-011.py",
+      "heading": "### 2.2 同花顺一致预期EPS（直连 basic.10jqka.com.cn）",
+      "sourceStartLine": 1192,
+      "sourceEndLine": 1224,
+      "bodySha256": "12b287e5c0d037d8be430bc4a08c3d9c2487be3842674461e78c1f0a3d0f8925",
+      "fileSha256": "12b287e5c0d037d8be430bc4a08c3d9c2487be3842674461e78c1f0a3d0f8925",
+      "selectedBlock": null
+    },
+    {
+      "index": 12,
+      "file": "block-012.py",
+      "heading": "### 2.3 iwencai — NL语义搜索研报（唯一能力）",
+      "sourceStartLine": 1232,
+      "sourceEndLine": 1324,
+      "bodySha256": "cbd6de9ea81fe0956be8512ffdc896dbe3e73e6acb1c4dead246ccb9ebe4abf2",
+      "fileSha256": "cbd6de9ea81fe0956be8512ffdc896dbe3e73e6acb1c4dead246ccb9ebe4abf2",
+      "selectedBlock": null
+    },
+    {
+      "index": 13,
+      "file": "block-013.py",
+      "heading": "### 3.1 同花顺热点 — 当日强势股 + 题材归因 reason tags（独家）",
+      "sourceStartLine": 1338,
+      "sourceEndLine": 1387,
+      "bodySha256": "e43a9e384917d71bc6fdb3cb58d424d6e25035d06745dde4f3c3bc9d58f48aec",
+      "fileSha256": "e43a9e384917d71bc6fdb3cb58d424d6e25035d06745dde4f3c3bc9d58f48aec",
+      "selectedBlock": null
+    },
+    {
+      "index": 14,
+      "file": "block-014.py",
+      "heading": "### 3.2 同花顺北向资金 — hsgtApi 实时分钟流向 + 本地自缓存历史",
+      "sourceStartLine": 1416,
+      "sourceEndLine": 1492,
+      "bodySha256": "e3539b9daa79c74ad9d7b81bcdb5f29d59c65b05bfa33dc9c24ed265259d8afc",
+      "fileSha256": "e3539b9daa79c74ad9d7b81bcdb5f29d59c65b05bfa33dc9c24ed265259d8afc",
+      "selectedBlock": null
+    },
+    {
+      "index": 15,
+      "file": "block-015.py",
+      "heading": "### 3.3 东财 slist — 个股所属板块/概念归属（V3.2.2 替换百度）",
+      "sourceStartLine": 1502,
+      "sourceEndLine": 1544,
+      "bodySha256": "156227e5e1abbb9f8af478c0e2ffd046017d518c4dbe312c9108fbabe3a50705",
+      "fileSha256": "156227e5e1abbb9f8af478c0e2ffd046017d518c4dbe312c9108fbabe3a50705",
+      "selectedBlock": null
+    },
+    {
+      "index": 16,
+      "file": "block-016.py",
+      "heading": "### 3.4 东财 push2 — 个股资金流向（分钟级）",
+      "sourceStartLine": 1556,
+      "sourceEndLine": 1613,
+      "bodySha256": "08c47d46039141dabec169706dbe0f0b1cf520b0cefb45da806cebdcb3e15655",
+      "fileSha256": "08c47d46039141dabec169706dbe0f0b1cf520b0cefb45da806cebdcb3e15655",
+      "selectedBlock": null
+    },
+    {
+      "index": 17,
+      "file": "block-017.py",
+      "heading": "### 3.5 龙虎榜席位 — 个股上榜记录 + 买卖席位 TOP5 + 机构动向",
+      "sourceStartLine": 1623,
+      "sourceEndLine": 1713,
+      "bodySha256": "b3005249fe884459767476744adfe167123228bcd212920a0fbd1a7f8ea43d46",
+      "fileSha256": "b3005249fe884459767476744adfe167123228bcd212920a0fbd1a7f8ea43d46",
+      "selectedBlock": null
+    },
+    {
+      "index": 18,
+      "file": "block-018.py",
+      "heading": "### 3.6 限售解禁日历 — 历史解禁 + 未来 90 天待解禁",
+      "sourceStartLine": 1721,
+      "sourceEndLine": 1774,
+      "bodySha256": "d477dff14422e97632c523634e12ea525689e37b217137939f22ce8607372395",
+      "fileSha256": "d477dff14422e97632c523634e12ea525689e37b217137939f22ce8607372395",
+      "selectedBlock": null
+    },
+    {
+      "index": 19,
+      "file": "block-019.py",
+      "heading": "### 3.7 行业板块排名（V3.0 改用东财 — 同花顺加了反爬401）",
+      "sourceStartLine": 1788,
+      "sourceEndLine": 1836,
+      "bodySha256": "69519b26a7c9b692a59663c50d9be16efe52c3b0a94206319a93e4eec02ac9ab",
+      "fileSha256": "69519b26a7c9b692a59663c50d9be16efe52c3b0a94206319a93e4eec02ac9ab",
+      "selectedBlock": null
+    },
+    {
+      "index": 20,
+      "file": "block-020.py",
+      "heading": "### 3.8 板块资金流向（行业/概念/地域 × 今日/5日/10日）",
+      "sourceStartLine": 1844,
+      "sourceEndLine": 1942,
+      "bodySha256": "7e76f9e7362aa80c15afe16e4b591698d292ebc9419db5a787e1d60920070837",
+      "fileSha256": "7e76f9e7362aa80c15afe16e4b591698d292ebc9419db5a787e1d60920070837",
+      "selectedBlock": null
+    },
+    {
+      "index": 21,
+      "file": "block-021.py",
+      "heading": "### 3.9 全市场龙虎榜",
+      "sourceStartLine": 1950,
+      "sourceEndLine": 2000,
+      "bodySha256": "09579b98d4379073ca378667e6bf7520dc684187f30b9cf07ac23fe5656bd8d3",
+      "fileSha256": "09579b98d4379073ca378667e6bf7520dc684187f30b9cf07ac23fe5656bd8d3",
+      "selectedBlock": null
+    },
+    {
+      "index": 22,
+      "file": "block-022.py",
+      "heading": "### 3.10 信号层组合用法：题材热度 + 资金验证",
+      "sourceStartLine": 2006,
+      "sourceEndLine": 2031,
+      "bodySha256": "751e395f8011735bec53c363109de37f34646b9a80a6970604fec40081f6dde2",
+      "fileSha256": "751e395f8011735bec53c363109de37f34646b9a80a6970604fec40081f6dde2",
+      "selectedBlock": null
+    },
+    {
+      "index": 23,
+      "file": "block-023.py",
+      "heading": "### 4.1 融资融券明细",
+      "sourceStartLine": 2041,
+      "sourceEndLine": 2069,
+      "bodySha256": "44cbc69e1c9f1204d7d52f1b226df950ee169cddd4e9fd91e377850abb752601",
+      "fileSha256": "44cbc69e1c9f1204d7d52f1b226df950ee169cddd4e9fd91e377850abb752601",
+      "selectedBlock": null
+    },
+    {
+      "index": 24,
+      "file": "block-024.py",
+      "heading": "### 4.2 大宗交易",
+      "sourceStartLine": 2075,
+      "sourceEndLine": 2106,
+      "bodySha256": "6fb11102a6f3d5578dce8d668aadc9f97b2059aeec353d10ecaee9e13d39dc8d",
+      "fileSha256": "6fb11102a6f3d5578dce8d668aadc9f97b2059aeec353d10ecaee9e13d39dc8d",
+      "selectedBlock": null
+    },
+    {
+      "index": 25,
+      "file": "block-025.py",
+      "heading": "### 4.3 股东户数变化",
+      "sourceStartLine": 2112,
+      "sourceEndLine": 2138,
+      "bodySha256": "58587d55aeeabbb36c7d4d59a54d08df0ae8d28560190ef5b4fc22c09d64c7b6",
+      "fileSha256": "58587d55aeeabbb36c7d4d59a54d08df0ae8d28560190ef5b4fc22c09d64c7b6",
+      "selectedBlock": null
+    },
+    {
+      "index": 26,
+      "file": "block-026.py",
+      "heading": "### 4.4 分红送转历史",
+      "sourceStartLine": 2144,
+      "sourceEndLine": 2169,
+      "bodySha256": "48ff9882c4a58c5e7acc924bd1bbf963ef75142630a08eca30440fd9d21d4eed",
+      "fileSha256": "48ff9882c4a58c5e7acc924bd1bbf963ef75142630a08eca30440fd9d21d4eed",
+      "selectedBlock": null
+    },
+    {
+      "index": 27,
+      "file": "block-027.py",
+      "heading": "### 4.5 个股资金流（120日，日级）",
+      "sourceStartLine": 2175,
+      "sourceEndLine": 2226,
+      "bodySha256": "a1c082615aafe5f77b548a77269548f89105aaab1769743d7d11fb3018e52b88",
+      "fileSha256": "a1c082615aafe5f77b548a77269548f89105aaab1769743d7d11fb3018e52b88",
+      "selectedBlock": null
+    },
+    {
+      "index": 28,
+      "file": "block-028.py",
+      "heading": "### 4.6 筹码分布 CYQ — 获利比例 / 平均成本 / 成本区间（V3.7.0 新增）",
+      "sourceStartLine": 2243,
+      "sourceEndLine": 2363,
+      "bodySha256": "ed5555b9b0f509b7a44d370291f18a42ce815f0b13d7b80a3eb8d1d58d2ead8b",
+      "fileSha256": "ed5555b9b0f509b7a44d370291f18a42ce815f0b13d7b80a3eb8d1d58d2ead8b",
+      "selectedBlock": null
+    },
+    {
+      "index": 29,
+      "file": "block-029.py",
+      "heading": "### 5.1 东财个股新闻（直连 search-api-web）",
+      "sourceStartLine": 2393,
+      "sourceEndLine": 2440,
+      "bodySha256": "1e39a8e5522e7e8d3a855baf95a5b03cccd7990810f106d60398bf932a30aaac",
+      "fileSha256": "1e39a8e5522e7e8d3a855baf95a5b03cccd7990810f106d60398bf932a30aaac",
+      "selectedBlock": null
+    },
+    {
+      "index": 30,
+      "file": "block-030.py",
+      "heading": "### 5.2 财联社快讯（直连 cls.cn，v1 API + 本地签名）✅ 已复活（2026-07）",
+      "sourceStartLine": 2454,
+      "sourceEndLine": 2487,
+      "bodySha256": "be3c5f6b7ecfecdc965477bb6cea0db022aa3bfd598e19f1ef2ff4d552630dd3",
+      "fileSha256": "be3c5f6b7ecfecdc965477bb6cea0db022aa3bfd598e19f1ef2ff4d552630dd3",
+      "selectedBlock": null
+    },
+    {
+      "index": 31,
+      "file": "block-031.py",
+      "heading": "### 5.3 东财全球资讯（7x24）",
+      "sourceStartLine": 2493,
+      "sourceEndLine": 2525,
+      "bodySha256": "6837e476cb87ca405bd0a4fb182911d26af5f5409f255d785fc3d9aac5131e55",
+      "fileSha256": "6837e476cb87ca405bd0a4fb182911d26af5f5409f255d785fc3d9aac5131e55",
+      "selectedBlock": null
+    },
+    {
+      "index": 32,
+      "file": "block-032.py",
+      "heading": "### 6.1 mootdx 财务快照（37字段季报数据）",
+      "sourceStartLine": 2535,
+      "sourceEndLine": 2547,
+      "bodySha256": "d7941d52a7923049e5355827263ea51011c94f0e7725ba9171bee0a5a8f08f6e",
+      "fileSha256": "d7941d52a7923049e5355827263ea51011c94f0e7725ba9171bee0a5a8f08f6e",
+      "selectedBlock": null
+    },
+    {
+      "index": 33,
+      "file": "block-033.py",
+      "heading": "### 6.2 mootdx F10（公司文本资料）",
+      "sourceStartLine": 2553,
+      "sourceEndLine": 2566,
+      "bodySha256": "62d62391f6e42030af6a3ca281c0e11e5567972b9c9ffa48786731329c072123",
+      "fileSha256": "62d62391f6e42030af6a3ca281c0e11e5567972b9c9ffa48786731329c072123",
+      "selectedBlock": null
+    },
+    {
+      "index": 34,
+      "file": "block-034.py",
+      "heading": "### 6.3 东财个股基本面（直连 push2 API）",
+      "sourceStartLine": 2574,
+      "sourceEndLine": 2605,
+      "bodySha256": "4d48667bb41c9abe93f51355cabdc10fa2ac23954071890a491683ecc63b293e",
+      "fileSha256": "4d48667bb41c9abe93f51355cabdc10fa2ac23954071890a491683ecc63b293e",
+      "selectedBlock": null
+    },
+    {
+      "index": 35,
+      "file": "block-035.py",
+      "heading": "### 6.4 新浪财报三表（资产负债表/利润表/现金流量表）",
+      "sourceStartLine": 2611,
+      "sourceEndLine": 2665,
+      "bodySha256": "591f1485993cae0451ff1ed8a355eb32bd541c73dbbc44b74b1a9b048f6920a1",
+      "fileSha256": "591f1485993cae0451ff1ed8a355eb32bd541c73dbbc44b74b1a9b048f6920a1",
+      "selectedBlock": null
+    },
+    {
+      "index": 36,
+      "file": "block-036.py",
+      "heading": "### 6.5 baostock 估值历史 — PE/PB/PS/PCF + 换手率 + 停牌 + ST（V3.7.0 新增）",
+      "sourceStartLine": 2681,
+      "sourceEndLine": 2748,
+      "bodySha256": "f20c63c976e999ce0d0c63f1c5566410b76105a736af6ef34f829ce1559294a3",
+      "fileSha256": "f20c63c976e999ce0d0c63f1c5566410b76105a736af6ef34f829ce1559294a3",
+      "selectedBlock": null
+    },
+    {
+      "index": 37,
+      "file": "block-037.py",
+      "heading": "### 6.6 baostock 标的基本信息 — 上市日 / 退市日 / 状态（V3.7.0 新增）",
+      "sourceStartLine": 2768,
+      "sourceEndLine": 2779,
+      "bodySha256": "cecb43483ebfaf573b86363b933370b1cb4362dcaac3884bb3c0d4c59e4ce684",
+      "fileSha256": "cecb43483ebfaf573b86363b933370b1cb4362dcaac3884bb3c0d4c59e4ce684",
+      "selectedBlock": null
+    },
+    {
+      "index": 38,
+      "file": "block-038.py",
+      "heading": "### 6.7 申万行业分类历史 — 消除行业前视偏差（V3.7.0 新增）",
+      "sourceStartLine": 2797,
+      "sourceEndLine": 2860,
+      "bodySha256": "357cc6900fdc228f28f315620d83243f599a617352aaa2862e498d05d0dd1846",
+      "fileSha256": "357cc6900fdc228f28f315620d83243f599a617352aaa2862e498d05d0dd1846",
+      "selectedBlock": null
+    },
+    {
+      "index": 39,
+      "file": "block-039.py",
+      "heading": "### 7.1 巨潮公告（直连 cninfo.com.cn）",
+      "sourceStartLine": 2873,
+      "sourceEndLine": 2950,
+      "bodySha256": "029a13096390e38b174f7b47c1e756cb63c889c4d2d126175030c4051d2ecf04",
+      "fileSha256": "029a13096390e38b174f7b47c1e756cb63c889c4d2d126175030c4051d2ecf04",
+      "selectedBlock": null
+    },
+    {
+      "index": 40,
+      "file": "block-040.py",
+      "heading": "### 7.2 mootdx F10 公告摘要",
+      "sourceStartLine": 2956,
+      "sourceEndLine": 2959,
+      "bodySha256": "4d5f1d90238139b80ca2b79060f3374234f1ceecb4e02318fdeafa47f411cfa1",
+      "fileSha256": "4d5f1d90238139b80ca2b79060f3374234f1ceecb4e02318fdeafa47f411cfa1",
+      "selectedBlock": null
+    },
+    {
+      "index": 41,
+      "file": "block-041.py",
+      "heading": "### 8.1 东财涨停板池 — 涨停 / 炸板 / 跌停 / 昨日涨停",
+      "sourceStartLine": 2971,
+      "sourceEndLine": 3052,
+      "bodySha256": "a78c37b161cb72c5273eb1cb26b3671aa596568ff96a3cfd67cd70390d9aabfd",
+      "fileSha256": "a78c37b161cb72c5273eb1cb26b3671aa596568ff96a3cfd67cd70390d9aabfd",
+      "selectedBlock": null
+    },
+    {
+      "index": 42,
+      "file": "block-042.py",
+      "heading": "### 8.2 同花顺涨停揭秘 — 涨停原因题材 + 封板成功率 + 板型",
+      "sourceStartLine": 3060,
+      "sourceEndLine": 3091,
+      "bodySha256": "326bd1b0ffb7c8ffcfb6ebd850f8612714c9daef9c1f66490d5a49aa09a62267",
+      "fileSha256": "326bd1b0ffb7c8ffcfb6ebd850f8612714c9daef9c1f66490d5a49aa09a62267",
+      "selectedBlock": null
+    },
+    {
+      "index": 43,
+      "file": "block-043.py",
+      "heading": "### 8.3 打板情绪速算 — 炸板率 / 连板高度 / 连板梯队",
+      "sourceStartLine": 3099,
+      "sourceEndLine": 3115,
+      "bodySha256": "83fe052b4f78bc891a0722f4ee4ded2af42a09348e35fee9dbe86a1bb4284dc8",
+      "fileSha256": "83fe052b4f78bc891a0722f4ee4ded2af42a09348e35fee9dbe86a1bb4284dc8",
+      "selectedBlock": null
+    },
+    {
+      "index": 44,
+      "file": "block-044.py",
+      "heading": "### 8.4 东财重点监控池（V3.6.0 新增 · #15）",
+      "sourceStartLine": 3125,
+      "sourceEndLine": 3171,
+      "bodySha256": "597c826a762adcb6d2ec4b8eb05cecb849dab2877f2c045438a4c73843ecc521",
+      "fileSha256": "597c826a762adcb6d2ec4b8eb05cecb849dab2877f2c045438a4c73843ecc521",
+      "selectedBlock": null
+    },
+    {
+      "index": 45,
+      "file": "block-045.py",
+      "heading": "### 8.5 东财日内异动池 — 严重异常波动（V3.6.0 新增 · #15）",
+      "sourceStartLine": 3186,
+      "sourceEndLine": 3277,
+      "bodySha256": "5528dfe7589ba75b777b9754f202a16ad16072addc97cbdd5cc5f6ee5c13d13b",
+      "fileSha256": "5528dfe7589ba75b777b9754f202a16ad16072addc97cbdd5cc5f6ee5c13d13b",
+      "selectedBlock": null
+    },
+    {
+      "index": 46,
+      "file": "block-046.py",
+      "heading": "### 9.1 合约清单 + T型报价 + 希腊字母",
+      "sourceStartLine": 3295,
+      "sourceEndLine": 3363,
+      "bodySha256": "49212d11908cfdf91358fe9b802706be7fa066bbbdfc07e0fb83bb149f488bcd",
+      "fileSha256": "49212d11908cfdf91358fe9b802706be7fa066bbbdfc07e0fb83bb149f488bcd",
+      "selectedBlock": null
+    },
+    {
+      "index": 47,
+      "file": "block-047.py",
+      "heading": "### 10.1 互动易问答（巨潮 — 投资者提问 + 公司回复）",
+      "sourceStartLine": 3377,
+      "sourceEndLine": 3412,
+      "bodySha256": "737a58239ad1ecc73f0023cd3e5a254eb4f712d935ebdc34f5f64d3b5af30dc7",
+      "fileSha256": "737a58239ad1ecc73f0023cd3e5a254eb4f712d935ebdc34f5f64d3b5af30dc7",
+      "selectedBlock": null
+    },
+    {
+      "index": 48,
+      "file": "block-048.py",
+      "heading": "### 10.2 同花顺热榜 + 东财人气榜（市场热度 + 概念命中）",
+      "sourceStartLine": 3420,
+      "sourceEndLine": 3490,
+      "bodySha256": "e268ee2219895258e625a13e468ec281b88cfdae29464f545295300500d12285",
+      "fileSha256": "e268ee2219895258e625a13e468ec281b88cfdae29464f545295300500d12285",
+      "selectedBlock": null
+    },
+    {
+      "index": 49,
+      "file": "block-049.py",
+      "heading": "### 11.1 人民银行 — 社会融资规模增量",
+      "sourceStartLine": 3514,
+      "sourceEndLine": 3621,
+      "bodySha256": "a2c6bed7d9ec8b3ec4f4cf256aedc4d08d28572ee5f96a4d1d247244cc0fdc7b",
+      "fileSha256": "a2c6bed7d9ec8b3ec4f4cf256aedc4d08d28572ee5f96a4d1d247244cc0fdc7b",
+      "selectedBlock": null
+    },
+    {
+      "index": 50,
+      "file": "block-050.py",
+      "heading": "### 11.2 国家统计局 — 采购经理指数 PMI",
+      "sourceStartLine": 3631,
+      "sourceEndLine": 3723,
+      "bodySha256": "44a1e1e9ac6b4f4243ae1ab958a0a2e0c7568930af92380566ecd9e1326fcdca",
+      "fileSha256": "44a1e1e9ac6b4f4243ae1ab958a0a2e0c7568930af92380566ecd9e1326fcdca",
+      "selectedBlock": null
+    },
+    {
+      "index": 51,
+      "file": "block-051.py",
+      "heading": "### 12.1–12.4 自包含实现",
+      "sourceStartLine": 3753,
+      "sourceEndLine": 3929,
+      "bodySha256": "f04ff9a36319272af51036f9c2ecfb916cb78e4ff559c4e6a79a87bef3d79cb4",
+      "fileSha256": "f04ff9a36319272af51036f9c2ecfb916cb78e4ff559c4e6a79a87bef3d79cb4",
+      "selectedBlock": "official-data-core"
+    },
+    {
+      "index": 52,
+      "file": "block-052.py",
+      "heading": "### 12.1–12.4 自包含实现",
+      "sourceStartLine": 3934,
+      "sourceEndLine": 3941,
+      "bodySha256": "49182024279739a44d87d8ca2e37703dc7306243e8ae7b870d2d3573b0531372",
+      "fileSha256": "49182024279739a44d87d8ca2e37703dc7306243e8ae7b870d2d3573b0531372",
+      "selectedBlock": null
+    },
+    {
+      "index": 53,
+      "file": "block-053.py",
+      "heading": "### 前向PE",
+      "sourceStartLine": 3958,
+      "sourceEndLine": 3962,
+      "bodySha256": "a5a2b18ffb8de63967db68081834b03159f70f3474a38b0c30e5cdfeac26692a",
+      "fileSha256": "a5a2b18ffb8de63967db68081834b03159f70f3474a38b0c30e5cdfeac26692a",
+      "selectedBlock": null
+    },
+    {
+      "index": 54,
+      "file": "block-054.py",
+      "heading": "### PE消化时间",
+      "sourceStartLine": 3968,
+      "sourceEndLine": 3980,
+      "bodySha256": "3087a18c6cc930bfcbd19ddc7b0da7c87af5ac1ae145d8ad9681a7ca691ed2ce",
+      "fileSha256": "3087a18c6cc930bfcbd19ddc7b0da7c87af5ac1ae145d8ad9681a7ca691ed2ce",
+      "selectedBlock": null
+    },
+    {
+      "index": 55,
+      "file": "block-055.py",
+      "heading": "### PEG",
+      "sourceStartLine": 3986,
+      "sourceEndLine": 3995,
+      "bodySha256": "9d8a3e4db4e64c93feaa49e9db67e6d297b96a4c5cc479d86a100ce3d31c0468",
+      "fileSha256": "9d8a3e4db4e64c93feaa49e9db67e6d297b96a4c5cc479d86a100ce3d31c0468",
+      "selectedBlock": null
+    },
+    {
+      "index": 56,
+      "file": "block-056.py",
+      "heading": "### 流程 A: 单票完整估值（30秒）",
+      "sourceStartLine": 4019,
+      "sourceEndLine": 4090,
+      "bodySha256": "ee714cd757508e6d2b6aea50d96f281b9b4daac858752b21f213a4679d2acbf8",
+      "fileSha256": "ee714cd757508e6d2b6aea50d96f281b9b4daac858752b21f213a4679d2acbf8",
+      "selectedBlock": null
+    },
+    {
+      "index": 57,
+      "file": "block-057.py",
+      "heading": "### 流程 B: 批量估值对比",
+      "sourceStartLine": 4096,
+      "sourceEndLine": 4102,
+      "bodySha256": "519daf63f472006ed1d2a1ae2d57e99f51b14f45fe2cdb3b5016cab849e3c797",
+      "fileSha256": "519daf63f472006ed1d2a1ae2d57e99f51b14f45fe2cdb3b5016cab849e3c797",
+      "selectedBlock": null
+    },
+    {
+      "index": 58,
+      "file": "block-058.py",
+      "heading": "### 流程 C: 主题研报批量检索",
+      "sourceStartLine": 4108,
+      "sourceEndLine": 4132,
+      "bodySha256": "b7751c86033d7969ff97368e165f3feec8c8d06df396376713fa44f8d3999b59",
+      "fileSha256": "b7751c86033d7969ff97368e165f3feec8c8d06df396376713fa44f8d3999b59",
+      "selectedBlock": null
+    },
+    {
+      "index": 59,
+      "file": "block-059.py",
+      "heading": "### 流程 D: 新标的快速调研（V3.0 增强版）",
+      "sourceStartLine": 4138,
+      "sourceEndLine": 4184,
+      "bodySha256": "2b72cd34e6754a20619c3a86f0d0bab62b7849e70adf50d287cb278df4e2230d",
+      "fileSha256": "2b72cd34e6754a20619c3a86f0d0bab62b7849e70adf50d287cb278df4e2230d",
+      "selectedBlock": null
+    },
+    {
+      "index": 60,
+      "file": "block-060.py",
+      "heading": "## 官方两融与北交所行情备胎（V3.8.0）",
+      "sourceStartLine": 4208,
+      "sourceEndLine": 4335,
+      "bodySha256": "f4e0f57ec421a2f8a7bd3f351dc71a2c2d66ea6ea67b74171955d28ef8089182",
+      "fileSha256": "f4e0f57ec421a2f8a7bd3f351dc71a2c2d66ea6ea67b74171955d28ef8089182",
+      "selectedBlock": "official-data-backups"
+    },
+    {
+      "index": 61,
+      "file": "block-061.py",
+      "heading": "## 官方两融与北交所行情备胎（V3.8.0）",
+      "sourceStartLine": 4340,
+      "sourceEndLine": 4342,
+      "bodySha256": "2dafbc16a35bb9908188747a39274cc0c42b4bf9476e58c3279f7f82c66fba34",
+      "fileSha256": "2dafbc16a35bb9908188747a39274cc0c42b4bf9476e58c3279f7f82c66fba34",
+      "selectedBlock": null
+    },
+    {
+      "index": 62,
+      "file": "block-062.py",
+      "heading": "## 备用源速查 & 降级策略（东财/主源被封时用）",
+      "sourceStartLine": 4406,
+      "sourceEndLine": 4469,
+      "bodySha256": "d88b0cf4191d5b38600c95f06e2d32551387826d96c032ed5f6df8d4be930d25",
+      "fileSha256": "d88b0cf4191d5b38600c95f06e2d32551387826d96c032ed5f6df8d4be930d25",
+      "selectedBlock": null
+    }
+  ]
+}

@@ -32,18 +32,25 @@ importers:
       '@deepseek-ai/schemastery':
         specifier: 3.18.1
         version: 3.18.1
+      '@finance2dsh/dsh-bundle':
+        specifier: workspace:*
+        version: link:packages/dsh-finance-bundle
+      yaml:
+        specifier: 2.8.1
+        version: 2.8.1
+    devDependencies:
       '@finance2dsh/core':
         specifier: workspace:*
         version: link:packages/finance-core
       '@finance2dsh/data-service':
         specifier: workspace:*
         version: link:packages/finance-data-service
-      '@finance2dsh/dsh-bundle':
-        specifier: workspace:*
-        version: link:packages/dsh-finance-bundle
       '@finance2dsh/dsh-tools':
         specifier: workspace:*
         version: link:packages/dsh-finance-tools
+      '@finance2dsh/portfolio-risk':
+        specifier: workspace:*
+        version: link:packages/portfolio-risk
       '@finance2dsh/provider-astock':
         specifier: workspace:*
         version: link:packages/finance-provider-astock
@@ -62,13 +69,6 @@ importers:
       '@finance2dsh/provider-yfinance':
         specifier: workspace:*
         version: link:packages/finance-provider-yfinance
-      yaml:
-        specifier: 2.8.1
-        version: 2.8.1
-    devDependencies:
-      '@finance2dsh/portfolio-risk':
-        specifier: workspace:*
-        version: link:packages/portfolio-risk
       '@finance2dsh/research-audit':
         specifier: workspace:*
         version: link:packages/research-audit

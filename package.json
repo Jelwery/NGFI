@@ -14,6 +14,7 @@
     "test": "vitest run",
     "test:ts": "vitest run",
     "test:python": "if [ -f packages/quant-research/pyproject.toml ]; then UV_CACHE_DIR=.uv-cache uv run --project packages/quant-research --frozen python -m unittest discover -s packages/quant-research/tests -v; else echo 'quant-research: not present in this phase'; fi",
+    "test:quant-research": "UV_CACHE_DIR=.uv-cache uv run --project packages/quant-research --frozen python -m unittest discover -s packages/quant-research/tests -v",
     "test:skills": "python -m unittest tests/test_v2_contracts.py -v && python skills/company-financial-analysis/scripts/selftest.py",
     "test:runtime": "pnpm run prepare && pnpm run dump:headless && pnpm run dump:web",
     "capability:check": "node scripts/validate-capability-manifest.mjs",

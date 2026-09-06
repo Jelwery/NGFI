@@ -3,6 +3,36 @@
   "generatedAt": "2026-09-07",
   "capabilities": [
     {
+      "id": "quant.research-backtest-and-validation",
+      "category": "quant",
+      "ownerPackage": "packages/quant-research",
+      "publicExports": ["run_research_backtest", "run_is_oos", "nested_walk_forward", "cscv_pbo", "deflated_sharpe", "decide_promotion"],
+      "status": "kernel-tested",
+      "tools": [],
+      "skills": [],
+      "presets": [],
+      "contractTests": ["packages/quant-research/tests/test_execution.py", "packages/quant-research/tests/test_portfolio.py", "packages/quant-research/tests/test_validation.py", "tests/quant-research-contract.test.ts"],
+      "goldenFixtures": ["evals/strategy-contracts/accumulation-breakout-v1.json"],
+      "upstream": [{"project": "a-share-accumulation-breakout adaptation", "commit": "c6a7d8d7397dfe6c02c97da8da83dea7c4ae6453", "path": "research/portfolio_accounting.py; walkforward.py; research/cscv.py; promotion_v2.py"}],
+      "safetyBoundaries": ["train selection and test evaluation remain separated", "dataset, strategy, config, execution, cost and benchmark hashes are retained", "only research-tier evidence can support promotion"],
+      "knownLimitations": ["pure offline calculation kernel", "not Agent-exposed yet"]
+    },
+    {
+      "id": "quant.factor-research",
+      "category": "quant",
+      "ownerPackage": "packages/quant-research",
+      "publicExports": ["information_coefficient", "grouped_returns", "factor_turnover", "factor_coverage", "correlation_matrix", "fit_factor_weights"],
+      "status": "kernel-tested",
+      "tools": [],
+      "skills": [],
+      "presets": [],
+      "contractTests": ["packages/quant-research/tests/test_factors.py"],
+      "goldenFixtures": ["packages/quant-research/tests/test_factors.py"],
+      "upstream": [{"project": "Panda QuantFlow independent rewrite", "commit": "688b90e74a738b84567efe622a2d9c1e5ce10e00", "path": "src/panda_plugins/internal factor nodes"}],
+      "safetyBoundaries": ["future returns are shifted and train/test boundaries are validated", "missing, constant and duplicate-key inputs fail explicitly", "lineage and sample coverage accompany results"],
+      "knownLimitations": ["no dynamic formulas or ML models", "not Agent-exposed yet"]
+    },
+    {
       "id": "strategy.contracts-registry-and-smoke",
       "category": "strategy",
       "ownerPackage": "packages/strategy-core",

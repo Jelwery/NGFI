@@ -37,4 +37,9 @@ describe('capability manifest', () => {
     })
     expect(() => validate(path)).toThrow(/tool inventory mismatch/)
   })
+
+  it('fails closed when an owner package disappears', async () => {
+    const path = await changedManifest(manifest => { manifest.capabilities[0].ownerPackage = 'packages/missing' })
+    expect(() => validate(path)).toThrow(/owner package does not exist/)
+  })
 })

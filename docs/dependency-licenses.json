@@ -17,6 +17,11 @@
         "path": "packages/finance-provider-tdx",
         "project": "finance2dsh-tdx-runner",
         "dependencies": "production (--no-dev)"
+      },
+      {
+        "path": "packages/quant-research",
+        "project": "ngfi-quant-research",
+        "dependencies": "production (--no-dev)"
       }
     ]
   },

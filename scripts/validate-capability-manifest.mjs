@@ -91,7 +91,9 @@ export function validateCapabilityManifest(manifest, root = repositoryRoot) {
     ids.add(label)
     if (typeof capability.category !== 'string' || capability.category === '') errors.push(`${label}: missing category`)
     if (!VALID_STATUS.has(capability.status)) errors.push(`${label}: invalid status`)
-    if (typeof capability.ownerPackage !== 'string' || !existingFile(`${capability.ownerPackage}/package.json`, root)) {
+    if (typeof capability.ownerPackage !== 'string'
+      || (!existingFile(`${capability.ownerPackage}/package.json`, root)
+        && !existingFile(`${capability.ownerPackage}/pyproject.toml`, root))) {
       errors.push(`${label}: owner package does not exist`)
     }
     if (!Array.isArray(capability.publicExports) || capability.publicExports.length === 0) {

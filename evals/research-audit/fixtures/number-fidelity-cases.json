@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "name": "cny-to-hundred-million",
+      "evidenceValue": 181200000000,
+      "reportToken": "1812亿元",
+      "expectedBound": true
+    },
+    {
+      "name": "ratio-to-percent",
+      "evidenceValue": 0.123,
+      "reportToken": "12.3%",
+      "expectedBound": true
+    },
+    {
+      "name": "tampered-number",
+      "evidenceValue": 181200000000,
+      "reportToken": "1912亿元",
+      "expectedBound": false
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "name": "@finance2dsh/research-workflow",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "import": "./lib/index.js"
+    }
+  },
+  "files": ["lib"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf lib",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@finance2dsh/research-audit": "workspace:*",
+    "@finance2dsh/research-core": "workspace:*",
+    "@finance2dsh/research-workspace": "workspace:*"
+  }
+}

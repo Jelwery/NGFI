@@ -17,7 +17,7 @@ Source worktree: sibling `../NGFI` at common base `da101d13095c413e7904d4eb171af
 | `packages/research-{core,workspace,audit,workflow}/**`, `skills/{thesis-review,adversarial-research}/**`, research tests/evals | same | 2.3 | untracked | no | WP01–WP06/WP12 tests | no | migrated; DSH session adapter deferred to Phase 3 tools layer |
 | `packages/{strategy-core,technical-analysis,strategy-accumulation-breakout,signal-evaluation}/**`, strategy/signal tests/evals | same | 2.4 | untracked | no | WP03/WP07–WP10 tests | no | migrated |
 | `packages/quant-research/**`, `tests/quant-research-contract.test.ts` | same | 2.5 | untracked | no | 23 Python tests; TS bridge | no | migrated |
-| `packages/portfolio-risk/**`, CNE6 tracked edits/new facade/tests | same | 2.6 | mixed | no | portfolio contracts; CNE6 suite | no | pending |
+| `packages/portfolio-risk/**`, CNE6 tracked edits/new facade/tests | same | 2.6 | mixed | no | portfolio contracts; CNE6 suite | no | migrated |
 | `packages/dsh-finance-tools/**`, `packages/dsh-finance-bundle/**`, presets, composition/isolation/E2E tests | reviewed thin adapters and generated presets | 3–4 | mixed | preset output only | build/typecheck/composition/isolation/trajectory | no | pending |
 | `.runtime/**`, `node_modules/**`, `**/.venv/**`, `**/.uv-cache/**`, `**/lib/**`, `**/__pycache__/**`, `**/.pytest_cache/**`, local market data, credentials and transient reports | none | all | ignored/local | yes/private | absence checks | no | intentionally local, never migrate |
 

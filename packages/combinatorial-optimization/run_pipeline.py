@@ -27,10 +27,13 @@ def main() -> None:
     parser.add_argument("--quiet", action="store_true")
     args = parser.parse_args()
 
+    from cne6_engine.interfaces.sina_adapter import SinaAdapter
+
+    # Pin one published generation for both date selection and the full run.
+    # A concurrent CURRENT switch must not make one pipeline mix snapshots.
+    adapter = SinaAdapter.from_config()
     end_date = args.date
     if end_date is None:
-        from cne6_engine.interfaces.sina_adapter import SinaAdapter
-        adapter = SinaAdapter.from_config()
         import polars as pl
         price_path = adapter.price_path
         end_date = pl.read_parquet(price_path).select(
@@ -42,6 +45,7 @@ def main() -> None:
     t0 = time.perf_counter()
     result = compute_covariance(
         end_date,
+        adapter=adapter,
         lookback_days=args.lookback,
         output_dir=os.path.join(project_root, "data", "output"),
         verbose=not args.quiet,

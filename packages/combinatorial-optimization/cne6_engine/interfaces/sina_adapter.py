@@ -17,11 +17,16 @@ Known source limitations (v1):
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from typing import Callable, Optional
 
 import polars as pl
 
 from cne6_engine.data_sources.akshare_index import load_benchmark_cached
+from cne6_engine.data_sources.publication import (
+    resolve_published_root,
+    verify_snapshot_manifest,
+)
 from cne6_engine.interfaces.contracts import (
     BenchmarkSeries,
     DataBundle,
@@ -51,6 +56,10 @@ class SinaAdapter:
         benchmark_start: str = "20150101",
         min_listed_days: int = 252,
         benchmark_fetcher: Optional[Callable[..., pl.DataFrame]] = None,
+        immutable_snapshot: bool = False,
+        snapshot_root: Optional[str] = None,
+        snapshot_id: Optional[str] = None,
+        snapshot_files: tuple[str, ...] = (),
     ) -> None:
         self.price_path = price_path
         self.cap_snapshot_path = cap_snapshot_path
@@ -61,6 +70,15 @@ class SinaAdapter:
         self.benchmark_start = benchmark_start
         self.min_listed_days = min_listed_days
         self._benchmark_fetcher = benchmark_fetcher
+        self._immutable_snapshot = immutable_snapshot
+        self._snapshot_root = snapshot_root
+        self._snapshot_id = snapshot_id
+        self._snapshot_files = snapshot_files
+
+    @property
+    def cache_identity(self) -> Optional[str]:
+        """Immutable publication identity used to namespace derived caches."""
+        return self._snapshot_id
 
     # ------------------------------------------------------------------
     # Config-based construction
@@ -86,17 +104,58 @@ class SinaAdapter:
         benchmark = config["benchmark"]
         universe = config.get("universe", {})
 
+        configured_paths = {
+            "price_path": Path(asset_root, assets["price_file"]),
+            "cap_snapshot_path": Path(asset_root, assets["cap_snapshot_file"]),
+            "fundamentals_path": Path(asset_root, assets["fundamentals_file"]),
+            "industry_path": Path(asset_root, assets["industry_file"]),
+            "benchmark_cache_path": Path(project_root, benchmark["cache_file"]),
+        }
+        reference_parents = {path.parent for path in configured_paths.values()}
+        immutable_snapshot = False
+        selected_snapshot_root: Optional[Path] = None
+        selected_snapshot_id: Optional[str] = None
+        snapshot_files: tuple[str, ...] = ()
+        if len(reference_parents) == 1:
+            legacy_reference = next(iter(reference_parents))
+            if legacy_reference.name == "reference":
+                try:
+                    legacy_reference.parent.lstat()
+                except FileNotFoundError:
+                    # A clean checkout intentionally has no ignored market-data
+                    # directory. Construction remains deterministic; load_bundle
+                    # will fail closed when it actually attempts to read assets.
+                    pass
+                else:
+                    selected_root, snapshot_id = resolve_published_root(
+                        legacy_reference.parent,
+                    )
+                    if snapshot_id is not None:
+                        snapshot_files = tuple(
+                            sorted(path.name for path in configured_paths.values())
+                        )
+                        verify_snapshot_manifest(
+                            selected_root, snapshot_id, required_files=snapshot_files,
+                        )
+                        pinned_reference = selected_root / "reference"
+                        configured_paths = {
+                            name: pinned_reference / path.name
+                            for name, path in configured_paths.items()
+                        }
+                        immutable_snapshot = True
+                        selected_snapshot_root = selected_root
+                        selected_snapshot_id = snapshot_id
+
         return cls(
-            price_path=os.path.join(asset_root, assets["price_file"]),
-            cap_snapshot_path=os.path.join(asset_root, assets["cap_snapshot_file"]),
-            fundamentals_path=os.path.join(asset_root, assets["fundamentals_file"]),
-            industry_path=os.path.join(asset_root, assets["industry_file"]),
-            benchmark_cache_path=os.path.join(
-                project_root, benchmark["cache_file"]
-            ),
+            **{name: str(path) for name, path in configured_paths.items()},
             benchmark_symbol=benchmark["symbol"],
             benchmark_start=benchmark["start_date"],
             min_listed_days=universe.get("min_listed_days", 252),
+            immutable_snapshot=immutable_snapshot,
+            snapshot_root=(str(selected_snapshot_root)
+                           if selected_snapshot_root is not None else None),
+            snapshot_id=selected_snapshot_id,
+            snapshot_files=snapshot_files,
         )
 
     # ------------------------------------------------------------------
@@ -104,6 +163,7 @@ class SinaAdapter:
     # ------------------------------------------------------------------
 
     def load_bundle(self, end_date: str) -> DataBundle:
+        self._verify_snapshot_integrity()
         industry = self._load_industry()
         market = self._load_market(end_date, industry)
         fundamentals = self._load_fundamentals()
@@ -132,7 +192,16 @@ class SinaAdapter:
             },
         )
         bundle.validate()
+        self._verify_snapshot_integrity()
         return bundle
+
+    def _verify_snapshot_integrity(self) -> None:
+        if self._snapshot_root is None or self._snapshot_id is None:
+            return
+        verify_snapshot_manifest(
+            Path(self._snapshot_root), self._snapshot_id,
+            required_files=self._snapshot_files,
+        )
 
     # ------------------------------------------------------------------
     # Market panel
@@ -233,7 +302,9 @@ class SinaAdapter:
     # ------------------------------------------------------------------
 
     def _load_benchmark(self, end_date: str) -> BenchmarkSeries:
-        if self._benchmark_fetcher is not None:
+        if self._immutable_snapshot:
+            frame = pl.read_parquet(self.benchmark_cache_path)
+        elif self._benchmark_fetcher is not None:
             frame = self._benchmark_fetcher(
                 self.benchmark_cache_path, self.benchmark_symbol,
                 self.benchmark_start, end_date,

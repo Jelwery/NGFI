@@ -2,6 +2,8 @@
 """SinaAdapter tests against synthetic package-style assets on disk."""
 from pathlib import Path
 import polars as pl
+import pytest
+import yaml
 
 from cne6_engine.interfaces.sina_adapter import SinaAdapter
 
@@ -13,6 +15,45 @@ def test_default_config_uses_package_owned_assets():
     package_root = Path(__file__).resolve().parents[2]
     assert Path(adapter.price_path).is_relative_to(package_root)
     assert "CNE5" not in Path(adapter.price_path).parts
+
+
+def test_from_config_rejects_an_unverified_current_snapshot(tmp_path):
+    data_root = tmp_path / "data"
+    first_id = "a" * 64
+    (data_root / "snapshots" / first_id / "reference").mkdir(parents=True)
+    (data_root / "CURRENT").write_text(first_id + "\n", encoding="utf-8")
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(yaml.safe_dump({
+        "assets": {
+            "root": str(tmp_path),
+            "price_file": "data/reference/price_history.parquet",
+            "cap_snapshot_file": "data/reference/market_cap_snapshot.parquet",
+            "fundamentals_file": "data/reference/historical_fundamentals.parquet",
+            "industry_file": "data/reference/sw_industry.parquet",
+        },
+        "benchmark": {
+            "symbol": "sh000300",
+            "cache_file": str(data_root / "reference" / "benchmark_sh000300.parquet"),
+            "start_date": "2015-01-01",
+        },
+        "universe": {"min_listed_days": 1},
+    }), encoding="utf-8")
+
+    with pytest.raises((FileNotFoundError, ValueError), match="quality report|snapshot"):
+        SinaAdapter.from_config(str(config_path))
+
+    (data_root / "CURRENT").unlink()
+    legacy = SinaAdapter.from_config(str(config_path))
+    assert Path(legacy.price_path) == data_root / "reference" / "price_history.parquet"
+
+
+def test_snapshot_identity_is_exposed_for_cache_namespacing():
+    adapter = SinaAdapter(
+        price_path="price", cap_snapshot_path="cap",
+        fundamentals_path="fundamentals", industry_path="industry",
+        benchmark_cache_path="benchmark", snapshot_id="a" * 64,
+    )
+    assert adapter.cache_identity == "a" * 64
 
 
 def _write_assets(tmp_path):

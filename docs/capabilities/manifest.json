@@ -3,6 +3,21 @@
   "generatedAt": "2026-09-07",
   "capabilities": [
     {
+      "id": "portfolio.holdings-and-risk",
+      "category": "portfolio",
+      "ownerPackage": "packages/portfolio-risk",
+      "publicExports": ["importHoldingsCsv", "importHoldingsJson", "InMemoryHoldingsStore", "Cne6PortfolioRiskFacade"],
+      "status": "kernel-tested",
+      "tools": [],
+      "skills": [],
+      "presets": [],
+      "contractTests": ["tests/portfolio-risk-contracts.test.ts", "packages/combinatorial-optimization/cne6_engine/tests/test_portfolio_risk.py"],
+      "goldenFixtures": ["tests/portfolio-risk-contracts.test.ts"],
+      "upstream": [{"project": "dsh-trading holdings adaptation and NGFI CNE6 facade", "commit": "c942057723ca7054519414575101e6bcc5ef7128", "path": "packages/holdings; cne6_engine/interfaces/portfolio_risk.py"}],
+      "safetyBoundaries": ["imports are staged and require explicit revision-bound confirmation", "unmapped instruments and currencies cannot be ignored", "coverage, covariance quality and reconciliation fail closed"],
+      "knownLimitations": ["no broker/account connector", "requires a valid CNE6 model snapshot and is not Agent-exposed yet"]
+    },
+    {
       "id": "quant.research-backtest-and-validation",
       "category": "quant",
       "ownerPackage": "packages/quant-research",

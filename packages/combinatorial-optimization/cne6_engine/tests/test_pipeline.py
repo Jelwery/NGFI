@@ -5,6 +5,7 @@ from datetime import date, timedelta
 import numpy as np
 import polars as pl
 import pytest
+import cne6_engine.algorithm.pipeline as pipeline_module
 
 from cne6_engine.algorithm.pipeline import compute_covariance
 from cne6_engine.interfaces.contracts import (
@@ -218,6 +219,31 @@ class TestPipeline:
         assert len(cached_files) == N_DATES
         second = compute_covariance(END_DATE, **kwargs)
         assert np.allclose(first["sigma_stock"], second["sigma_stock"])
+
+    def test_snapshot_adapters_namespace_exposure_cache(self, bundle, tmp_path, monkeypatch):
+        class SnapshotAdapter(StubAdapter):
+            def __init__(self, value, identity):
+                super().__init__(value)
+                self.cache_identity = identity
+
+        observed: list[str] = []
+        original = pipeline_module.build_daily_exposure
+
+        def record_cache(*args, **kwargs):
+            observed.append(kwargs["cache_dir"])
+            return original(*args, **kwargs)
+
+        monkeypatch.setattr(pipeline_module, "build_daily_exposure", record_cache)
+        compute_covariance(
+            END_DATE, adapter=SnapshotAdapter(bundle, "a" * 64),
+            lookback_days=N_DATES, cache_dir=str(tmp_path / "cache"), verbose=False,
+            factor_cov_kwargs=dict(
+                vol_half_life=20, vol_nw_lags=2, corr_half_life=60,
+                corr_nw_lags=1, vra_half_life=10, n_simulations=5,
+            ),
+        )
+        assert observed
+        assert all(("snapshot-" + "a" * 64) in path for path in observed)
 
     def test_outputs_saved(self, bundle, tmp_path):
         out_dir = str(tmp_path / "out")

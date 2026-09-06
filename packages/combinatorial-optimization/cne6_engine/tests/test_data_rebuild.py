@@ -148,7 +148,7 @@ def test_validate_assets_fails_closed_on_schema_change(tmp_path: Path) -> None:
         rebuild.validate_assets(tmp_path)
 
 
-def test_rebuild_stages_validates_and_publishes(
+def test_rebuild_stages_validates_and_publishes_immutable_snapshot(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
@@ -181,11 +181,15 @@ def test_rebuild_stages_validates_and_publishes(
     assert report["coverage"] == {
         "market_cap": 1.0, "industry": 1.0, "fundamentals": 1.0,
     }
-    assert (tmp_path / "quality-report.json").exists()
+    snapshot_id = (tmp_path / "CURRENT").read_text(encoding="utf-8").strip()
+    assert len(snapshot_id) == 64
+    snapshot_root = tmp_path / "snapshots" / snapshot_id
+    assert (snapshot_root / "quality-report.json").exists()
     assert all(
-        (tmp_path / "reference" / name).exists()
+        (snapshot_root / "reference" / name).exists()
         for name in rebuild._PUBLISHED_FILES
     )
+    assert rebuild.validate_assets(tmp_path)["assets"] == report["assets"]
 
 
 def test_rebuild_does_not_publish_when_staged_validation_fails(
@@ -221,33 +225,79 @@ def test_rebuild_does_not_publish_when_staged_validation_fails(
     assert not (tmp_path / "reference").exists()
 
 
-def test_publish_rolls_back_if_a_replace_fails(
+def test_snapshot_publication_switches_current_only_after_snapshot_is_complete(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    old_root = tmp_path / "old"
-    staged_root = tmp_path / "staged"
-    _write_asset_set(old_root)
-    _write_asset_set(staged_root)
-    staged_reference = staged_root / "reference"
-    reference = old_root / "reference"
-    staged_price = _price().with_columns(pl.lit(202.0).alias("close"))
-    staged_price.write_parquet(staged_reference / "price_history.parquet")
-    original_write = rebuild.atomic_write_parquet
-    failed = False
+    old_stage = tmp_path / "old-stage"
+    new_stage = tmp_path / "new-stage"
+    _write_asset_set(old_stage)
+    _write_asset_set(new_stage)
+    _price().with_columns(pl.lit(202.0).alias("close")).write_parquet(
+        new_stage / "reference" / "price_history.parquet"
+    )
 
-    def fail_once(frame: pl.DataFrame, path: Path) -> None:
-        nonlocal failed
-        if path == reference / "market_cap_snapshot.parquet" and not failed:
-            failed = True
-            raise OSError("simulated disk failure")
-        original_write(frame, path)
+    def report_for(root: Path) -> dict[str, object]:
+        report = rebuild.validate_assets(root)
+        report.update({
+            "partial": False, "failedSymbols": [],
+            "requestedSymbols": ["600519"],
+        })
+        return report
 
-    monkeypatch.setattr(rebuild, "atomic_write_parquet", fail_once)
+    old_id = rebuild._publish_snapshot(
+        old_stage / "reference", tmp_path, report_for(old_stage),
+    )
+    observed_before_switch = False
+    original_replace = rebuild.os.replace
 
-    with pytest.raises(OSError, match="simulated"):
-        rebuild._publish_staged(staged_reference, reference)
+    def observe_current_switch(source: Path, target: Path) -> None:
+        nonlocal observed_before_switch
+        if Path(target) == tmp_path / "CURRENT":
+            observed_before_switch = True
+            assert (tmp_path / "CURRENT").read_text(encoding="utf-8").strip() == old_id
+            candidate_id = Path(source).read_text(encoding="utf-8").strip()
+            candidate_root = tmp_path / "snapshots" / candidate_id
+            assert rebuild.validate_assets(candidate_root)["assets"] == report_for(new_stage)["assets"]
+        original_replace(source, target)
 
-    assert pl.read_parquet(reference / "price_history.parquet")["close"][0] == 101.0
+    monkeypatch.setattr(rebuild.os, "replace", observe_current_switch)
+    new_id = rebuild._publish_snapshot(
+        new_stage / "reference", tmp_path, report_for(new_stage),
+    )
+
+    assert observed_before_switch
+    assert new_id != old_id
+    assert (tmp_path / "CURRENT").read_text(encoding="utf-8").strip() == new_id
+    assert (tmp_path / "snapshots" / old_id).is_dir()
+    assert pl.read_parquet(
+        tmp_path / "snapshots" / new_id / "reference" / "price_history.parquet"
+    )["close"][0] == 202.0
+
+
+def test_snapshot_publication_recovers_from_an_incomplete_unreferenced_target(
+    tmp_path: Path,
+) -> None:
+    staged = tmp_path / "staged-candidate"
+    _write_asset_set(staged)
+    report = rebuild.validate_assets(staged)
+    report.update({
+        "partial": False, "failedSymbols": [],
+        "requestedSymbols": ["600519"],
+    })
+    snapshot_id = rebuild.hashlib.sha256(
+        rebuild._serialized_report(report)
+    ).hexdigest()
+    poison = tmp_path / "snapshots" / snapshot_id
+    poison.mkdir(parents=True)
+    (poison / "interrupted").write_text("incomplete", encoding="utf-8")
+
+    published = rebuild._publish_snapshot(
+        staged / "reference", tmp_path, report,
+    )
+
+    assert published == snapshot_id
+    assert (tmp_path / "CURRENT").read_text(encoding="utf-8").strip() == snapshot_id
+    assert rebuild.validate_assets(tmp_path)["assets"] == report["assets"]
 
 
 def test_cli_smoke_defaults_are_isolated_and_serial() -> None:

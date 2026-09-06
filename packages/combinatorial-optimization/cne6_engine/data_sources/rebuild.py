@@ -7,12 +7,15 @@ publication as part of the data contract rather than optional conveniences.
 from __future__ import annotations
 
 import concurrent.futures
+import contextlib
 import hashlib
 import asyncio
 import json
 import math
 import os
 import random
+import shutil
+import stat
 import tempfile
 import threading
 import time
@@ -27,6 +30,10 @@ import requests
 
 from cne6_engine.data_sources.akshare_index import fetch_index_daily
 from cne6_engine.data_sources.dev_fundamentals_probe import fetch_year
+from cne6_engine.data_sources.publication import (
+    read_current_snapshot_id,
+    resolve_published_root,
+)
 from cne6_engine.interfaces.contracts import (
     BENCHMARK_SCHEMA,
     FUNDAMENTAL_SCHEMA,
@@ -71,6 +78,7 @@ _PUBLISHED_FILES = (
     "benchmark_sh000300.parquet",
     "dividends.parquet",
 )
+PUBLISHED_UNITS = {"price": "CNY", "volume": "share", "turnover": "CNY"}
 
 
 def normalize_symbol(value: str) -> str:
@@ -230,6 +238,9 @@ def normalize_price_history(raw: Any, symbol: str) -> pl.DataFrame:
     frame = frame.rename(aliases).sort("date").with_columns(
         pl.lit(prefixed_symbol(symbol)).alias("code"),
         pl.col("date").cast(pl.Utf8).str.slice(0, 10),
+        # East Money's f56 daily-kline field is reported in board lots. The
+        # published CNE6 contract uses shares, matching the Sina fallback.
+        (pl.col("volume").cast(pl.Float64, strict=False) * 100.0).alias("volume"),
         pl.col("turn").cast(pl.Float64, strict=False) / 100.0,
     ).with_columns(
         pl.col("close").cast(pl.Float64, strict=False).shift(1).alias("preclose")
@@ -562,7 +573,7 @@ def fetch_one_price(
 
 def _checkpoint_key(start_date: str, end_date: str, price_source: str) -> str:
     return (f"{start_date.replace('-', '')}_{end_date.replace('-', '')}_daily_"
-            f"{price_source}")
+            f"{price_source}_shares_v2")
 
 
 def _read_price_checkpoint(
@@ -793,7 +804,10 @@ def attach_dividends(fundamentals: pl.DataFrame, dividends: pl.DataFrame) -> pl.
 
 
 def validate_assets(root: Path, *, expected_symbols: set[str] | None = None) -> dict[str, Any]:
-    reference = root / "reference"
+    published_root, snapshot_id = resolve_published_root(Path(root))
+    reference = published_root / "reference"
+    if reference.is_symlink() or not reference.is_dir():
+        raise ValueError("reference must be a real directory")
     paths = {
         "prices": reference / "price_history.parquet",
         "caps": reference / "market_cap_snapshot.parquet",
@@ -812,6 +826,9 @@ def validate_assets(root: Path, *, expected_symbols: set[str] | None = None) -> 
     }
     frames: dict[str, pl.DataFrame] = {}
     for name, path in paths.items():
+        metadata = path.lstat()
+        if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISREG(metadata.st_mode):
+            raise ValueError(f"{name} asset must be a regular file")
         frame = pl.read_parquet(path)
         if dict(frame.schema) != expected_schemas[name]:
             raise ValueError(
@@ -853,6 +870,7 @@ def validate_assets(root: Path, *, expected_symbols: set[str] | None = None) -> 
                  "benchmark": benchmark.height, "dividends": dividends.height},
         "symbols": len(price_codes), "priceStart": price["date"].min(),
         "priceEnd": price["date"].max(), "coverage": coverage,
+        "units": dict(PUBLISHED_UNITS),
         "sources": {"prices": "unknown; run rebuild to record actual source",
                     "marketCap": "unknown; run rebuild to record actual source",
                     "industry": "SWS Research level-1 current snapshot",
@@ -861,7 +879,9 @@ def validate_assets(root: Path, *, expected_symbols: set[str] | None = None) -> 
                     "dividend": "annual report cash dividend proxy (not rolling PIT TTM)"},
         "assets": _asset_manifest(paths),
     }
-    recorded = _read_json(root / "quality-report.json")
+    recorded = _read_json(published_root / "quality-report.json")
+    if snapshot_id is not None and recorded.get("assets") != report["assets"]:
+        raise ValueError("CURRENT quality report does not match snapshot assets")
     if recorded.get("assets") == report["assets"]:
         for key in ("sources", "build", "partial", "failedSymbols",
                     "requestedSymbols"):
@@ -911,15 +931,24 @@ def _run_key(options: RebuildOptions, symbols: list[str] | None) -> str:
     return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()[:12]
 
 
-def _publish_staged(staged_reference: Path, reference: Path) -> None:
-    """Publish validated files with per-file atomic replace and rollback."""
+def _publish_staged(
+    staged_reference: Path, reference: Path,
+    *, after_publish: Callable[[], None] | None = None,
+) -> None:
+    """Publish validated files and roll them back if finalization fails."""
     reference.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(
         prefix="publish-backup-", dir=staged_reference.parent,
     ) as temporary:
         backup = Path(temporary)
+        report_path = reference.parent / "quality-report.json"
+        report_existed = after_publish is not None and report_path.exists()
+        report_backed_up = False
         replaced: list[tuple[str, bool]] = []
         try:
+            if report_existed:
+                (backup / report_path.name).write_bytes(report_path.read_bytes())
+                report_backed_up = True
             for name in _PUBLISHED_FILES:
                 target = reference / name
                 existed = target.exists()
@@ -927,6 +956,8 @@ def _publish_staged(staged_reference: Path, reference: Path) -> None:
                     atomic_write_parquet(pl.read_parquet(target), backup / name)
                 atomic_write_parquet(pl.read_parquet(staged_reference / name), target)
                 replaced.append((name, existed))
+            if after_publish is not None:
+                after_publish()
         except Exception:
             for name, existed in reversed(replaced):
                 target = reference / name
@@ -934,12 +965,179 @@ def _publish_staged(staged_reference: Path, reference: Path) -> None:
                     atomic_write_parquet(pl.read_parquet(backup / name), target)
                 else:
                     target.unlink(missing_ok=True)
+            if after_publish is not None:
+                if report_backed_up:
+                    os.replace(backup / report_path.name, report_path)
+                elif not report_existed:
+                    report_path.unlink(missing_ok=True)
             raise
+
+
+def _serialized_report(report: dict[str, Any]) -> bytes:
+    return (json.dumps(
+        report, ensure_ascii=False, indent=2, default=str,
+    ) + "\n").encode("utf-8")
+
+
+def _fsync_directory(path: Path) -> None:
+    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0)
+    flags |= getattr(os, "O_DIRECTORY", 0)
+    fd = os.open(path, flags)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
+def _copy_regular_file(source: Path, target: Path) -> None:
+    read_flags = (os.O_RDONLY | getattr(os, "O_CLOEXEC", 0)
+                  | getattr(os, "O_NOFOLLOW", 0))
+    write_flags = (os.O_WRONLY | os.O_CREAT | os.O_EXCL
+                   | getattr(os, "O_CLOEXEC", 0)
+                   | getattr(os, "O_NOFOLLOW", 0))
+    source_fd = os.open(source, read_flags)
+    target_fd: int | None = None
+    try:
+        if not stat.S_ISREG(os.fstat(source_fd).st_mode):
+            raise ValueError(f"staged asset must be a regular file: {source}")
+        target_fd = os.open(target, write_flags, 0o644)
+        with (os.fdopen(source_fd, "rb", closefd=False) as source_handle,
+              os.fdopen(target_fd, "wb", closefd=False) as target_handle):
+            shutil.copyfileobj(source_handle, target_handle, 1024 * 1024)
+            target_handle.flush()
+        os.fsync(target_fd)
+    finally:
+        os.close(source_fd)
+        if target_fd is not None:
+            os.close(target_fd)
+
+
+def _write_exclusive_file(payload: bytes, path: Path) -> None:
+    flags = (os.O_WRONLY | os.O_CREAT | os.O_EXCL
+             | getattr(os, "O_CLOEXEC", 0)
+             | getattr(os, "O_NOFOLLOW", 0))
+    fd = os.open(path, flags, 0o644)
+    try:
+        view = memoryview(payload)
+        while view:
+            written = os.write(fd, view)
+            if written <= 0:  # pragma: no cover - defensive OS invariant
+                raise OSError("short write while publishing snapshot")
+            view = view[written:]
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
+@contextlib.contextmanager
+def _publication_lock(data_root: Path):
+    """Serialize publishers with an OS-released lock (safe after SIGKILL)."""
+    import fcntl
+
+    flags = (os.O_RDWR | os.O_CREAT | getattr(os, "O_CLOEXEC", 0)
+             | getattr(os, "O_NOFOLLOW", 0))
+    fd = os.open(data_root / ".publish.lock", flags, 0o600)
+    try:
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            raise ValueError("publication lock must be a regular file")
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        yield
+    finally:
+        os.close(fd)
+
+
+def _snapshot_matches(
+    snapshot_root: Path, snapshot_id: str, report: dict[str, Any],
+) -> bool:
+    try:
+        metadata = snapshot_root.lstat()
+        if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISDIR(metadata.st_mode):
+            return False
+        report_path = snapshot_root / "quality-report.json"
+        return (not report_path.is_symlink()
+                and _file_sha256(report_path) == snapshot_id
+                and validate_assets(snapshot_root)["assets"] == report.get("assets"))
+    except (OSError, ValueError, pl.exceptions.PolarsError):
+        return False
+
+
+def _publish_snapshot(
+    staged_reference: Path, data_root: Path, report: dict[str, Any],
+) -> str:
+    """Publish one content-addressed snapshot, then atomically switch CURRENT.
+
+    Existing snapshots are never replaced or collected.  All snapshot files
+    and directories are flushed before the durable pointer switch.
+    """
+    staged_reference = Path(staged_reference)
+    data_root = Path(data_root)
+    data_root.mkdir(parents=True, exist_ok=True)
+    if data_root.is_symlink() or not data_root.is_dir():
+        raise ValueError("published data root must be a real directory")
+    snapshots = data_root / "snapshots"
+    snapshots.mkdir(exist_ok=True)
+    if snapshots.is_symlink() or not snapshots.is_dir():
+        raise ValueError("snapshots must be a real directory")
+
+    report_bytes = _serialized_report(report)
+    snapshot_id = hashlib.sha256(report_bytes).hexdigest()
+    target_root = snapshots / snapshot_id
+    temporary_root = Path(tempfile.mkdtemp(prefix=".publish-", dir=snapshots))
+    try:
+        temporary_reference = temporary_root / "reference"
+        temporary_reference.mkdir()
+        for name in _PUBLISHED_FILES:
+            _copy_regular_file(staged_reference / name, temporary_reference / name)
+        _write_exclusive_file(report_bytes, temporary_root / "quality-report.json")
+        candidate = validate_assets(temporary_root)
+        if candidate["assets"] != report.get("assets"):
+            raise ValueError("snapshot assets do not match the quality report manifest")
+        _fsync_directory(temporary_reference)
+        _fsync_directory(temporary_root)
+
+        with _publication_lock(data_root):
+            active_id = read_current_snapshot_id(data_root)
+            if target_root.exists() or target_root.is_symlink():
+                if _snapshot_matches(target_root, snapshot_id, report):
+                    shutil.rmtree(temporary_root)
+                else:
+                    if active_id == snapshot_id:
+                        raise FileExistsError(
+                            "refusing to replace the active snapshot"
+                        )
+                    quarantine = snapshots / f".incomplete-{snapshot_id}-{os.getpid()}"
+                    os.rename(target_root, quarantine)
+                    try:
+                        os.rename(temporary_root, target_root)
+                    except Exception:
+                        os.rename(quarantine, target_root)
+                        raise
+                    shutil.rmtree(quarantine)
+            else:
+                os.rename(temporary_root, target_root)
+            _fsync_directory(snapshots)
+
+            current_fd, current_temporary = tempfile.mkstemp(
+                prefix=".CURRENT.", suffix=".tmp", dir=data_root,
+            )
+            try:
+                pointer = f"{snapshot_id}\n".encode("ascii")
+                with os.fdopen(current_fd, "wb", closefd=True) as handle:
+                    handle.write(pointer)
+                    handle.flush()
+                    os.fsync(handle.fileno())
+                os.replace(Path(current_temporary), data_root / "CURRENT")
+                _fsync_directory(data_root)
+            finally:
+                Path(current_temporary).unlink(missing_ok=True)
+    finally:
+        shutil.rmtree(temporary_root, ignore_errors=True)
+    return snapshot_id
 
 
 def rebuild_all(options: RebuildOptions) -> dict[str, Any]:
     root = options.data_root.resolve(); staging = root / "staging"
-    reference = root / "reference"; staging.mkdir(parents=True, exist_ok=True)
+    staging.mkdir(parents=True, exist_ok=True)
     explicit = (list(dict.fromkeys(normalize_symbol(s) for s in options.symbols))
                 if options.symbols else None)
     run_root = staging / "runs" / _run_key(options, explicit)
@@ -1024,20 +1222,23 @@ def rebuild_all(options: RebuildOptions) -> dict[str, Any]:
         "marketCap": cap_sources,
     }
     staged_report["sources"] = actual_sources
-    _publish_staged(staged_reference, reference)
-    report = validate_assets(root, expected_symbols=successful_symbols)
-    report["sources"] = actual_sources
-    report.update({"partial": bool(failures), "failedSymbols": failures,
-                   "requestedSymbols": symbols,
-                   "build": {"startDate": options.start_date,
-                             "endDate": options.end_date,
-                             "years": sorted(set(options.years)),
-                             "workers": options.workers,
-                             "attempts": options.attempts,
-                             "requestDelaySeconds": options.request_delay,
-                             "priceSourcePolicy": options.price_source,
-                             "priceSourceCounts": price_sources,
-                             "runKey": run_root.name},
-                   "stagedValidation": staged_report})
-    atomic_write_json(report, root / "quality-report.json")
+    staged_report["units"] = dict(PUBLISHED_UNITS)
+    report = dict(staged_report)
+    report.update({
+        "sources": actual_sources,
+        "units": dict(PUBLISHED_UNITS),
+        "partial": bool(failures), "failedSymbols": failures,
+        "requestedSymbols": symbols,
+        "build": {"startDate": options.start_date,
+                  "endDate": options.end_date,
+                  "years": sorted(set(options.years)),
+                  "workers": options.workers,
+                  "attempts": options.attempts,
+                  "requestDelaySeconds": options.request_delay,
+                  "priceSourcePolicy": options.price_source,
+                  "priceSourceCounts": price_sources,
+                  "runKey": run_root.name},
+        "stagedValidation": staged_report,
+    })
+    _publish_snapshot(staged_reference, root, report)
     return report

@@ -66,6 +66,9 @@ importers:
         specifier: 2.8.1
         version: 2.8.1
     devDependencies:
+      '@finance2dsh/portfolio-risk':
+        specifier: workspace:*
+        version: link:packages/portfolio-risk
       '@finance2dsh/research-audit':
         specifier: workspace:*
         version: link:packages/research-audit
@@ -211,6 +214,15 @@ importers:
       '@finance2dsh/core':
         specifier: workspace:*
         version: link:../finance-core
+
+  packages/portfolio-risk:
+    dependencies:
+      '@finance2dsh/core':
+        specifier: workspace:*
+        version: link:../finance-core
+      '@finance2dsh/research-core':
+        specifier: workspace:*
+        version: link:../research-core
 
   packages/research-audit:
     dependencies:

@@ -41,6 +41,18 @@ pnpm test:runtime
 
 唯一运行入口是 `skills/`。当前 canonical Skills、V2 合并规则和离线 CLI 边界见根目录 `SKILLS_V2.md` 与 `skills/migration-manifest.json`。`company-financial-analysis` 中的 Python 脚本以及 `macro-cycle-policy-analysis` 的 PDF helper 不会因为 Skill 被发现而获得执行权限。
 
+## 测试责任
+
+| 层级 | 位置 | 默认门禁 |
+|---|---|---|
+| package 单元/契约 | 各 `packages/*` 的源码与根 `tests/*-contracts.test.ts` / 领域测试 | `pnpm test:ts` |
+| 跨包契约 | `tests/` 中 data reconciliation、research audit、TS/Python bridge | `pnpm test:ts` |
+| runtime/composition | `tests/composition.test.ts`、`tests/isolation.test.ts`、`tests/*adapter.test.ts` | `pnpm test:ts`、`pnpm test:runtime` |
+| immutable eval fixtures | `evals/` 与 package 内固定 fixture | 对应 contract test |
+| live tests | `tests/*.live.test.ts`、CNE6 live marker | 仅显式 `test:live:*` |
+
+`packages/combinatorial-optimization` 作为现有兼容入口保留；本阶段不做目录改名，避免同时破坏 Python project、CLI、文档和测试引用。其环境、cache、egg-info 和本地数据均位于被忽略且可重建的位置。
+
 ## 可选 live 检查
 
 以下命令不属于默认 CI；缺少凭据、授权、网络或数据资产时应报告未运行，不能伪造通过：

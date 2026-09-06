@@ -1,5 +1,7 @@
 # NGFI 外部能力迁移深度调研
 
+> **Historical input:** 本文是 Phase 2 迁移前的调研快照。实现状态与当前入口以 `docs/capabilities/manifest.json`、`docs/capabilities/status.md` 和根 README 为准。
+
 > 调研日期：2026-09-06
 > 对象：ai-berkshire、Vibe-Research、a-share-accumulation-breakout、daily_stock_analysis、agent-agnostic-stock-skills、panda_quantflow、dsh-trading，以及当前 NGFI 工作树。
 > 用途：供后续实现 Agent 做代码级迁移。本报告不是产品竞品分析。

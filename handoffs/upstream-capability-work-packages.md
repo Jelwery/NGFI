@@ -1,5 +1,7 @@
 # NGFI 能力迁移实施工作包
 
+> **Historical input:** WP01–WP14 已迁入治理分支；本文保留用于审计来源、固定 upstream commit 和验收意图，不是当前待办列表。WP15 的实际接线状态以 capability manifest 为准。
+
 > 用途：把单个工作包原样交给新的实现 Agent。
 > 依据：[外部能力迁移深度调研](./upstream-capability-adoption-study.md)。
 > 范围：能力内核、Skill、工具与评测。排除新数据源、Web/UI、Bot、通知和实盘交易。

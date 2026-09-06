@@ -4,6 +4,7 @@
 
 - Node.js 22.19+、pnpm 11、Python 3.12+、uv。
 - DSH 状态固定在仓库内 `.runtime/`；不读写用户全局 DSH home。
+- 人工维护的 preset 位于 `config/agent-presets/`；`pnpm preset:generate` 确定性复制到 `generated/agent-presets/`，`pnpm preset:check` 检测 drift。
 - 默认 sandbox 为只读，Agent 仅能调用 preset 显式 allowlist 中的工具。
 - shell、任意 URL、raw provider/MCP、订单和实盘交易均不在 finance Agent surface。
 - 默认门禁离线运行，不请求模型或真实 provider。

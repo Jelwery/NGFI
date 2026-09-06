@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "commonBase": "da101d13095c413e7904d4eb171afd11d01c97b5",
+  "runtimeRoot": "skills",
+  "legacyRuntimeRootsRemoved": [
+    "skills_v2",
+    "公司财务分析",
+    "宏观周期与政策分析",
+    "投资行为诊断"
+  ],
+  "skills": [
+    {
+      "name": "company-financial-analysis",
+      "sourcePath": "公司财务分析",
+      "sourceTreeSha256": "68107a9f83eaf664291b557cecd12ed419c5bf7fcb00571bf97225b707c89cfd",
+      "targetPath": "skills/company-financial-analysis",
+      "merge": "copy-and-adapt-runtime-boundary",
+      "compatibility": "All SKILL.md, references, deterministic scripts and schemas retained; host paths removed; scripts remain offline CLI helpers unless a preset explicitly allowlists a narrow adapter."
+    },
+    {
+      "name": "macro-cycle-policy-analysis",
+      "sourcePath": "宏观周期与政策分析",
+      "sourceTreeSha256": "8862ee8296bc8af55d38fb98343e70b23c9f361ba6283482be6a61361058d5f5",
+      "targetPath": "skills/macro-cycle-policy-analysis",
+      "merge": "copy-and-adapt-runtime-boundary",
+      "compatibility": "All SKILL.md, references and PDF helper retained; frozen snapshot, insufficiency, tool error, transmission and falsifier rules preserved; PDF helper is offline-only."
+    },
+    {
+      "name": "investment-behavior-diagnosis",
+      "sourcePath": "投资行为诊断",
+      "sourceTreeSha256": "27be5a87a054ff2d7ea73f0e302c0cf6ce11a46f9e74170442821701ccff00f8",
+      "productionBase": "da101d13095c413e7904d4eb171afd11d01c97b5:skills/investment-behavior-diagnosis",
+      "targetPath": "skills/investment-behavior-diagnosis",
+      "merge": "production-base-plus-v2-superset",
+      "compatibility": "Production evidence hierarchy, candidate mechanisms, competing explanations, tool use, PGR/PLR, confidence, privacy and mental-health boundaries retained. V2 status gates, rational-null, three-mechanism maximum, adversarial resistance, no-default-write and no-current-trade-advice constraints absorbed."
+    }
+  ]
+}

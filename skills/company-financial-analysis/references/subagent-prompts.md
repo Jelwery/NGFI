@@ -186,8 +186,8 @@ Agent(subagent_type="general-purpose", description="Stage 4: CF Analysis for {{�
 
 | 占位符 | 含义 | 示例 |
 |------|------|------|
-| `{{工作目录}}` | 股票分析目录的绝对路径 | `C:/Users/86186/Desktop/财报分析/三七互娱` |
-| `{{skill路径}}` | skill安装目录的绝对路径 | `C:/Users/86186/.claude/skills/公司财务分析` |
+| `{{工作目录}}` | 股票分析目录的绝对路径 | `{workspaceRoot}/财报分析/示例公司` |
+| `{{skill路径}}` | skill 安装目录的绝对路径 | `{repositoryRoot}/skills/company-financial-analysis` |
 | `{{公司简称}}` | 公司简称 | `三七互娱` |
 | `{{行业属性}}` | GENERAL/INSURANCE/BANK/BROKER/FINANCIAL_HOLDING | `GENERAL` |
 

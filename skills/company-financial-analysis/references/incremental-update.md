@@ -314,7 +314,7 @@ else:
    估值变化桥接公式（逐项叠加）：
    上次中性DCF: state["last_valuation"]["dcf"]["neutral_per_share"]
    本次中性DCF: new_dcf
-   
+
    变化分解：
      + 收入假设上修/下修 = 只改 rev_growth 重跑，对比 delta
      + 毛利率假设变化 = 只改 gm 重跑，对比 delta

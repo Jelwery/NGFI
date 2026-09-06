@@ -11,6 +11,12 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+SKILLS_ROOT = ROOT / "skills"
+PRIMARY_SKILLS = {
+    "company-financial-analysis",
+    "macro-cycle-policy-analysis",
+    "investment-behavior-diagnosis",
+}
 
 
 def load_module(name: str, path: Path):
@@ -23,54 +29,55 @@ def load_module(name: str, path: Path):
 
 class SkillContractTests(unittest.TestCase):
     def test_keeps_three_primary_skills(self):
-        skills = sorted(ROOT.glob("*/SKILL.md"))
-        self.assertEqual(
-            [path.parent.name for path in skills],
-            ["公司财务分析", "宏观周期与政策分析", "投资行为诊断"],
-        )
+        names = set()
+        for path in SKILLS_ROOT.glob("*/SKILL.md"):
+            match = re.search(r"(?m)^name: ([a-z0-9-]+)$", path.read_text(encoding="utf-8"))
+            self.assertIsNotNone(match, path)
+            self.assertNotIn(match.group(1), names, f"duplicate skill name: {match.group(1)}")
+            names.add(match.group(1))
+        self.assertTrue(PRIMARY_SKILLS.issubset(names))
+        for legacy in ("skills_v2", "公司财务分析", "宏观周期与政策分析", "投资行为诊断"):
+            self.assertFalse((ROOT / legacy).exists(), f"legacy runtime copy remains: {legacy}")
 
     def test_all_skills_put_v2_control_layer_first(self):
-        for path in ROOT.glob("*/SKILL.md"):
+        legacy_headings = {
+            "company-financial-analysis": "## 角色",
+            "macro-cycle-policy-analysis": "## 触发原则",
+            "investment-behavior-diagnosis": "## 先识别用户真正要解决的任务",
+        }
+        for name in PRIMARY_SKILLS:
+            path = SKILLS_ROOT / name / "SKILL.md"
             text = path.read_text(encoding="utf-8")
             control = text.index("## V2 执行控制层")
-            first_legacy_section = min(
-                index
-                for heading in ("## 角色", "## 写作规范", "## 触发原则")
-                if (index := text.find(heading)) >= 0
-            )
+            first_legacy_section = text.index(legacy_headings[name])
             self.assertLess(control, first_legacy_section, path)
 
     def test_frontmatter_names_are_dsh_compatible(self):
-        expected = {
-            "投资行为诊断": "investment-behavior-diagnosis",
-            "宏观周期与政策分析": "macro-cycle-policy-analysis",
-            "公司财务分析": "company-financial-analysis",
-        }
-        for directory, name in expected.items():
-            text = (ROOT / directory / "SKILL.md").read_text(encoding="utf-8")
+        for name in PRIMARY_SKILLS:
+            text = (SKILLS_ROOT / name / "SKILL.md").read_text(encoding="utf-8")
             self.assertRegex(text, rf"(?m)^name: {re.escape(name)}$")
 
     def test_referenced_resources_exist(self):
         pattern = re.compile(r"(?:references|scripts)/[A-Za-z0-9_.\-\u4e00-\u9fff]+")
-        for skill_path in ROOT.glob("*/SKILL.md"):
+        for skill_path in SKILLS_ROOT.glob("*/SKILL.md"):
             text = skill_path.read_text(encoding="utf-8")
             for relative in sorted(set(pattern.findall(text))):
                 self.assertTrue((skill_path.parent / relative).is_file(), relative)
 
     def test_behavior_guardrails(self):
-        text = (ROOT / "投资行为诊断/SKILL.md").read_text(encoding="utf-8")
+        text = (SKILLS_ROOT / "investment-behavior-diagnosis/SKILL.md").read_text(encoding="utf-8")
         for phrase in ("needs_input", "data_conflict", "not_a_bias", "理性行为是零假设"):
             self.assertIn(phrase, text)
         self.assertNotIn('卖出一部分，保留一部分', text)
 
     def test_macro_guardrails(self):
-        text = (ROOT / "宏观周期与政策分析/SKILL.md").read_text(encoding="utf-8")
+        text = (SKILLS_ROOT / "macro-cycle-policy-analysis/SKILL.md").read_text(encoding="utf-8")
         for phrase in ("冻结快照", "needs_input", "tool_error", "有界双 Agent"):
             self.assertIn(phrase, text)
         self.assertIn("禁止基于伪前提推导行业", text)
 
     def test_finance_guardrails(self):
-        text = (ROOT / "公司财务分析/SKILL.md").read_text(encoding="utf-8")
+        text = (SKILLS_ROOT / "company-financial-analysis/SKILL.md").read_text(encoding="utf-8")
         for phrase in (
             "当前股价防火墙",
             "run_canonical.py",
@@ -86,7 +93,7 @@ class StateValidatorTests(unittest.TestCase):
     def setUpClass(cls):
         cls.validator = load_module(
             "validate_state",
-            ROOT / "公司财务分析/scripts/validate_state.py",
+            SKILLS_ROOT / "company-financial-analysis/scripts/validate_state.py",
         )
 
     def valid_state(self):
@@ -147,7 +154,7 @@ class StateValidatorTests(unittest.TestCase):
             completed = subprocess.run(
                 [
                     sys.executable,
-                    str(ROOT / "公司财务分析/scripts/validate_finance_output.py"),
+                    str(SKILLS_ROOT / "company-financial-analysis/scripts/validate_finance_output.py"),
                     "--report",
                     str(report),
                     "--state",
@@ -165,7 +172,7 @@ class RatioDefinitionTests(unittest.TestCase):
     def test_canonical_roa_is_ebit_over_assets(self):
         ratios = load_module(
             "calc_ratios",
-            ROOT / "公司财务分析/scripts/calc_ratios.py",
+            SKILLS_ROOT / "company-financial-analysis/scripts/calc_ratios.py",
         )
         data = {
             "company_type": "GENERAL",
@@ -220,7 +227,7 @@ class RatioDefinitionTests(unittest.TestCase):
             completed = subprocess.run(
                 [
                     sys.executable,
-                    str(ROOT / "公司财务分析/scripts/run_canonical.py"),
+                    str(SKILLS_ROOT / "company-financial-analysis/scripts/run_canonical.py"),
                     "--script",
                     "calc_ratios.py",
                     "--input",
@@ -236,7 +243,7 @@ class RatioDefinitionTests(unittest.TestCase):
             self.assertTrue(output_path.is_file())
             records = json.loads((workdir / "_provenance.json").read_text(encoding="utf-8"))
             self.assertEqual(records[0]["exit_code"], 0)
-            self.assertEqual(records[0]["script"], str(ROOT / "公司财务分析/scripts/calc_ratios.py"))
+            self.assertEqual(records[0]["script"], str(SKILLS_ROOT / "company-financial-analysis/scripts/calc_ratios.py"))
             self.assertIsNotNone(records[0]["input_sha256"])
             self.assertIsNotNone(records[0]["output_sha256"])
 

@@ -1,10 +1,10 @@
 # NGFI Skills V2
 
-V2 以 `/Users/bytedance/Desktop/ngfi` 为基线，保留三套完整 Skill，不再把工作流拆成大量物理子 Skill：
+V2 以原版三套 Skill 为基线，现已合并到 NGFI 的 canonical `skills/` 根，不再把工作流拆成大量物理子 Skill：
 
-- `投资行为诊断`
-- `宏观周期与政策分析`
-- `公司财务分析`
+- `skills/investment-behavior-diagnosis`
+- `skills/macro-cycle-policy-analysis`
+- `skills/company-financial-analysis`
 
 这样保留了原版在复杂任务中的上下文一致性，同时吸收 A/B 测试中原子化版本的有效部分：输入 fast-path、边界判断、理论到行业追溯和明确的数据契约。
 
@@ -14,7 +14,7 @@ V2 以 `/Users/bytedance/Desktop/ngfi` 为基线，保留三套完整 Skill，�
 - `/macro-cycle-policy-analysis`
 - `/company-financial-analysis`
 
-中文目录名和中文 `description` 保留，因此自然语言中文请求仍可依据描述触发；显式调用时使用以上名称。
+中文 `description` 保留，因此自然语言中文请求仍可依据描述触发；显式调用时使用以上名称。DSH runtime 只挂载这一个 `skills/` 根。
 
 ## 为什么采用“整体 Skill + 内部阶段契约”
 
@@ -61,9 +61,9 @@ V2 因此采用：
 ## 财务校验器
 
 ```bash
-python "公司财务分析/scripts/validate_state.py" path/to/state.json
+python "skills/company-financial-analysis/scripts/validate_state.py" path/to/state.json
 
-python "公司财务分析/scripts/validate_finance_output.py" \
+python "skills/company-financial-analysis/scripts/validate_finance_output.py" \
   --report path/to/report.md \
   --state path/to/state.json
 ```
@@ -71,7 +71,7 @@ python "公司财务分析/scripts/validate_finance_output.py" \
 规范计算通过 `run_canonical.py` 调用，例如：
 
 ```bash
-python "公司财务分析/scripts/run_canonical.py" \
+python "skills/company-financial-analysis/scripts/run_canonical.py" \
   --script calc_ratios.py \
   --input path/to/_data.json \
   --output path/to/_ratios.json
@@ -83,7 +83,7 @@ python "公司财务分析/scripts/run_canonical.py" \
 
 ```bash
 python -m unittest discover -s tests -v
-python "公司财务分析/scripts/selftest.py"
+python "skills/company-financial-analysis/scripts/selftest.py"
 python tests/run_dsh_smoke.py
 ```
 
@@ -100,4 +100,4 @@ python tests/run_dsh_smoke.py
 
 ## 与原版的关系
 
-V2 复制了原版脚本和参考资料，再做增量强化。原目录 `/Users/bytedance/Desktop/ngfi` 不需要且不应被修改。V2 是独立目录和独立 Git 仓库。
+V2 在原版脚本和参考资料上做增量强化。三套 Skill 及其测试与 NGFI 主工程共同维护；`skills_v2/` 和仓库根目录中文副本不再是运行入口。行为诊断以原生产版为 canonical 基础，V2 独有理论资料以 `v2-*-toolkit.md` 兼容 reference 保留。

@@ -11,10 +11,18 @@ export const ASTOCK_CAPABILITIES = [
   'instrument-reference',
   'quote',
   'market-bars',
+  'order-book',
   'fundamentals',
+  'corporate-actions',
   'disclosures',
+  'research-consensus',
+  'capital-flow',
+  'market-signal',
+  'industry-classification',
   'index',
+  'macro',
   'trading-calendar',
+  'risk-data',
 ] as const
 
 export type AStockCapability = typeof ASTOCK_CAPABILITIES[number]
@@ -63,6 +71,34 @@ export interface AStockProviderOptions {
   networkTimeoutMs?: number
   /** Minimum delay between starts for this provider instance. */
   minRequestIntervalMs?: number
+}
+
+export interface AStockFeatureParams {
+  featureId: string
+  variant?: string
+  limit?: number
+  instrument?: InstrumentId
+  asOf?: string
+  startDate?: string
+  endDate?: string
+  tradeDate?: string
+  interval?: '1m' | '5m' | '15m' | '30m' | '60m' | '1d' | '1wk' | '1mo'
+  adjustment?: AdjustmentMode
+  officialProvider?: 'csi' | 'cni'
+  industryCode?: string
+  boardType?: 'industry' | 'concept' | 'region'
+  period?: string
+  year?: number
+  page?: number
+  lookbackDays?: number
+  forwardDays?: number
+  category?: string
+  statement?: 'lrb' | 'fzb' | 'llb'
+  searchText?: string
+  channel?: 'report' | 'announcement' | 'news'
+  underlying?: string
+  optionCode?: string
+  optionType?: 'call' | 'put'
 }
 
 export interface AStockInstrumentParams {

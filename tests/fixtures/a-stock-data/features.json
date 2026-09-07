@@ -1,0 +1,1748 @@
+{
+  "schemaVersion": "ngfi-a-stock-fixture-1",
+  "capturedAt": "2026-09-04T08:00:00Z",
+  "upstreamSource": "recorded-feature-success-fixture",
+  "sourceKind": "user",
+  "records": [
+    {
+      "featureId": "market.tdx",
+      "scope": "instrument",
+      "records": [
+        {
+          "capability_id": "capability-001",
+          "sample_date": "2026-09-04",
+          "source": "mootdx",
+          "value": 1,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-001",
+          "sample_date": "2026-09-03",
+          "source": "mootdx",
+          "value": 101,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "quote.tencent",
+      "scope": "instrument",
+      "records": [
+        {
+          "capability_id": "capability-002",
+          "sample_date": "2026-09-04",
+          "source": "tencent-finance",
+          "value": 2,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-002",
+          "sample_date": "2026-09-03",
+          "source": "tencent-finance",
+          "value": 102,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "bars.baidu-ma",
+      "scope": "instrument",
+      "records": [
+        {
+          "capability_id": "capability-003",
+          "sample_date": "2026-09-04",
+          "source": "baidu-gushitong",
+          "value": 3,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-003",
+          "sample_date": "2026-09-03",
+          "source": "baidu-gushitong",
+          "value": 103,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "bars.adjustment",
+      "scope": "instrument",
+      "records": [
+        {
+          "capability_id": "capability-004",
+          "sample_date": "2026-09-04",
+          "source": "sina-finance",
+          "value": 4,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-004",
+          "sample_date": "2026-09-03",
+          "source": "sina-finance",
+          "value": 104,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "disclosures.research-report",
+      "scope": "instrument",
+      "records": [
+        {
+          "capability_id": "capability-005",
+          "sample_date": "2026-09-04",
+          "source": "eastmoney-reportapi",
+          "value": 5,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-005",
+          "sample_date": "2026-09-03",
+          "source": "eastmoney-reportapi",
+          "value": 105,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "disclosures.research-document",
+      "scope": "instrument",
+      "records": [
+        {
+          "capability_id": "capability-006",
+          "sample_date": "2026-09-04",
+          "source": "eastmoney-reportapi",
+          "value": 6,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-006",
+          "sample_date": "2026-09-03",
+          "source": "eastmoney-reportapi",
+          "value": 106,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "disclosures.eps-consensus",
+      "scope": "instrument",
+      "records": [
+        {
+          "capability_id": "capability-007",
+          "sample_date": "2026-09-04",
+          "source": "ths-basic",
+          "value": 7,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-007",
+          "sample_date": "2026-09-03",
+          "source": "ths-basic",
+          "value": 107,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "disclosures.iwencai-semantic",
+      "scope": "market",
+      "records": [
+        {
+          "capability_id": "capability-008",
+          "sample_date": "2026-09-04",
+          "source": "iwencai",
+          "value": 8,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-008",
+          "sample_date": "2026-09-03",
+          "source": "iwencai",
+          "value": 108,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "market-activity.hot-reason",
+      "scope": "market",
+      "records": [
+        {
+          "capability_id": "capability-009",
+          "sample_date": "2026-09-04",
+          "source": "ths-hot",
+          "value": 9,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-009",
+          "sample_date": "2026-09-03",
+          "source": "ths-hot",
+          "value": 109,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "market-activity.northbound-minute-flow",
+      "scope": "market",
+      "records": [
+        {
+          "capability_id": "capability-010",
+          "sample_date": "2026-09-04",
+          "source": "ths-hsgt",
+          "value": 10,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-010",
+          "sample_date": "2026-09-03",
+          "source": "ths-hsgt",
+          "value": 110,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "instrument.concept-membership",
+      "scope": "instrument",
+      "records": [
+        {
+          "capability_id": "capability-011",
+          "sample_date": "2026-09-04",
+          "source": "eastmoney-push2",
+          "value": 11,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-011",
+          "sample_date": "2026-09-03",
+          "source": "eastmoney-push2",
+          "value": 111,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "market-activity.stock-fund-flow-minute",
+      "scope": "instrument",
+      "records": [
+        {
+          "capability_id": "capability-012",
+          "sample_date": "2026-09-04",
+          "source": "eastmoney-push2",
+          "value": 12,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-012",
+          "sample_date": "2026-09-03",
+          "source": "eastmoney-push2",
+          "value": 112,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "market-activity.dragon-tiger-stock",
+      "scope": "instrument",
+      "records": [
+        {
+          "capability_id": "capability-013",
+          "sample_date": "2026-09-04",
+          "source": "eastmoney-datacenter",
+          "value": 13,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-013",
+          "sample_date": "2026-09-03",
+          "source": "eastmoney-datacenter",
+          "value": 113,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "fundamentals.lockup-expiry",
+      "scope": "instrument",
+      "records": [
+        {
+          "capability_id": "capability-014",
+          "sample_date": "2026-09-04",
+          "source": "eastmoney-datacenter",
+          "value": 14,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-014",
+          "sample_date": "2026-09-03",
+          "source": "eastmoney-datacenter",
+          "value": 114,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "market-activity.industry-performance-ranking",
+      "scope": "industry",
+      "records": [
+        {
+          "capability_id": "capability-015",
+          "sample_date": "2026-09-04",
+          "source": "eastmoney-push2",
+          "value": 15,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-015",
+          "sample_date": "2026-09-03",
+          "source": "eastmoney-push2",
+          "value": 115,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "market-activity.board-fund-flow",
+      "scope": "industry",
+      "records": [
+        {
+          "capability_id": "capability-016",
+          "sample_date": "2026-09-04",
+          "source": "eastmoney-push2",
+          "value": 16,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-016",
+          "sample_date": "2026-09-03",
+          "source": "eastmoney-push2",
+          "value": 116,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "market-activity.dragon-tiger-market",
+      "scope": "market",
+      "records": [
+        {
+          "capability_id": "capability-017",
+          "sample_date": "2026-09-04",
+          "source": "eastmoney-datacenter",
+          "value": 17,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-017",
+          "sample_date": "2026-09-03",
+          "source": "eastmoney-datacenter",
+          "value": 117,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "market-activity.margin-trading",
+      "scope": "instrument",
+      "records": [
+        {
+          "capability_id": "capability-018",
+          "sample_date": "2026-09-04",
+          "source": "eastmoney-datacenter",
+          "value": 18,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-018",
+          "sample_date": "2026-09-03",
+          "source": "eastmoney-datacenter",
+          "value": 118,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "market-activity.block-trade",
+      "scope": "instrument",
+      "records": [
+        {
+          "capability_id": "capability-019",
+          "sample_date": "2026-09-04",
+          "source": "eastmoney-datacenter",
+          "value": 19,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-019",
+          "sample_date": "2026-09-03",
+          "source": "eastmoney-datacenter",
+          "value": 119,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "fundamentals.holder-count-change",
+      "scope": "instrument",
+      "records": [
+        {
+          "capability_id": "capability-020",
+          "sample_date": "2026-09-04",
+          "source": "eastmoney-datacenter",
+          "value": 20,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-020",
+          "sample_date": "2026-09-03",
+          "source": "eastmoney-datacenter",
+          "value": 120,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "fundamentals.dividend-history",
+      "scope": "instrument",
+      "records": [
+        {
+          "capability_id": "capability-021",
+          "sample_date": "2026-09-04",
+          "source": "eastmoney-datacenter",
+          "value": 21,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-021",
+          "sample_date": "2026-09-03",
+          "source": "eastmoney-datacenter",
+          "value": 121,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "market-activity.stock-fund-flow-daily",
+      "scope": "instrument",
+      "records": [
+        {
+          "capability_id": "capability-022",
+          "sample_date": "2026-09-04",
+          "source": "eastmoney-push2",
+          "value": 22,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-022",
+          "sample_date": "2026-09-03",
+          "source": "eastmoney-push2",
+          "value": 122,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "market-activity.chip-distribution",
+      "scope": "instrument",
+      "records": [
+        {
+          "capability_id": "capability-023",
+          "sample_date": "2026-09-04",
+          "source": "mootdx",
+          "value": 23,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-023",
+          "sample_date": "2026-09-03",
+          "source": "mootdx",
+          "value": 123,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "disclosures.stock-news",
+      "scope": "instrument",
+      "records": [
+        {
+          "capability_id": "capability-024",
+          "sample_date": "2026-09-04",
+          "source": "eastmoney-push2",
+          "value": 24,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-024",
+          "sample_date": "2026-09-03",
+          "source": "eastmoney-push2",
+          "value": 124,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "disclosures.market-telegraph",
+      "scope": "market",
+      "records": [
+        {
+          "capability_id": "capability-025",
+          "sample_date": "2026-09-04",
+          "source": "cailianpress",
+          "value": 25,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-025",
+          "sample_date": "2026-09-03",
+          "source": "cailianpress",
+          "value": 125,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "disclosures.global-news",
+      "scope": "market",
+      "records": [
+        {
+          "capability_id": "capability-026",
+          "sample_date": "2026-09-04",
+          "source": "eastmoney-push2",
+          "value": 26,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-026",
+          "sample_date": "2026-09-03",
+          "source": "eastmoney-push2",
+          "value": 126,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "fundamentals.tdx-finance-snapshot",
+      "scope": "instrument",
+      "records": [
+        {
+          "capability_id": "capability-027",
+          "sample_date": "2026-09-04",
+          "source": "mootdx",
+          "value": 27,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-027",
+          "sample_date": "2026-09-03",
+          "source": "mootdx",
+          "value": 127,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "fundamentals.tdx-f10",
+      "scope": "instrument",
+      "records": [
+        {
+          "capability_id": "capability-028",
+          "sample_date": "2026-09-04",
+          "source": "mootdx",
+          "value": 28,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-028",
+          "sample_date": "2026-09-03",
+          "source": "mootdx",
+          "value": 128,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "instrument.company-profile",
+      "scope": "instrument",
+      "records": [
+        {
+          "capability_id": "capability-029",
+          "sample_date": "2026-09-04",
+          "source": "eastmoney-push2",
+          "value": 29,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-029",
+          "sample_date": "2026-09-03",
+          "source": "eastmoney-push2",
+          "value": 129,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "fundamentals.financial-statements",
+      "scope": "instrument",
+      "records": [
+        {
+          "capability_id": "capability-030",
+          "sample_date": "2026-09-04",
+          "source": "sina-finance",
+          "value": 30,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-030",
+          "sample_date": "2026-09-03",
+          "source": "sina-finance",
+          "value": 130,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "fundamentals.valuation-history",
+      "scope": "instrument",
+      "records": [
+        {
+          "capability_id": "capability-031",
+          "sample_date": "2026-09-04",
+          "source": "baostock",
+          "value": 31,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-031",
+          "sample_date": "2026-09-03",
+          "source": "baostock",
+          "value": 131,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "instrument.listing-status",
+      "scope": "instrument",
+      "records": [
+        {
+          "capability_id": "capability-032",
+          "sample_date": "2026-09-04",
+          "source": "baostock",
+          "value": 32,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-032",
+          "sample_date": "2026-09-03",
+          "source": "baostock",
+          "value": 132,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "instrument.sw-industry",
+      "scope": "instrument",
+      "records": [
+        {
+          "capability_id": "capability-033",
+          "sample_date": "2026-09-04",
+          "source": "sw-research",
+          "value": 33,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-033",
+          "sample_date": "2026-09-03",
+          "source": "sw-research",
+          "value": 133,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "disclosures.announcement",
+      "scope": "instrument",
+      "records": [
+        {
+          "capability_id": "capability-034",
+          "sample_date": "2026-09-04",
+          "source": "cninfo",
+          "value": 34,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-034",
+          "sample_date": "2026-09-03",
+          "source": "cninfo",
+          "value": 134,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "disclosures.tdx-announcement-summary",
+      "scope": "instrument",
+      "records": [
+        {
+          "capability_id": "capability-035",
+          "sample_date": "2026-09-04",
+          "source": "mootdx",
+          "value": 35,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-035",
+          "sample_date": "2026-09-03",
+          "source": "mootdx",
+          "value": 135,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "market-activity.limit-up-pool",
+      "scope": "market",
+      "records": [
+        {
+          "capability_id": "capability-036",
+          "sample_date": "2026-09-04",
+          "source": "eastmoney-push2",
+          "value": 36,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-036",
+          "sample_date": "2026-09-03",
+          "source": "eastmoney-push2",
+          "value": 136,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "market-activity.broken-limit-pool",
+      "scope": "market",
+      "records": [
+        {
+          "capability_id": "capability-037",
+          "sample_date": "2026-09-04",
+          "source": "eastmoney-push2",
+          "value": 37,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-037",
+          "sample_date": "2026-09-03",
+          "source": "eastmoney-push2",
+          "value": 137,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "market-activity.limit-down-pool",
+      "scope": "market",
+      "records": [
+        {
+          "capability_id": "capability-038",
+          "sample_date": "2026-09-04",
+          "source": "eastmoney-push2",
+          "value": 38,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-038",
+          "sample_date": "2026-09-03",
+          "source": "eastmoney-push2",
+          "value": 138,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "market-activity.previous-limit-up-pool",
+      "scope": "market",
+      "records": [
+        {
+          "capability_id": "capability-039",
+          "sample_date": "2026-09-04",
+          "source": "eastmoney-push2",
+          "value": 39,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-039",
+          "sample_date": "2026-09-03",
+          "source": "eastmoney-push2",
+          "value": 139,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "market-activity.limit-up-reason",
+      "scope": "market",
+      "records": [
+        {
+          "capability_id": "capability-040",
+          "sample_date": "2026-09-04",
+          "source": "ths-hot",
+          "value": 40,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-040",
+          "sample_date": "2026-09-03",
+          "source": "ths-hot",
+          "value": 140,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "market-activity.limit-up-sentiment",
+      "scope": "market",
+      "records": [
+        {
+          "capability_id": "capability-041",
+          "sample_date": "2026-09-04",
+          "source": "eastmoney-push2",
+          "value": 41,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-041",
+          "sample_date": "2026-09-03",
+          "source": "eastmoney-push2",
+          "value": 141,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "market-activity.stock-monitor",
+      "scope": "market",
+      "records": [
+        {
+          "capability_id": "capability-042",
+          "sample_date": "2026-09-04",
+          "source": "eastmoney-push2",
+          "value": 42,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-042",
+          "sample_date": "2026-09-03",
+          "source": "eastmoney-push2",
+          "value": 142,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "market-activity.price-anomaly-events",
+      "scope": "market",
+      "records": [
+        {
+          "capability_id": "capability-043",
+          "sample_date": "2026-09-04",
+          "source": "eastmoney-push2",
+          "value": 43,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-043",
+          "sample_date": "2026-09-03",
+          "source": "eastmoney-push2",
+          "value": 143,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "market-activity.price-anomaly-count",
+      "scope": "market",
+      "records": [
+        {
+          "capability_id": "capability-044",
+          "sample_date": "2026-09-04",
+          "source": "eastmoney-push2",
+          "value": 44,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-044",
+          "sample_date": "2026-09-03",
+          "source": "eastmoney-push2",
+          "value": 144,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "market-activity.option-contracts",
+      "scope": "derivative",
+      "records": [
+        {
+          "capability_id": "capability-045",
+          "sample_date": "2026-09-04",
+          "source": "sina-finance",
+          "value": 45,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-045",
+          "sample_date": "2026-09-03",
+          "source": "sina-finance",
+          "value": 145,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "market-activity.option-tquote",
+      "scope": "derivative",
+      "records": [
+        {
+          "capability_id": "capability-046",
+          "sample_date": "2026-09-04",
+          "source": "sina-finance",
+          "value": 46,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-046",
+          "sample_date": "2026-09-03",
+          "source": "sina-finance",
+          "value": 146,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "market-activity.option-greeks",
+      "scope": "derivative",
+      "records": [
+        {
+          "capability_id": "capability-047",
+          "sample_date": "2026-09-04",
+          "source": "sina-finance",
+          "value": 47,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-047",
+          "sample_date": "2026-09-03",
+          "source": "sina-finance",
+          "value": 147,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "disclosures.investor-relations-qa",
+      "scope": "instrument",
+      "records": [
+        {
+          "capability_id": "capability-048",
+          "sample_date": "2026-09-04",
+          "source": "cninfo",
+          "value": 48,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-048",
+          "sample_date": "2026-09-03",
+          "source": "cninfo",
+          "value": 148,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "market-activity.ths-hot-list",
+      "scope": "market",
+      "records": [
+        {
+          "capability_id": "capability-049",
+          "sample_date": "2026-09-04",
+          "source": "ths-hot",
+          "value": 49,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-049",
+          "sample_date": "2026-09-03",
+          "source": "ths-hot",
+          "value": 149,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "market-activity.eastmoney-hot-rank",
+      "scope": "market",
+      "records": [
+        {
+          "capability_id": "capability-050",
+          "sample_date": "2026-09-04",
+          "source": "eastmoney-push2",
+          "value": 50,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-050",
+          "sample_date": "2026-09-03",
+          "source": "eastmoney-push2",
+          "value": 150,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "market-activity.hot-concept",
+      "scope": "instrument",
+      "records": [
+        {
+          "capability_id": "capability-051",
+          "sample_date": "2026-09-04",
+          "source": "eastmoney-push2",
+          "value": 51,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-051",
+          "sample_date": "2026-09-03",
+          "source": "eastmoney-push2",
+          "value": 151,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "macro.social-financing-flow",
+      "scope": "macro",
+      "records": [
+        {
+          "capability_id": "capability-052",
+          "sample_date": "2026-09-04",
+          "source": "pboc",
+          "value": 52,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-052",
+          "sample_date": "2026-09-03",
+          "source": "pboc",
+          "value": 152,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "macro.pmi",
+      "scope": "macro",
+      "records": [
+        {
+          "capability_id": "capability-053",
+          "sample_date": "2026-09-04",
+          "source": "nbs",
+          "value": 53,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-053",
+          "sample_date": "2026-09-03",
+          "source": "nbs",
+          "value": 153,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "index.constituents",
+      "scope": "index",
+      "records": [
+        {
+          "capability_id": "capability-054",
+          "sample_date": "2026-09-04",
+          "source": "csi",
+          "value": 54,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-054",
+          "sample_date": "2026-09-03",
+          "source": "csi",
+          "value": 154,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "index.weights",
+      "scope": "index",
+      "records": [
+        {
+          "capability_id": "capability-055",
+          "sample_date": "2026-09-04",
+          "source": "csi",
+          "value": 55,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-055",
+          "sample_date": "2026-09-03",
+          "source": "csi",
+          "value": 155,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "index.valuation",
+      "scope": "index",
+      "records": [
+        {
+          "capability_id": "capability-056",
+          "sample_date": "2026-09-04",
+          "source": "csi",
+          "value": 56,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-056",
+          "sample_date": "2026-09-03",
+          "source": "csi",
+          "value": 156,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "index.trading-calendar",
+      "scope": "market",
+      "records": [
+        {
+          "capability_id": "capability-057",
+          "sample_date": "2026-09-04",
+          "source": "szse-official",
+          "value": 57,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-057",
+          "sample_date": "2026-09-03",
+          "source": "szse-official",
+          "value": 157,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "market-activity.margin-trading-official",
+      "scope": "instrument",
+      "records": [
+        {
+          "capability_id": "capability-058",
+          "sample_date": "2026-09-04",
+          "source": "szse-official",
+          "value": 58,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-058",
+          "sample_date": "2026-09-03",
+          "source": "szse-official",
+          "value": 158,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "market.bse-official",
+      "scope": "instrument",
+      "records": [
+        {
+          "capability_id": "capability-059",
+          "sample_date": "2026-09-04",
+          "source": "bse-official",
+          "value": 59,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-059",
+          "sample_date": "2026-09-03",
+          "source": "bse-official",
+          "value": 159,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    },
+    {
+      "featureId": "market-activity.official-backups",
+      "scope": "market",
+      "records": [
+        {
+          "capability_id": "capability-060",
+          "sample_date": "2026-09-04",
+          "source": "sse-official",
+          "value": 60,
+          "unit": "fixture-unit"
+        },
+        {
+          "capability_id": "capability-060",
+          "sample_date": "2026-09-03",
+          "source": "sse-official",
+          "value": 160,
+          "unit": "fixture-unit"
+        }
+      ],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": false
+    }
+  ]
+}

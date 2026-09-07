@@ -23,6 +23,7 @@ import {
   ASTOCK_PROTOCOL_VERSION,
   ASTOCK_PROVIDER_ID,
 } from './types.js'
+import { getAshareFeature } from './features.js'
 import type {
   AStockBars,
   AStockBarsParams,
@@ -96,6 +97,7 @@ const RUNNER_ENVIRONMENT_KEYS = [
   'SYSTEMROOT',
   'WINDIR',
 ] as const
+const OPTIONAL_AUTH_ENVIRONMENT_KEYS = ['IWENCAI_API_KEY'] as const
 const RESPONSE_STATUSES = new Set([
   'available', 'missing', 'not-applicable', 'no-data', 'unsupported', 'unauthorized',
   'insufficient-permission', 'rate-limited', 'provider-error',
@@ -115,6 +117,14 @@ const CAPABILITY_PARAMS: Readonly<Record<AStockCapability, ReadonlySet<string>>>
   disclosures: new Set(['startDate', 'endDate', 'limit']),
   index: new Set(['limit', 'officialProvider']),
   'trading-calendar': new Set(['exchange', 'startDate', 'endDate', 'limit']),
+  'order-book': new Set(),
+  'corporate-actions': new Set(),
+  'research-consensus': new Set(),
+  'capital-flow': new Set(),
+  'market-signal': new Set(),
+  'industry-classification': new Set(),
+  macro: new Set(),
+  'risk-data': new Set(),
 }
 
 export class AStockProviderError extends FinanceDataError {
@@ -171,7 +181,7 @@ export class AStockProvider {
           '--project', this.projectRoot, 'python',
         ]
       : [])
-    this.runnerEnv = runnerEnvironment(this.projectRoot, environment)
+    this.runnerEnv = runnerEnvironment(this.projectRoot, environment, this.source)
     this.fixtureRoot = options.fixtureRoot === undefined ? undefined : resolve(options.fixtureRoot)
     if (this.source === 'fixture' && this.fixtureRoot === undefined) {
       throw providerError('fixtureRoot is required for fixture source', 'invalid-request', 'invalid-request', false)
@@ -297,8 +307,14 @@ export class AStockProvider {
     if (request.market.toUpperCase() !== 'CN') throw invalid('A-stock provider only accepts market CN')
     const rawParams = request.params ?? {}
     if (!isPlainObject(rawParams)) throw invalid('capability params must be a plain JSON object')
-    rejectUnknownKeys(rawParams, CAPABILITY_PARAMS[operation], `${operation} params`)
     assertJsonSafe(rawParams)
+    if (typeof rawParams.featureId === 'string') {
+      return this.normalizeFeatureRequest(request, operation, rawParams)
+    }
+    rejectUnknownKeys(rawParams, CAPABILITY_PARAMS[operation], `${operation} params`)
+    if (!['instrument-reference', 'quote', 'market-bars', 'fundamentals', 'disclosures', 'index', 'trading-calendar'].includes(operation)) {
+      throw providerError('featureId is required for this capability', 'invalid-request', 'invalid-request', false)
+    }
 
     const params: JsonObject = {}
     if (operation === 'trading-calendar') {
@@ -355,6 +371,66 @@ export class AStockProvider {
     }
     const serialized = JSON.stringify(normalized)
     if (Buffer.byteLength(serialized) > this.maxInputBytes) {
+      throw providerError('A-stock runner input exceeded limit', 'input-limit', 'invalid-request', false)
+    }
+    return normalized
+  }
+
+  private normalizeFeatureRequest(
+    request: CapabilityRequest<JsonObject>,
+    operation: AStockCapability,
+    rawParams: JsonObject,
+  ): RunnerRequest {
+    const definition = getAshareFeature(rawParams.featureId as string)
+    const variantId = rawParams.variant === undefined ? definition.variants[0]?.id : rawParams.variant
+    if (typeof variantId !== 'string') throw invalid('feature variant is required')
+    const variant = definition.variants.find(item => item.id === variantId)
+    if (variant === undefined || variant.dataCapability !== operation) {
+      throw invalid('feature does not belong to the requested capability')
+    }
+    rejectUnknownKeys(rawParams, new Set(['featureId', ...definition.allowedParams]), `${operation} feature params`)
+    const params: JsonObject = { featureId: definition.featureId, variant: variant.id }
+    if (definition.scope === 'instrument' || definition.scope === 'index') {
+      params.instrument = requireInstrument(request.instrument)
+    } else if (request.instrument !== undefined) {
+      params.instrument = requireInstrument(request.instrument)
+    }
+    const asOf = rawParams.asOf ?? request.asOf
+    if (asOf !== undefined) params.asOf = strictDateOrTimestamp(asOf, 'asOf')
+    for (const key of ['startDate', 'endDate', 'tradeDate'] as const) {
+      if (rawParams[key] !== undefined) params[key] = strictDate(rawParams[key], key)
+    }
+    if ((rawParams.startDate === undefined) !== (rawParams.endDate === undefined)) {
+      throw invalid('startDate and endDate must be provided together')
+    }
+    if (typeof params.startDate === 'string' && typeof params.endDate === 'string') {
+      assertDateSpan(params.startDate, params.endDate, this.limits.maxDateSpanDays)
+    }
+    params.limit = boundedInteger(
+      rawParams.limit ?? definition.defaultLimit, 'limit', 1,
+      Math.min(definition.maxLimit, this.limits.maxRecords),
+    )
+    const enumFields: Record<string, readonly string[]> = {
+      interval: ['1m', '5m', '15m', '30m', '60m', '1d', '1wk', '1mo'],
+      adjustment: ['none', 'qfq', 'hfq'], officialProvider: ['csi', 'cni'],
+      boardType: ['industry', 'concept', 'region'], statement: ['lrb', 'fzb', 'llb'],
+      channel: ['report', 'announcement', 'news'], optionType: ['call', 'put'],
+    }
+    for (const [key, allowed] of Object.entries(enumFields)) {
+      if (rawParams[key] !== undefined) params[key] = enumValue(rawParams[key], allowed, key)
+    }
+    for (const key of ['year', 'page', 'lookbackDays', 'forwardDays'] as const) {
+      if (rawParams[key] !== undefined) params[key] = boundedInteger(rawParams[key], key, 1, key === 'year' ? 9999 : 3660)
+    }
+    for (const key of ['industryCode', 'period', 'category', 'searchText', 'underlying', 'optionCode'] as const) {
+      if (rawParams[key] !== undefined) params[key] = boundedString(rawParams[key], key, key === 'searchText' ? 500 : 100)
+    }
+    const normalized: RunnerRequest = {
+      version: ASTOCK_PROTOCOL_VERSION, id: randomUUID(), operation, source: this.source,
+      params, limits: this.limits,
+      ...(this.fixtureRoot === undefined ? {} : { fixtureRoot: this.fixtureRoot }),
+    }
+    if (Buffer.byteLength(JSON.stringify(normalized)) > this.maxInputBytes) {
       throw providerError('A-stock runner input exceeded limit', 'input-limit', 'invalid-request', false)
     }
     return normalized
@@ -530,7 +606,11 @@ export class AStockProvider {
   }
 }
 
-function runnerEnvironment(projectRoot: string, parent: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+function runnerEnvironment(
+  projectRoot: string,
+  parent: NodeJS.ProcessEnv,
+  source: AStockSource,
+): NodeJS.ProcessEnv {
   const environment: NodeJS.ProcessEnv = {
     PYTHONDONTWRITEBYTECODE: '1',
     PYTHONIOENCODING: 'utf-8',
@@ -543,6 +623,12 @@ function runnerEnvironment(projectRoot: string, parent: NodeJS.ProcessEnv): Node
   for (const key of RUNNER_ENVIRONMENT_KEYS) {
     const value = parent[key] ?? process.env[key]
     if (value !== undefined) environment[key] = value
+  }
+  if (source === 'public-web') {
+    for (const key of OPTIONAL_AUTH_ENVIRONMENT_KEYS) {
+      const value = parent[key]
+      if (value !== undefined) environment[key] = value
+    }
   }
   return environment
 }
@@ -653,6 +739,10 @@ function validateCanonicalResult(
   validateCanonicalProvenance(result.provenance)
   if (result.data === null) throw new TypeError('successful data must be an object')
 
+  if (typeof request.params.featureId === 'string') {
+    validateFeatureResult(result.data, request, maxRecords)
+    return
+  }
   switch (request.operation) {
     case 'instrument-reference':
       validateInstrumentReference(result.data, expectedRequestInstrument(request))
@@ -675,6 +765,40 @@ function validateCanonicalResult(
     case 'trading-calendar':
       validateTradingCalendar(result.data, request, maxRecords)
       break
+  }
+}
+
+function validateFeatureResult(value: unknown, request: RunnerRequest, maxRecords: number): void {
+  const definition = getAshareFeature(request.params.featureId as string)
+  const data = canonicalObject(
+    value,
+    ['featureId', 'schemaVersion', 'scope', 'records', 'returned', 'truncated', 'fieldUnits', 'limitations'],
+    ['instrument', 'asOf', 'startDate', 'endDate', 'nextCursor'],
+    'A-share feature data',
+  )
+  if (data.featureId !== definition.featureId || data.schemaVersion !== 1 || data.scope !== definition.scope) {
+    throw new TypeError('A-share feature identity or schema is inconsistent')
+  }
+  if (data.instrument !== undefined) validateCanonicalInstrument(data.instrument, 'A-share feature data.instrument')
+  for (const key of ['asOf', 'startDate', 'endDate'] as const) {
+    if (data[key] !== undefined) canonicalDateOrTimestamp(data[key], `A-share feature data.${key}`)
+  }
+  const records = validateCollection(data, 'records', request, maxRecords)
+  for (const [index, item] of records.entries()) {
+    if (!isPlainObject(item)) throw new TypeError(`A-share feature data.records[${index}] must be an object`)
+    for (const child of Object.values(item)) {
+      if (child !== null && !['string', 'number', 'boolean'].includes(typeof child)) {
+        throw new TypeError(`A-share feature data.records[${index}] contains a non-scalar value`)
+      }
+      if (typeof child === 'number' && !Number.isFinite(child)) throw new TypeError('A-share feature data contains a non-finite number')
+    }
+  }
+  if (!isPlainObject(data.fieldUnits)
+      || Object.values(data.fieldUnits).some(unit => typeof unit !== 'string' || unit.length === 0)) {
+    throw new TypeError('A-share feature fieldUnits are invalid')
+  }
+  if (!Array.isArray(data.limitations) || data.limitations.some(item => typeof item !== 'string' || item.length === 0)) {
+    throw new TypeError('A-share feature limitations are invalid')
   }
 }
 
@@ -1268,6 +1392,14 @@ function boundedInteger(value: unknown, name: string, minimum: number, maximum: 
     throw new RangeError(`${name} must be an integer from ${minimum} through ${maximum}`)
   }
   return value as number
+}
+
+function boundedString(value: unknown, name: string, maximum: number): string {
+  if (typeof value !== 'string' || value.length === 0 || value.length > maximum
+      || value.includes('\0') || /[\r\n]/u.test(value)) {
+    throw invalid(`${name} must be a non-empty string of at most ${maximum} characters`)
+  }
+  return value
 }
 
 function strictDate(value: unknown, name: string): string {

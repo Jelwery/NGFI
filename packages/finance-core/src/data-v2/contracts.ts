@@ -160,6 +160,82 @@ export interface CanonicalDataResult<T> {
   warnings: string[]
 }
 
+export const ASHARE_FEATURE_SCOPES = [
+  'instrument', 'market', 'industry', 'macro', 'index', 'derivative',
+] as const
+
+export type AshareFeatureScope = typeof ASHARE_FEATURE_SCOPES[number]
+export type AshareFeatureScalar = string | number | boolean | null
+
+/**
+ * Versioned Tier-B contract for curated A-share datasets that do not yet have
+ * a dedicated domain model. Nested upstream values are serialized by the
+ * adapter instead of leaking arbitrary Python objects or response bodies.
+ */
+export interface AshareFeatureDatasetV1 {
+  featureId: string
+  schemaVersion: 1
+  scope: AshareFeatureScope
+  instrument?: InstrumentId
+  asOf?: string
+  startDate?: string
+  endDate?: string
+  records: Array<Record<string, AshareFeatureScalar>>
+  returned: number
+  truncated: boolean
+  nextCursor?: string
+  fieldUnits: Record<string, string>
+  limitations: string[]
+}
+
+export interface AshareOrderBookLevelV1 {
+  level: number
+  bidPrice: number | null
+  bidVolume: number | null
+  askPrice: number | null
+  askVolume: number | null
+}
+
+export interface AshareOrderBookV1 {
+  instrument: InstrumentId
+  observedAt: string
+  currency: 'CNY'
+  levels: AshareOrderBookLevelV1[]
+  returned: number
+  truncated: boolean
+}
+
+export interface AshareTimeSaleV1 {
+  time: string
+  price: number
+  volume: number
+  side: 'buy' | 'sell' | 'neutral' | 'unknown'
+}
+
+export interface AshareTimeSalesV1 {
+  instrument: InstrumentId
+  tradingDate: string
+  trades: AshareTimeSaleV1[]
+  returned: number
+  truncated: boolean
+}
+
+export interface AshareMacroObservationV1 {
+  period: string
+  values: Record<string, number | null>
+}
+
+export interface AshareMacroSeriesV1 {
+  featureId: string
+  frequency: 'monthly' | 'quarterly' | 'annual'
+  unit: string
+  publishedAt?: string
+  observations: AshareMacroObservationV1[]
+  returned: number
+  truncated: boolean
+  limitations: string[]
+}
+
 export type CanonicalResult<T> = CanonicalDataResult<T>
 
 export const PROVIDER_HEALTH_STATUSES = [

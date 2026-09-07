@@ -5,7 +5,7 @@ NGFI 是一个基于 [DeepSeek Harness（DSH）](https://www.npmjs.com/package/@
 它目前提供：
 
 - 全球股票的证券资料、行情、财务数据、分析师预期和可比公司数据查询
-- A 股证券代码规范化，以及行情、财务、公告、指数和交易日历数据的统一查询入口；另有长尾 capability 的受控稳定 surface（当前没有默认 routable provider，不代表已实现数据能力）
+- A 股 60/60 capability：通过 8 个 curated tools 覆盖身份、行情、K 线、盘口、逐笔、财务、公告、市场活动、期权、宏观和指数数据
 - WACC、DCF、敏感性分析和相对估值
 - 投资行为诊断与交易记录审计
 - 可按需加载的金融分析 Skills
@@ -83,22 +83,27 @@ A 股数据只通过以下 8 个 curated tools 暴露给 Agent。它们是稳定
 
 | 工具 | 用途 |
 |---|---|
-| `finance_data_catalog` | 查询 capability、approved provider、健康状态、鉴权与限制 |
-| `finance_cn_instrument` | 将六位证券代码、带交易所前后缀的代码或 canonical identifier 规范化为 canonical instrument |
-| `finance_cn_quote` | 当前 quote；指定 `as_of` 时返回由目标日单日未复权 bars 映射的稳定 quote snapshot |
-| `finance_cn_bars` | 受控日期范围和复权方式的历史 K 线 |
-| `finance_cn_fundamentals` | 财务期间筛选；`corporate-actions` 仅为受控稳定 surface，当前没有默认 routable provider |
-| `finance_cn_disclosures` | 公告查询；`research-consensus` 仅为受控稳定 surface，当前没有默认 routable provider |
-| `finance_cn_market_activity` | `capital-flow`、`market-signal`、`order-book` 的受控稳定 surface，当前没有默认 routable provider |
-| `finance_cn_macro_index` | 指数和交易日历查询；`macro` 仅为受控稳定 surface，当前没有默认 routable provider |
+| `finance_data_catalog` | 按 capability 或 feature 查询实现状态、运行健康、鉴权、来源链、contract tier、PIT 等级与限制 |
+| `finance_cn_instrument` | 证券规范化、公司资料、上市状态、概念归属和申万行业历史/as-of |
+| `finance_cn_quote` | canonical quote，以及腾讯、TDX、北交所受控快照 feature；历史 `as_of` 仍由目标日未复权 bars 映射 |
+| `finance_cn_bars` | 日/分钟 K、百度 MA、复权因子和复权行情 |
+| `finance_cn_fundamentals` | 财务期间、三表、TDX 财务/F10、估值历史、解禁、股东户数和分红 |
+| `finance_cn_disclosures` | 公告/附件、研报/附件、一致预期、iWenCai、新闻、电报和互动易 |
+| `finance_cn_market_activity` | 盘口/逐笔、资金流、龙虎榜、两融、大宗、涨跌停、异动、热榜、期权及官方备份 |
+| `finance_cn_macro_index` | 社融、PMI、指数成分/权重/估值和交易日历 |
 
-`corporate-actions`、`research-consensus`、`capital-flow`、`market-signal`、`order-book` 和 `macro` 是受控稳定 surface，但当前没有默认 routable provider，不能计作已经实现的数据 capability。只有运行时 catalog 明确返回 capability 映射、`routable: true` 且 health/授权合格时才能取数；当前默认组合会返回 `unsupported`，不能因工具或参数存在就宣称数据可用。
+`packages/finance-provider-astock/feature-registry.json` 是运行时映射的单一事实来源。固定上游 `a-stock-data v3.8.0` 的 60 个 capability、67 个 capability-callable 映射均已覆盖，并通过 70 个受控 tool variant 暴露；组合 capability 中的每个 callable 都有独立 variant。实现状态为 14 个 `implemented-canonical`、45 个 `implemented-experimental` 和 1 个 `implemented-optional-auth`，没有 `deferred-policy`、`unsupported` 或未映射 callable。完整矩阵见 [`skills/a-share-data-research/references/capability-routing.md`](skills/a-share-data-research/references/capability-routing.md)。
+
+实现状态不等于实时可用性。公开站点、社区 TDX、匿名 BaoStock/BSE 会受网络、地域、频率和 schema 变化影响；catalog 和 live probe 会如实报告 `pass`、`no-data`、`blocked-auth`、`unavailable-network`、`rate-limited`、`schema-drift` 或 `upstream-error`，不会把失败伪装成空结果。
+
+输出采用两级契约：核心身份、quote、bars、盘口/逐笔、财务、公告、指数、日历和宏观数据使用强类型 canonical payload；其余长尾能力使用版本化 `AshareFeatureDatasetV1` records envelope。两级结果都保留 provenance、日期/时点、单位、warnings、limitations、limit/truncated 和 fallback chain。
 
 执行规则：
 
 - **Normalize first**：涉及证券时必须先调用 `finance_cn_instrument`，再把同一个 canonical instrument 传给 quote、bars、fundamentals 等下游工具。该工具只接受六位证券代码、带交易所前后缀的代码（如 `sh600519`、`600519.SH`）或 canonical identifier；当前没有中文证券名称查询。纯宏观或交易日历查询不要求虚构证券身份。
+- **闭合 feature/dataset**：8 个工具通过 schema 中的 `feature` / `dataset` enum 选择能力；组合项再使用闭合 `variant`。参数不能控制上游 callable、模块、host、path、header 或 Cookie。
 - **受控来源**：`source` 只能是 `auto` 或 `finance_data_catalog` 返回的 approved provider id。工具参数不接受任意 URL、raw MCP 工具名、shell、Python、SQL 或上游函数名。
-- **`source: auto` 优先级**：当前注册表只有一套全局静态 priority，不能为每个 capability 单独排序。对共同支持的能力，已配置且可路由的 `tushare-mcp` 优先于 `cne6-local`；CNE6 是本地/PIT fallback。具体而言，`market-bars` 为 TuShare → CNE6 → TDX community → public，`fundamentals` 为 TuShare → CNE6 → public；不支持该 capability、未配置或不可路由的 provider 不进入候选。
+- **路由边界**：新增的 60 项 feature 路径固定经 `a-stock-public` 的 registry dispatcher 进入相应公开、官方或社区 source；`source: auto` 不会把私有 feature 参数投递给其他 provider。未选择 feature 的原有 canonical 调用继续使用 provider registry 的 TuShare、CNE6、TDX 和 public 路由。
 - **来源可追溯**：回答保留 `requestedProvider`、`actualProvider`、`upstreamSource`、`sourceKind`、`fetchedAt`，以及适用的观察、发布和可见时间、币种、单位、复权、状态、warnings、limitations 与 fallback chain。
 - **历史 quote 语义**：`finance_cn_quote(as_of)` 使用目标自然日的单日 `1d`、`adjustment: none` bars 映射稳定 quote snapshot，并保留实际 bars provenance。它不是历史实时 quote 或历史盘口；休市日不以前一交易日回填。
 - **Point-in-time（PIT）安全**：历史 `as_of` 只能使用当时已经可见的数据。交易日、抓取时间、报告期、公告/发布时间和 `availableAt` 不可互换；当前快照不能冒充历史快照。fundamentals 用 `report_period` 或成对的 `start_date`/`end_date` 选择期间，顶层 provenance 必须对应最终所选期间。
@@ -111,14 +116,16 @@ A 股数据只通过以下 8 个 curated tools 暴露给 Agent。它们是稳定
 
 | Provider | 类型 | 当前状态与配置 |
 |---|---|---|
-| `a-stock-public` | `public-web` / 部分官方公开端点 | 已实现且无需凭据；网络和字段稳定性按调用检查，best-effort、无 SLA，未做 live 探测时 catalog 可显示 degraded |
+| `a-stock-public` | 固定 public-web、官方公开端点、mootdx、BaoStock 与匿名 BSE session | 60/60 runtime mapping 已实现；59 项无需用户 credential，运行时按 feature 检查真实可用性；best-effort、无 SLA |
 | `tushare-mcp` | TuShare 官方 MCP | 可选；未配置时 dormant，配置 `TUSHARE_MCP_URL` 和/或 `TUSHARE_TOKEN` 后通过握手与工具 inventory 判断实际能力；套餐、接口权限和积分仍可能限制结果 |
 | `tdx-official` | TDX 官方/授权服务 | 当前是 dormant 配置边界，尚未完成 live transport 验证；`TDX_DATA_KEY` 不会自动使其变为可用，官方本地客户端还受 Windows 平台限制 |
-| `tdx-community` | 社区 TDX-compatible 行情 | 已实现 quote/bars；必须显式配置批准的 `host:port` 列表并通过连通性探测，非官方且无服务保证 |
+| `tdx-community` | 独立社区 TDX-compatible provider | 已实现 quote/bars；独立 provider 可显式配置批准的 `host:port`。60 项 registry 内的 mootdx 路径使用版本化固定服务器 allowlist，不要求用户 credential |
 | `ifind-official` | iFinD 官方/授权 MCP | 当前是 dormant 配置边界；即使配置 endpoint 与 credential，也要等认证 live handshake 验证后才能启用，不会读取浏览器 Cookie 或代替用户登录 |
 | `cne6-local` | 本地只读已发布数据 | 已实现且不联网、不需要凭据；仅读取本地发布的 CNE6 artifacts，状态取决于数据是否存在、完整及 PIT 合规，partial 数据会报告 degraded |
 
 全球股票默认数据源 yfinance 和 A 股公开来源一样属于 best-effort 数据源；对生产或交易决策使用前应独立核验。
+
+iWenCai 是唯一 optional-auth feature：`disclosures.iwencai-semantic`。未配置 `IWENCAI_API_KEY` 时只返回预期 `blocked-auth`，其他 59 项不受影响；配置后也必须以实际 live health 为准。BaoStock 的 anonymous client 与 BSE 的进程内匿名 Cookie session 不是用户 credential。
 
 ### 凭据隔离
 
@@ -142,6 +149,8 @@ chmod 600 .runtime/secrets/a-share-data.env
   NGFI_LIVE_TDX=1 NGFI_LIVE_IFIND=1 pnpm test:live:matrix
 )
 ```
+
+只有运行 iWenCai live feature 时才需要在该专用文件中设置 `IWENCAI_API_KEY`。不要为其余 59 项添加占位 credential。
 
 不要提交、粘贴、打印或通过命令行参数传递凭据，也不要把带 token 的 URL 写进日志。安全扫描只报告文件和规则，不打印命中的秘密值。
 
@@ -189,6 +198,8 @@ pnpm data:upstream:test
 ```
 
 `pnpm check` 会构建并检查 TypeScript packages、运行稳定测试和 CNE6 离线测试，并验证两个 DSH profile 可以正确组合。`pnpm data:upstream:test` 仅做静态、离线、无代码执行的 snapshot/生成物/manifest 验证。自动同步会在只读 `prepare` job 中额外运行候选 snapshot 自带的离线 Python suite：依赖先从受信任的默认分支 lock 准备，候选代码随后只在固定 digest、无网络、只读文件系统、非 root 且受资源限制的容器中运行。写权限 job 不执行候选代码；验证通过时只推版本分支并创建人工审阅 PR，绝不自动合并或推送默认分支。验证阻塞时，独立的最小写权限 job 只用枚举原因和 workflow run URL 更新已有版本 PR，或创建带 `blocked-upstream` 标签的 issue，不上传候选内容或原始错误。
+
+A 股 feature matrix 使用统一离线 fixture 覆盖 60 项 capability 和所有受控 variant，包括成功、合法 no-data、schema drift、参数上限、provenance、单位与 truncated。它属于常规 `pnpm test`；真实网络探针不属于默认门禁。
 
 `pnpm dependency:licenses:check` 是离线门禁：它从已安装的 pnpm production closure（排除平台可选包）和三份 `uv.lock` 的 production closure 生成确定性包列表，并与 [`docs/dependency-licenses.json`](docs/dependency-licenses.json) 中已审查的许可证基线比较；check 模式不要求 Python `.venv`。`UNKNOWN`、`UNLICENSED`、未经审查的许可证或明显强 copyleft 会失败；sharp 的可选 libvips LGPL runtime 以及缺少标准许可证声明的隔离 pytdx provider 均已记录为人工审查例外。依赖升级后先同步三个 Python 环境并审阅差异，再运行 `pnpm dependency:licenses:update`；只有 update 模式读取已安装的 Python metadata。
 
@@ -238,9 +249,14 @@ A 股 upstream 维护命令分为离线检查和显式联网探测：
 ```bash
 pnpm data:upstream:test  # 固定 snapshot 的离线完整性与回归检查
 ASTOCK_LIVE_TRADE_DATE=YYYY-MM-DD pnpm data:upstream:live
+pnpm data:astock:live -- --feature quote.tencent
+pnpm data:astock:live -- --group activity
+pnpm data:astock:live -- --all --low-frequency
 ```
 
-`data:upstream:live` 运行固定 upstream snapshot 自带的 opt-in live suite；交易日是必填项，可按测试需要同时设置 ``ASTOCK_LIVE_MARGIN_DATE``。它不会同步新版本，也不会隐式启用 Agent 数据源。版本检查、同步和 deterministic diff 分别使用 ``pnpm data:upstream:check``、``pnpm data:upstream:sync -- --version vX.Y.Z`` 与 ``pnpm data:upstream:report``。
+`data:upstream:live` 运行固定 upstream snapshot 自带的 opt-in live suite；交易日是必填项，可按测试需要同时设置 `ASTOCK_LIVE_MARGIN_DATE`。`data:astock:live` 是统一 feature probe：支持单 feature、`identity|market|research|activity|macro-index` 分组，以及全量低频模式；全量模式必须显式带 `--low-frequency`。结果写入 Git ignored 的 `.runtime/a-stock-live-matrix.json`，只记录状态和耗时，不记录响应正文或 credential。iWenCai 无 Key 时为 expected `blocked-auth`。这些命令不会同步新版本，也不会隐式启用模型。
+
+版本检查、同步和 deterministic diff 分别使用 `pnpm data:upstream:check`、`pnpm data:upstream:sync -- --version vX.Y.Z` 与 `pnpm data:upstream:report`。同步始终要求稳定 semver tag、固定 tag object/peeled commit、deterministic extraction 和人工审核 PR；禁止跟随浮动 `main`，也禁止运行时执行远端 Markdown。
 
 同步候选必须经过 deterministic diff、许可证/来源审查、离线测试和安全扫描；不要把 upstream 中的任意 URL、抓取代码或原始 MCP 工具直接开放给 Agent。
 

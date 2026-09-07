@@ -1,0 +1,848 @@
+{
+  "schemaVersion": "ngfi-a-stock-fixture-1",
+  "capturedAt": "2026-09-04T08:00:00Z",
+  "upstreamSource": "recorded-feature-empty-fixture",
+  "sourceKind": "user",
+  "records": [
+    {
+      "featureId": "market.tdx",
+      "scope": "instrument",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "quote.tencent",
+      "scope": "instrument",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "bars.baidu-ma",
+      "scope": "instrument",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "bars.adjustment",
+      "scope": "instrument",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "disclosures.research-report",
+      "scope": "instrument",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "disclosures.research-document",
+      "scope": "instrument",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "disclosures.eps-consensus",
+      "scope": "instrument",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "disclosures.iwencai-semantic",
+      "scope": "market",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "market-activity.hot-reason",
+      "scope": "market",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "market-activity.northbound-minute-flow",
+      "scope": "market",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "instrument.concept-membership",
+      "scope": "instrument",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "market-activity.stock-fund-flow-minute",
+      "scope": "instrument",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "market-activity.dragon-tiger-stock",
+      "scope": "instrument",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "fundamentals.lockup-expiry",
+      "scope": "instrument",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "market-activity.industry-performance-ranking",
+      "scope": "industry",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "market-activity.board-fund-flow",
+      "scope": "industry",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "market-activity.dragon-tiger-market",
+      "scope": "market",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "market-activity.margin-trading",
+      "scope": "instrument",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "market-activity.block-trade",
+      "scope": "instrument",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "fundamentals.holder-count-change",
+      "scope": "instrument",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "fundamentals.dividend-history",
+      "scope": "instrument",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "market-activity.stock-fund-flow-daily",
+      "scope": "instrument",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "market-activity.chip-distribution",
+      "scope": "instrument",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "disclosures.stock-news",
+      "scope": "instrument",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "disclosures.market-telegraph",
+      "scope": "market",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "disclosures.global-news",
+      "scope": "market",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "fundamentals.tdx-finance-snapshot",
+      "scope": "instrument",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "fundamentals.tdx-f10",
+      "scope": "instrument",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "instrument.company-profile",
+      "scope": "instrument",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "fundamentals.financial-statements",
+      "scope": "instrument",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "fundamentals.valuation-history",
+      "scope": "instrument",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "instrument.listing-status",
+      "scope": "instrument",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "instrument.sw-industry",
+      "scope": "instrument",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "disclosures.announcement",
+      "scope": "instrument",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "disclosures.tdx-announcement-summary",
+      "scope": "instrument",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "market-activity.limit-up-pool",
+      "scope": "market",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "market-activity.broken-limit-pool",
+      "scope": "market",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "market-activity.limit-down-pool",
+      "scope": "market",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "market-activity.previous-limit-up-pool",
+      "scope": "market",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "market-activity.limit-up-reason",
+      "scope": "market",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "market-activity.limit-up-sentiment",
+      "scope": "market",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "market-activity.stock-monitor",
+      "scope": "market",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "market-activity.price-anomaly-events",
+      "scope": "market",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "market-activity.price-anomaly-count",
+      "scope": "market",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "market-activity.option-contracts",
+      "scope": "derivative",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "market-activity.option-tquote",
+      "scope": "derivative",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "market-activity.option-greeks",
+      "scope": "derivative",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "disclosures.investor-relations-qa",
+      "scope": "instrument",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "market-activity.ths-hot-list",
+      "scope": "market",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "market-activity.eastmoney-hot-rank",
+      "scope": "market",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "market-activity.hot-concept",
+      "scope": "instrument",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "macro.social-financing-flow",
+      "scope": "macro",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "macro.pmi",
+      "scope": "macro",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "index.constituents",
+      "scope": "index",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "index.weights",
+      "scope": "index",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "index.valuation",
+      "scope": "index",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "index.trading-calendar",
+      "scope": "market",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "market-activity.margin-trading-official",
+      "scope": "instrument",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "market.bse-official",
+      "scope": "instrument",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    },
+    {
+      "featureId": "market-activity.official-backups",
+      "scope": "market",
+      "records": [],
+      "fieldUnits": {
+        "sample_date": "ISO-8601",
+        "value": "fixture-unit"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ],
+      "validEmpty": true
+    }
+  ]
+}

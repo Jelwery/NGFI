@@ -50,27 +50,27 @@ const INSTRUMENT_KEYS = new Set(['market', 'exchange', 'symbol', 'assetType'])
  * executable inputs out of the service boundary.
  */
 const CAPABILITY_PARAMETER_KEYS = {
-  'instrument-reference': new Set(['symbol', 'exchange', 'assetType']),
-  quote: new Set(['fields']),
+  'instrument-reference': new Set(['symbol', 'exchange', 'assetType', 'featureId', 'variant', 'limit', 'asOf']),
+  quote: new Set(['fields', 'featureId', 'variant', 'limit', 'asOf', 'tradeDate']),
   // offset/count are the bounded legacy TDX pagination shape.
   'market-bars': new Set([
-    'startDate', 'endDate', 'adjustment', 'interval', 'limit', 'offset', 'count', 'dataset',
+    'startDate', 'endDate', 'adjustment', 'interval', 'limit', 'offset', 'count', 'dataset', 'featureId', 'variant', 'asOf',
   ]),
-  'order-book': new Set(['startDate', 'endDate', 'limit']),
+  'order-book': new Set(['startDate', 'endDate', 'tradeDate', 'limit', 'featureId', 'variant', 'asOf']),
   fundamentals: new Set([
-    'period', 'startDate', 'endDate', 'limit', 'fields', 'statement', 'dataset',
+    'period', 'startDate', 'endDate', 'limit', 'fields', 'statement', 'dataset', 'featureId', 'variant', 'asOf', 'category',
   ]),
-  'corporate-actions': new Set(['startDate', 'endDate', 'limit']),
-  disclosures: new Set(['startDate', 'endDate', 'limit']),
-  'research-consensus': new Set(['startDate', 'endDate', 'limit']),
-  'capital-flow': new Set(['date', 'metric', 'startDate', 'endDate', 'limit']),
-  'market-signal': new Set(['startDate', 'endDate', 'limit']),
-  'industry-classification': new Set<string>(),
-  index: new Set(['exchange', 'startDate', 'endDate', 'limit', 'officialProvider']),
-  macro: new Set(['exchange', 'startDate', 'endDate', 'limit']),
-  'trading-calendar': new Set(['exchange', 'startDate', 'endDate', 'isOpen', 'limit']),
+  'corporate-actions': new Set(['startDate', 'endDate', 'tradeDate', 'limit', 'featureId', 'variant', 'asOf', 'forwardDays']),
+  disclosures: new Set(['startDate', 'endDate', 'tradeDate', 'limit', 'featureId', 'variant', 'asOf', 'category']),
+  'research-consensus': new Set(['startDate', 'endDate', 'limit', 'featureId', 'variant', 'asOf', 'searchText', 'channel', 'page']),
+  'capital-flow': new Set(['date', 'metric', 'startDate', 'endDate', 'tradeDate', 'limit', 'featureId', 'variant', 'asOf', 'boardType', 'period']),
+  'market-signal': new Set(['startDate', 'endDate', 'tradeDate', 'limit', 'featureId', 'variant', 'asOf', 'lookbackDays', 'industryCode', 'period', 'page', 'underlying', 'optionType']),
+  'industry-classification': new Set(['featureId', 'variant', 'asOf', 'limit', 'industryCode']),
+  index: new Set(['exchange', 'startDate', 'endDate', 'limit', 'officialProvider', 'featureId', 'variant', 'asOf']),
+  macro: new Set(['exchange', 'startDate', 'endDate', 'limit', 'featureId', 'variant', 'asOf', 'year']),
+  'trading-calendar': new Set(['exchange', 'startDate', 'endDate', 'isOpen', 'limit', 'featureId', 'variant', 'asOf']),
   // CNE6 exposes these as a bounded, read-only projection over published data.
-  'risk-data': new Set(['dataset', 'columns', 'codes', 'limit']),
+  'risk-data': new Set(['dataset', 'columns', 'codes', 'limit', 'featureId', 'variant', 'asOf', 'tradeDate', 'optionCode']),
 } satisfies Readonly<Record<DataCapability, ReadonlySet<string>>>
 
 export interface RequestBoundaryLimits {

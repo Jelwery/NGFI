@@ -21,6 +21,13 @@ from pathlib import Path
 from typing import Any, Callable
 from zoneinfo import ZoneInfo
 
+PYTHON_ROOT = Path(__file__).resolve().parent
+if str(PYTHON_ROOT) not in sys.path:
+  sys.path.insert(0, str(PYTHON_ROOT))
+
+from operations.features import FeatureFailure, execute_feature
+from runtime.feature_registry import RegistryError, feature as registered_feature, variant as registered_variant
+
 VERSION = "1"
 PROVIDER_ID = "a-stock-public"
 MAX_REQUEST_BYTES = 256 * 1024
@@ -32,7 +39,9 @@ FIXTURE_SCHEMA_VERSION = "ngfi-a-stock-fixture-1"
 SHANGHAI_TIMEZONE = ZoneInfo("Asia/Shanghai")
 ALLOWED_OPERATIONS = frozenset({
   "instrument-reference", "quote", "market-bars", "fundamentals",
-  "disclosures", "index", "trading-calendar",
+  "disclosures", "index", "trading-calendar", "order-book",
+  "corporate-actions", "research-consensus", "capital-flow",
+  "market-signal", "industry-classification", "macro", "risk-data",
 })
 PUBLIC_OPERATIONS = ALLOWED_OPERATIONS
 ALLOWED_SOURCES = frozenset({"fixture", "public-web"})
@@ -57,7 +66,22 @@ PARAM_KEYS: dict[str, tuple[frozenset[str], frozenset[str]]] = {
     frozenset({"exchange", "startDate", "endDate", "limit", "asOf"}),
     frozenset({"exchange", "startDate", "endDate", "limit"}),
   ),
+  "order-book": (frozenset(), frozenset()),
+  "corporate-actions": (frozenset(), frozenset()),
+  "research-consensus": (frozenset(), frozenset()),
+  "capital-flow": (frozenset(), frozenset()),
+  "market-signal": (frozenset(), frozenset()),
+  "industry-classification": (frozenset(), frozenset()),
+  "macro": (frozenset(), frozenset()),
+  "risk-data": (frozenset(), frozenset()),
 }
+FEATURE_PARAM_KEYS = frozenset({
+  "featureId", "variant", "instrument", "asOf", "startDate", "endDate",
+  "tradeDate", "interval", "adjustment", "officialProvider", "industryCode",
+  "boardType", "period", "year", "page", "lookbackDays", "forwardDays",
+  "category", "statement", "searchText", "channel", "underlying",
+  "optionCode", "optionType", "limit",
+})
 
 EASTMONEY_QUOTE_URL = "https://push2.eastmoney.com/api/qt/stock/get"
 EASTMONEY_BARS_URL = "https://push2his.eastmoney.com/api/qt/stock/kline/get"
@@ -284,7 +308,7 @@ def success(data: dict[str, Any], metadata: dict[str, str], **provenance_values:
   }
 
 
-def secure_fixture_file(root_value: Any, operation: str) -> Path:
+def secure_fixture_file(root_value: Any, operation: str, filename: str | None = None) -> Path:
   fail(not isinstance(root_value, str) or not root_value, "invalid-request", "invalid-request",
        "fixtureRoot is required for fixture source")
   root_path = Path(root_value)
@@ -295,7 +319,7 @@ def secure_fixture_file(root_value: Any, operation: str) -> Path:
   except OSError as exc:
     raise ProviderFailure("schema-drift", "fixture-schema", "fixtureRoot is unavailable") from exc
   fail(not root.is_dir(), "schema-drift", "fixture-schema", "fixtureRoot is not a directory")
-  filename = f"{operation}.json"
+  filename = filename or f"{operation}.json"
   raw_path = root / filename
   fail(raw_path.is_symlink(), "schema-drift", "fixture-schema", "fixture file cannot be a symlink")
   try:
@@ -308,8 +332,8 @@ def secure_fixture_file(root_value: Any, operation: str) -> Path:
   return path
 
 
-def load_fixture(request: dict[str, Any]) -> tuple[dict[str, str], list[Any]]:
-  path = secure_fixture_file(request.get("fixtureRoot"), request["operation"])
+def load_fixture(request: dict[str, Any], filename: str | None = None) -> tuple[dict[str, str], list[Any]]:
+  path = secure_fixture_file(request.get("fixtureRoot"), request["operation"], filename)
   try:
     payload = path.read_bytes()
   except OSError as exc:
@@ -631,6 +655,55 @@ def fixture_calendar(request: dict[str, Any]) -> dict[str, Any]:
     "days": days, "returned": len(days), "truncated": truncated,
   }
   return success(data, metadata, source="fixture", observedAt=days[-1]["date"], timezone="Asia/Shanghai")
+
+
+def fixture_feature(request: dict[str, Any]) -> dict[str, Any]:
+  metadata, records = load_fixture(request, "features.json")
+  params = request["params"]
+  feature_id = params["featureId"]
+  matched = [item for item in records if isinstance(item, dict) and item.get("featureId") == feature_id]
+  fail(len(matched) == 0, "no-data", "no-data", "fixture has no data for requested feature")
+  fail(len(matched) > 1, "schema-drift", "fixture-schema", "fixture contains duplicate feature entries")
+  item = matched[0]
+  expected_keys = frozenset({
+    "featureId", "scope", "records", "fieldUnits", "limitations", "validEmpty",
+  })
+  exact_keys(item, expected_keys, f"feature {feature_id}")
+  fail(item["scope"] not in {"instrument", "market", "industry", "macro", "index", "derivative"},
+       "schema-drift", "fixture-schema", "feature scope is invalid")
+  raw_records = item["records"]
+  fail(not isinstance(raw_records, list), "schema-drift", "fixture-schema", "feature records must be an array")
+  fail(not raw_records and item["validEmpty"] is not True, "schema-drift", "fixture-schema",
+       "empty feature fixture must be explicitly marked validEmpty")
+  limit = params["limit"]
+  selected, truncated = slice_rows(raw_records, limit)
+  if not selected:
+    raise ProviderFailure("no-data", "no-data", "fixture declares a validated empty dataset")
+  for index, record in enumerate(selected):
+    fail(not isinstance(record, dict) or any(
+      value is not None and not isinstance(value, (str, int, float, bool)) for value in record.values()
+    ), "schema-drift", "fixture-schema", f"feature records[{index}] must contain scalars only")
+  fail(not isinstance(item["fieldUnits"], dict) or any(
+    not isinstance(key, str) or not isinstance(value, str) for key, value in item["fieldUnits"].items()
+  ), "schema-drift", "fixture-schema", "feature fieldUnits are invalid")
+  fail(not isinstance(item["limitations"], list) or any(
+    not isinstance(value, str) or not value for value in item["limitations"]
+  ), "schema-drift", "fixture-schema", "feature limitations are invalid")
+  data = {
+    "featureId": feature_id, "schemaVersion": 1, "scope": item["scope"],
+    **({"instrument": params["instrument"]} if "instrument" in params else {}),
+    "records": selected, "returned": len(selected), "truncated": truncated,
+    "fieldUnits": item["fieldUnits"], "limitations": item["limitations"],
+  }
+  for key in ("asOf", "startDate", "endDate"):
+    if key in params:
+      data[key] = params[key]
+  result = success(
+    data, metadata, source="fixture", observedAt=params.get("asOf", metadata["capturedAt"]),
+    unit="declared-in-fieldUnits", timezone="Asia/Shanghai",
+  )
+  result["warnings"] = list(item["limitations"])
+  return result
 
 
 FIXTURE_HANDLERS: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
@@ -1404,6 +1477,31 @@ def validate_date_span(params: dict[str, Any], limits: dict[str, int]) -> None:
 
 
 def validate_params(operation: str, params: dict[str, Any], limits: dict[str, int]) -> None:
+  if isinstance(params.get("featureId"), str):
+    actual = set(params)
+    fail(bool(actual - FEATURE_PARAM_KEYS), "invalid-request", "invalid-request",
+         f"feature params contain unsupported fields: {sorted(actual - FEATURE_PARAM_KEYS)}")
+    try:
+      definition = registered_feature(params["featureId"])
+      selected = registered_variant(definition, params.get("variant"))
+    except RegistryError as exc:
+      raise ProviderFailure("invalid-request", "unsupported-operation", str(exc)) from exc
+    fail(selected["dataCapability"] != operation, "invalid-request", "invalid-request",
+         "feature is not mapped to requested operation")
+    allowed = set(definition["allowedParams"]) | {"featureId", "instrument"}
+    fail(bool(actual - allowed), "invalid-request", "invalid-request",
+         f"feature params are invalid: {sorted(actual - allowed)}")
+    if "instrument" in params:
+      validate_instrument(params["instrument"], "params.instrument")
+    for key in ("asOf", "startDate", "endDate", "tradeDate"):
+      if key in params:
+        validate_request_as_of(params[key])
+    validate_date_span(params, limits)
+    limit = params.get("limit")
+    fail(not isinstance(limit, int) or isinstance(limit, bool) or limit < 1
+         or limit > min(definition["maxLimit"], limits["maxRecords"]),
+         "invalid-request", "input-limit", "feature limit exceeds configured maximum")
+    return
   allowed, required = PARAM_KEYS[operation]
   actual = set(params)
   fail(bool(actual - allowed) or bool(required - actual), "invalid-request", "invalid-request",
@@ -1457,9 +1555,15 @@ def handle(request: Any) -> tuple[dict[str, Any], int]:
   if source == "public-web":
     fail(operation not in PUBLIC_OPERATIONS, "unsupported", "unsupported-operation",
          f"public-web does not implement {operation}")
-    result = PUBLIC_HANDLERS[operation](value)
+    if isinstance(params.get("featureId"), str):
+      try:
+        result = execute_feature(params, limits)
+      except FeatureFailure as exc:
+        raise ProviderFailure(exc.kind, exc.code, str(exc), exc.retryable) from exc
+    else:
+      result = PUBLIC_HANDLERS[operation](value)
   else:
-    result = FIXTURE_HANDLERS[operation](value)
+    result = fixture_feature(value) if isinstance(params.get("featureId"), str) else FIXTURE_HANDLERS[operation](value)
   return {"version": VERSION, "id": request_id, "ok": True, "data": result}, limits["maxOutputBytes"]
 
 

@@ -8,6 +8,8 @@
 - 默认 sandbox 为只读，Agent 仅能调用 preset 显式 allowlist 中的工具。
 - shell、任意 URL、raw provider/MCP、订单和实盘交易均不在 finance Agent surface。
 - 默认门禁离线运行，不请求模型或真实 provider。
+- A 股 60 项能力只经 8 个 curated tools 和 `feature-registry.json` 的闭合 feature/dataset/variant 映射调用；不接受任意 callable、URL、header、Cookie、Python、shell 或 SQL。
+- public-web 适配器固定 host/operation，禁重定向并限制超时、响应体、并发和重试。403、429、验证码、登录页、异常空响应与 schema drift 都 fail closed。
 
 ## 安装与总门禁
 
@@ -54,6 +56,7 @@ pnpm test:runtime
 | runtime/composition | `tests/composition.test.ts`、`tests/isolation.test.ts`、`tests/*adapter.test.ts` | `pnpm test:ts`、`pnpm test:runtime` |
 | immutable eval fixtures | `evals/` 与 package 内固定 fixture | 对应 contract test |
 | live tests | `tests/*.live.test.ts`、CNE6 live marker | 仅显式 `test:live:*` |
+| A 股 60 项 feature matrix | `tests/a-stock-feature-matrix.test.ts` 与 `tests/fixtures/a-stock-data/features.json` | `pnpm test:ts`；逐项覆盖成功、合法 no-data、schema drift、参数上限、provenance、单位和 truncated |
 
 `packages/combinatorial-optimization` 作为现有兼容入口保留；本阶段不做目录改名，避免同时破坏 Python project、CLI、文档和测试引用。其环境、cache、egg-info 和本地数据均位于被忽略且可重建的位置。
 
@@ -68,7 +71,51 @@ pnpm test:e2e:web
 pnpm test:live:cne6
 ```
 
+### A 股统一低频 probe
+
+```bash
+# 单 feature
+pnpm data:astock:live -- --feature quote.tencent
+
+# 分组：identity | market | research | activity | macro-index
+pnpm data:astock:live -- --group macro-index
+
+# 全部 60 项；必须显式确认低频顺序执行
+pnpm data:astock:live -- --all --low-frequency
+```
+
+probe 按 source rate group 顺序执行；每个 capability 的全部 variant 都会尝试。输出状态只有 `pass`、`no-data`、`blocked-auth`、`unavailable-network`、`rate-limited`、`schema-drift`、`upstream-error`。59 个零 Key feature 会真实进入受控 provider；`disclosures.iwencai-semantic` 在未配置 `IWENCAI_API_KEY` 时返回 expected `blocked-auth` 且 `attempted: false`，配置后才发起受控请求。任何临时网络或上游错误都保留真实状态，不能改写为 pass。
+
+结构化结果写入 `.runtime/a-stock-live-matrix.json`，文件模式为 `0600`，不包含响应正文、Cookie 或 credential。BSE 匿名 Cookie 只存在于探针进程内；BaoStock 使用匿名 client session。全量 probe 不是压力测试，默认每个 variant 只请求最小记录数。
+
+如果需要从专用 secret 文件运行带 Key 的 iWenCai probe，先确认文件被 Git 忽略且权限为 `0600`，再在不回显内容的子 shell 中加载：
+
+```bash
+(
+  test "$(stat -f %Lp .runtime/secrets/a-share-data.env)" = 600
+  set -a
+  . ./.runtime/secrets/a-share-data.env
+  set +a
+  pnpm data:astock:live -- --feature disclosures.iwencai-semantic
+)
+```
+
+不要用此命令读取或打印 secret 文件内容。除 iWenCai 外的 59 项不需要用户 credential；TDX official、iFinD 和 TuShare 是可选增强源，不是 60 项公开能力的前置条件。
+
 真实模型凭据仅从进程环境或被 Git 忽略的仓库根 `.env` 读取，绝不写入 generated preset、profile、日志或 `.runtime/settings.yaml`。
+
+### 固定上游与同步
+
+当前 `a-stock-data` 固定为稳定 tag `v3.8.0`、tag object `9f995e66ee792255e492a15627f98615627041c6`、peeled commit `2012ce7cd0e75d379c5e6cbd3115514f300f3bc8`。
+
+```bash
+pnpm data:upstream:check
+pnpm data:upstream:test
+pnpm data:upstream:report
+pnpm data:upstream:sync -- --version v3.8.0
+```
+
+`check`/`test` 离线校验 snapshot、generated code、source/capability manifest 与 feature registry；`report` 生成 deterministic diff。`sync` 只接受完整稳定 semver tag，并把 tag object、peeled commit、tree 和文件 hash 写入 lock。候选更新必须进入人工审核 PR，不自动 merge/deploy；禁止跟随浮动 `main`，禁止运行时执行远端 Markdown，也禁止手改 upstream snapshot 或 generated 文件。
 
 ## 当前基线
 

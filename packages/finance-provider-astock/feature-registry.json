@@ -1,0 +1,3173 @@
+{
+  "schemaVersion": 1,
+  "registryVersion": "1.0.0",
+  "upstream": {
+    "repository": "https://github.com/simonlin1212/a-stock-data.git",
+    "version": "v3.8.0",
+    "tagObject": "9f995e66ee792255e492a15627f98615627041c6",
+    "peeledCommit": "2012ce7cd0e75d379c5e6cbd3115514f300f3bc8"
+  },
+  "features": [
+    {
+      "featureId": "market.tdx",
+      "upstreamCapabilityId": "capability-001",
+      "upstreamCallables": [
+        "tdx_client.bars",
+        "tdx_client.quotes",
+        "tdx_client.transaction"
+      ],
+      "variants": [
+        {
+          "id": "quote",
+          "upstreamCallable": "tdx_client.quotes",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-005.py",
+            "symbol": "tdx_client.quotes"
+          },
+          "toolName": "finance_cn_quote",
+          "dataCapability": "quote",
+          "dataset": "tdx-quote"
+        },
+        {
+          "id": "bars",
+          "upstreamCallable": "tdx_client.bars",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-005.py",
+            "symbol": "tdx_client.bars"
+          },
+          "toolName": "finance_cn_bars",
+          "dataCapability": "market-bars",
+          "dataset": "tdx-bars"
+        },
+        {
+          "id": "order-book",
+          "upstreamCallable": "tdx_client.quotes",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-005.py",
+            "symbol": "tdx_client.quotes"
+          },
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "order-book",
+          "dataset": "order-book"
+        },
+        {
+          "id": "time-and-sales",
+          "upstreamCallable": "tdx_client.transaction",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-005.py",
+            "symbol": "tdx_client.transaction"
+          },
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "order-book",
+          "dataset": "time-and-sales"
+        }
+      ],
+      "tools": [
+        "finance_cn_quote",
+        "finance_cn_bars",
+        "finance_cn_market_activity"
+      ],
+      "sources": [
+        "mootdx"
+      ],
+      "auth": "none",
+      "implementation": "implemented-canonical",
+      "contractTier": "canonical",
+      "scope": "instrument",
+      "pitGrade": "partial",
+      "allowedParams": [
+        "adjustment",
+        "asOf",
+        "endDate",
+        "interval",
+        "instrument",
+        "limit",
+        "startDate",
+        "tradeDate",
+        "variant"
+      ],
+      "defaultLimit": 50,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-001",
+      "liveProbe": "capability-001",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "quote.tencent",
+      "upstreamCapabilityId": "capability-002",
+      "upstreamCallables": [
+        "tencent_quote"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "tencent_quote",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-006.py",
+            "symbol": "tencent_quote"
+          },
+          "toolName": "finance_cn_quote",
+          "dataCapability": "quote",
+          "dataset": "tencent-quote"
+        }
+      ],
+      "tools": [
+        "finance_cn_quote"
+      ],
+      "sources": [
+        "tencent-finance"
+      ],
+      "auth": "none",
+      "implementation": "implemented-canonical",
+      "contractTier": "canonical",
+      "scope": "instrument",
+      "pitGrade": "partial",
+      "allowedParams": [
+        "asOf",
+        "instrument",
+        "limit",
+        "variant"
+      ],
+      "defaultLimit": 20,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-002",
+      "liveProbe": "capability-002",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "bars.baidu-ma",
+      "upstreamCapabilityId": "capability-003",
+      "upstreamCallables": [
+        "baidu_kline_with_ma"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "baidu_kline_with_ma",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-007.py",
+            "symbol": "baidu_kline_with_ma"
+          },
+          "toolName": "finance_cn_bars",
+          "dataCapability": "market-bars",
+          "dataset": "baidu-bars-ma"
+        }
+      ],
+      "tools": [
+        "finance_cn_bars"
+      ],
+      "sources": [
+        "baidu-gushitong"
+      ],
+      "auth": "none",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "instrument",
+      "pitGrade": "partial",
+      "allowedParams": [
+        "asOf",
+        "instrument",
+        "limit",
+        "variant"
+      ],
+      "defaultLimit": 20,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-003",
+      "liveProbe": "capability-003",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "bars.adjustment",
+      "upstreamCapabilityId": "capability-004",
+      "upstreamCallables": [
+        "sina_adjust_factor",
+        "apply_adjust"
+      ],
+      "variants": [
+        {
+          "id": "factor",
+          "upstreamCallable": "sina_adjust_factor",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-008.py",
+            "symbol": "sina_adjust_factor"
+          },
+          "toolName": "finance_cn_bars",
+          "dataCapability": "market-bars",
+          "dataset": "adjustment-data"
+        },
+        {
+          "id": "adjusted-bars",
+          "upstreamCallable": "apply_adjust",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-008.py",
+            "symbol": "apply_adjust"
+          },
+          "toolName": "finance_cn_bars",
+          "dataCapability": "market-bars",
+          "dataset": "adjustment-data"
+        }
+      ],
+      "tools": [
+        "finance_cn_bars"
+      ],
+      "sources": [
+        "sina-finance"
+      ],
+      "auth": "none",
+      "implementation": "implemented-canonical",
+      "contractTier": "canonical",
+      "scope": "instrument",
+      "pitGrade": "partial",
+      "allowedParams": [
+        "adjustment",
+        "asOf",
+        "endDate",
+        "instrument",
+        "limit",
+        "startDate",
+        "variant"
+      ],
+      "defaultLimit": 20,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-004",
+      "liveProbe": "capability-004",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "disclosures.research-report",
+      "upstreamCapabilityId": "capability-005",
+      "upstreamCallables": [
+        "eastmoney_reports"
+      ],
+      "variants": [
+        {
+          "id": "stock",
+          "upstreamCallable": "eastmoney_reports",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-009.py",
+            "symbol": "eastmoney_reports"
+          },
+          "toolName": "finance_cn_disclosures",
+          "dataCapability": "disclosures",
+          "dataset": "research-report"
+        },
+        {
+          "id": "industry",
+          "upstreamCallable": "eastmoney_reports",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-010.py",
+            "symbol": "eastmoney_industry_reports"
+          },
+          "toolName": "finance_cn_disclosures",
+          "dataCapability": "disclosures",
+          "dataset": "industry-research-report"
+        }
+      ],
+      "tools": [
+        "finance_cn_disclosures"
+      ],
+      "sources": [
+        "eastmoney-reportapi"
+      ],
+      "auth": "none",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "instrument",
+      "pitGrade": "partial",
+      "allowedParams": [
+        "asOf",
+        "industryCode",
+        "instrument",
+        "limit",
+        "variant"
+      ],
+      "defaultLimit": 20,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-005",
+      "liveProbe": "capability-005",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "disclosures.research-document",
+      "upstreamCapabilityId": "capability-006",
+      "upstreamCallables": [
+        "download_pdf"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "download_pdf",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-009.py",
+            "symbol": "download_pdf"
+          },
+          "toolName": "finance_cn_disclosures",
+          "dataCapability": "disclosures",
+          "dataset": "research-document"
+        }
+      ],
+      "tools": [
+        "finance_cn_disclosures"
+      ],
+      "sources": [
+        "eastmoney-reportapi"
+      ],
+      "auth": "none",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "instrument",
+      "pitGrade": "partial",
+      "allowedParams": [
+        "asOf",
+        "instrument",
+        "limit",
+        "variant"
+      ],
+      "defaultLimit": 20,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-006",
+      "liveProbe": "capability-006",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "disclosures.eps-consensus",
+      "upstreamCapabilityId": "capability-007",
+      "upstreamCallables": [
+        "ths_eps_forecast"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "ths_eps_forecast",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-011.py",
+            "symbol": "ths_eps_forecast"
+          },
+          "toolName": "finance_cn_disclosures",
+          "dataCapability": "research-consensus",
+          "dataset": "eps-consensus"
+        }
+      ],
+      "tools": [
+        "finance_cn_disclosures"
+      ],
+      "sources": [
+        "ths-basic"
+      ],
+      "auth": "none",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "instrument",
+      "pitGrade": "partial",
+      "allowedParams": [
+        "asOf",
+        "instrument",
+        "limit",
+        "variant"
+      ],
+      "defaultLimit": 20,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-007",
+      "liveProbe": "capability-007",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "disclosures.iwencai-semantic",
+      "upstreamCapabilityId": "capability-008",
+      "upstreamCallables": [
+        "iwencai_search",
+        "iwencai_query"
+      ],
+      "variants": [
+        {
+          "id": "search",
+          "upstreamCallable": "iwencai_search",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-012.py",
+            "symbol": "iwencai_search"
+          },
+          "toolName": "finance_cn_disclosures",
+          "dataCapability": "research-consensus",
+          "dataset": "iwencai-semantic-search"
+        },
+        {
+          "id": "query",
+          "upstreamCallable": "iwencai_query",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-012.py",
+            "symbol": "iwencai_query"
+          },
+          "toolName": "finance_cn_disclosures",
+          "dataCapability": "research-consensus",
+          "dataset": "iwencai-semantic-search"
+        }
+      ],
+      "tools": [
+        "finance_cn_disclosures"
+      ],
+      "sources": [
+        "iwencai"
+      ],
+      "auth": "api-key",
+      "implementation": "implemented-optional-auth",
+      "contractTier": "experimental-records-v1",
+      "scope": "market",
+      "pitGrade": "current",
+      "allowedParams": [
+        "asOf",
+        "channel",
+        "endDate",
+        "limit",
+        "page",
+        "searchText",
+        "startDate",
+        "tradeDate",
+        "variant"
+      ],
+      "defaultLimit": 50,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-008",
+      "liveProbe": "capability-008",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "market-activity.hot-reason",
+      "upstreamCapabilityId": "capability-009",
+      "upstreamCallables": [
+        "ths_hot_reason"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "ths_hot_reason",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-013.py",
+            "symbol": "ths_hot_reason"
+          },
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "market-signal",
+          "dataset": "hot-reason"
+        }
+      ],
+      "tools": [
+        "finance_cn_market_activity"
+      ],
+      "sources": [
+        "ths-hot"
+      ],
+      "auth": "none",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "market",
+      "pitGrade": "current",
+      "allowedParams": [
+        "asOf",
+        "endDate",
+        "limit",
+        "startDate",
+        "tradeDate",
+        "variant"
+      ],
+      "defaultLimit": 50,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-009",
+      "liveProbe": "capability-009",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "market-activity.northbound-minute-flow",
+      "upstreamCapabilityId": "capability-010",
+      "upstreamCallables": [
+        "hsgt_realtime"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "hsgt_realtime",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-014.py",
+            "symbol": "hsgt_realtime"
+          },
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "capital-flow",
+          "dataset": "northbound-minute-flow"
+        }
+      ],
+      "tools": [
+        "finance_cn_market_activity"
+      ],
+      "sources": [
+        "ths-hsgt"
+      ],
+      "auth": "none",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "market",
+      "pitGrade": "current",
+      "allowedParams": [
+        "asOf",
+        "endDate",
+        "limit",
+        "startDate",
+        "tradeDate",
+        "variant"
+      ],
+      "defaultLimit": 50,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-010",
+      "liveProbe": "capability-010",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "instrument.concept-membership",
+      "upstreamCapabilityId": "capability-011",
+      "upstreamCallables": [
+        "eastmoney_concept_blocks"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "eastmoney_concept_blocks",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-015.py",
+            "symbol": "eastmoney_concept_blocks"
+          },
+          "toolName": "finance_cn_instrument",
+          "dataCapability": "industry-classification",
+          "dataset": "concept-membership"
+        }
+      ],
+      "tools": [
+        "finance_cn_instrument"
+      ],
+      "sources": [
+        "eastmoney-push2"
+      ],
+      "auth": "none",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "instrument",
+      "pitGrade": "partial",
+      "allowedParams": [
+        "asOf",
+        "instrument",
+        "limit",
+        "variant"
+      ],
+      "defaultLimit": 20,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-011",
+      "liveProbe": "capability-011",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "market-activity.stock-fund-flow-minute",
+      "upstreamCapabilityId": "capability-012",
+      "upstreamCallables": [
+        "eastmoney_fund_flow_minute"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "eastmoney_fund_flow_minute",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-016.py",
+            "symbol": "eastmoney_fund_flow_minute"
+          },
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "capital-flow",
+          "dataset": "stock-fund-flow-minute"
+        }
+      ],
+      "tools": [
+        "finance_cn_market_activity"
+      ],
+      "sources": [
+        "eastmoney-push2"
+      ],
+      "auth": "none",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "instrument",
+      "pitGrade": "partial",
+      "allowedParams": [
+        "asOf",
+        "instrument",
+        "limit",
+        "variant"
+      ],
+      "defaultLimit": 20,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-012",
+      "liveProbe": "capability-012",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "market-activity.dragon-tiger-stock",
+      "upstreamCapabilityId": "capability-013",
+      "upstreamCallables": [
+        "dragon_tiger_board"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "dragon_tiger_board",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-017.py",
+            "symbol": "dragon_tiger_board"
+          },
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "market-signal",
+          "dataset": "dragon-tiger-stock"
+        }
+      ],
+      "tools": [
+        "finance_cn_market_activity"
+      ],
+      "sources": [
+        "eastmoney-datacenter"
+      ],
+      "auth": "none",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "instrument",
+      "pitGrade": "partial",
+      "allowedParams": [
+        "asOf",
+        "instrument",
+        "limit",
+        "lookbackDays",
+        "tradeDate",
+        "variant"
+      ],
+      "defaultLimit": 20,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-013",
+      "liveProbe": "capability-013",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "fundamentals.lockup-expiry",
+      "upstreamCapabilityId": "capability-014",
+      "upstreamCallables": [
+        "lockup_expiry"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "lockup_expiry",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-018.py",
+            "symbol": "lockup_expiry"
+          },
+          "toolName": "finance_cn_fundamentals",
+          "dataCapability": "corporate-actions",
+          "dataset": "lockup-expiry"
+        }
+      ],
+      "tools": [
+        "finance_cn_fundamentals"
+      ],
+      "sources": [
+        "eastmoney-datacenter"
+      ],
+      "auth": "none",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "instrument",
+      "pitGrade": "partial",
+      "allowedParams": [
+        "asOf",
+        "forwardDays",
+        "instrument",
+        "limit",
+        "tradeDate",
+        "variant"
+      ],
+      "defaultLimit": 20,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-014",
+      "liveProbe": "capability-014",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "market-activity.industry-performance-ranking",
+      "upstreamCapabilityId": "capability-015",
+      "upstreamCallables": [
+        "industry_comparison"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "industry_comparison",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-019.py",
+            "symbol": "industry_comparison"
+          },
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "market-signal",
+          "dataset": "industry-performance-ranking"
+        }
+      ],
+      "tools": [
+        "finance_cn_market_activity"
+      ],
+      "sources": [
+        "eastmoney-push2"
+      ],
+      "auth": "none",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "industry",
+      "pitGrade": "current",
+      "allowedParams": [
+        "asOf",
+        "boardType",
+        "industryCode",
+        "limit",
+        "period",
+        "variant"
+      ],
+      "defaultLimit": 20,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-015",
+      "liveProbe": "capability-015",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "market-activity.board-fund-flow",
+      "upstreamCapabilityId": "capability-016",
+      "upstreamCallables": [
+        "board_fund_flow"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "board_fund_flow",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-020.py",
+            "symbol": "board_fund_flow"
+          },
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "capital-flow",
+          "dataset": "board-fund-flow"
+        }
+      ],
+      "tools": [
+        "finance_cn_market_activity"
+      ],
+      "sources": [
+        "eastmoney-push2"
+      ],
+      "auth": "none",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "industry",
+      "pitGrade": "current",
+      "allowedParams": [
+        "asOf",
+        "boardType",
+        "industryCode",
+        "limit",
+        "period",
+        "variant"
+      ],
+      "defaultLimit": 20,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-016",
+      "liveProbe": "capability-016",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "market-activity.dragon-tiger-market",
+      "upstreamCapabilityId": "capability-017",
+      "upstreamCallables": [
+        "daily_dragon_tiger"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "daily_dragon_tiger",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-021.py",
+            "symbol": "daily_dragon_tiger"
+          },
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "market-signal",
+          "dataset": "dragon-tiger-market"
+        }
+      ],
+      "tools": [
+        "finance_cn_market_activity"
+      ],
+      "sources": [
+        "eastmoney-datacenter"
+      ],
+      "auth": "none",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "market",
+      "pitGrade": "current",
+      "allowedParams": [
+        "asOf",
+        "endDate",
+        "limit",
+        "startDate",
+        "tradeDate",
+        "variant"
+      ],
+      "defaultLimit": 50,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-017",
+      "liveProbe": "capability-017",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "market-activity.margin-trading",
+      "upstreamCapabilityId": "capability-018",
+      "upstreamCallables": [
+        "margin_trading"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "margin_trading",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-023.py",
+            "symbol": "margin_trading"
+          },
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "capital-flow",
+          "dataset": "margin-trading"
+        }
+      ],
+      "tools": [
+        "finance_cn_market_activity"
+      ],
+      "sources": [
+        "eastmoney-datacenter"
+      ],
+      "auth": "none",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "instrument",
+      "pitGrade": "partial",
+      "allowedParams": [
+        "asOf",
+        "instrument",
+        "limit",
+        "page",
+        "variant"
+      ],
+      "defaultLimit": 20,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-018",
+      "liveProbe": "capability-018",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "market-activity.block-trade",
+      "upstreamCapabilityId": "capability-019",
+      "upstreamCallables": [
+        "block_trade"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "block_trade",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-024.py",
+            "symbol": "block_trade"
+          },
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "market-signal",
+          "dataset": "block-trade"
+        }
+      ],
+      "tools": [
+        "finance_cn_market_activity"
+      ],
+      "sources": [
+        "eastmoney-datacenter"
+      ],
+      "auth": "none",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "instrument",
+      "pitGrade": "partial",
+      "allowedParams": [
+        "asOf",
+        "instrument",
+        "limit",
+        "page",
+        "variant"
+      ],
+      "defaultLimit": 20,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-019",
+      "liveProbe": "capability-019",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "fundamentals.holder-count-change",
+      "upstreamCapabilityId": "capability-020",
+      "upstreamCallables": [
+        "holder_num_change"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "holder_num_change",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-025.py",
+            "symbol": "holder_num_change"
+          },
+          "toolName": "finance_cn_fundamentals",
+          "dataCapability": "fundamentals",
+          "dataset": "holder-count-change"
+        }
+      ],
+      "tools": [
+        "finance_cn_fundamentals"
+      ],
+      "sources": [
+        "eastmoney-datacenter"
+      ],
+      "auth": "none",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "instrument",
+      "pitGrade": "partial",
+      "allowedParams": [
+        "asOf",
+        "instrument",
+        "limit",
+        "page",
+        "variant"
+      ],
+      "defaultLimit": 20,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-020",
+      "liveProbe": "capability-020",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "fundamentals.dividend-history",
+      "upstreamCapabilityId": "capability-021",
+      "upstreamCallables": [
+        "dividend_history"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "dividend_history",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-026.py",
+            "symbol": "dividend_history"
+          },
+          "toolName": "finance_cn_fundamentals",
+          "dataCapability": "corporate-actions",
+          "dataset": "dividend-history"
+        }
+      ],
+      "tools": [
+        "finance_cn_fundamentals"
+      ],
+      "sources": [
+        "eastmoney-datacenter"
+      ],
+      "auth": "none",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "instrument",
+      "pitGrade": "partial",
+      "allowedParams": [
+        "asOf",
+        "instrument",
+        "limit",
+        "page",
+        "variant"
+      ],
+      "defaultLimit": 20,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-021",
+      "liveProbe": "capability-021",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "market-activity.stock-fund-flow-daily",
+      "upstreamCapabilityId": "capability-022",
+      "upstreamCallables": [
+        "stock_fund_flow_120d"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "stock_fund_flow_120d",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-027.py",
+            "symbol": "stock_fund_flow_120d"
+          },
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "capital-flow",
+          "dataset": "stock-fund-flow-daily"
+        }
+      ],
+      "tools": [
+        "finance_cn_market_activity"
+      ],
+      "sources": [
+        "eastmoney-push2"
+      ],
+      "auth": "none",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "instrument",
+      "pitGrade": "partial",
+      "allowedParams": [
+        "asOf",
+        "instrument",
+        "limit",
+        "variant"
+      ],
+      "defaultLimit": 20,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-022",
+      "liveProbe": "capability-022",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "market-activity.chip-distribution",
+      "upstreamCapabilityId": "capability-023",
+      "upstreamCallables": [
+        "chip_distribution"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "chip_distribution",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-028.py",
+            "symbol": "chip_distribution"
+          },
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "market-signal",
+          "dataset": "chip-distribution"
+        }
+      ],
+      "tools": [
+        "finance_cn_market_activity"
+      ],
+      "sources": [
+        "mootdx",
+        "baostock"
+      ],
+      "auth": "none",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "instrument",
+      "pitGrade": "partial",
+      "allowedParams": [
+        "asOf",
+        "endDate",
+        "instrument",
+        "limit",
+        "startDate",
+        "variant"
+      ],
+      "defaultLimit": 20,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-023",
+      "liveProbe": "capability-023",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "disclosures.stock-news",
+      "upstreamCapabilityId": "capability-024",
+      "upstreamCallables": [
+        "eastmoney_stock_news"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "eastmoney_stock_news",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-029.py",
+            "symbol": "eastmoney_stock_news"
+          },
+          "toolName": "finance_cn_disclosures",
+          "dataCapability": "disclosures",
+          "dataset": "stock-news"
+        }
+      ],
+      "tools": [
+        "finance_cn_disclosures"
+      ],
+      "sources": [
+        "eastmoney-push2"
+      ],
+      "auth": "none",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "instrument",
+      "pitGrade": "partial",
+      "allowedParams": [
+        "asOf",
+        "instrument",
+        "limit",
+        "variant"
+      ],
+      "defaultLimit": 20,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-024",
+      "liveProbe": "capability-024",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "disclosures.market-telegraph",
+      "upstreamCapabilityId": "capability-025",
+      "upstreamCallables": [
+        "cls_telegraph"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "cls_telegraph",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-030.py",
+            "symbol": "cls_telegraph"
+          },
+          "toolName": "finance_cn_disclosures",
+          "dataCapability": "disclosures",
+          "dataset": "market-telegraph"
+        }
+      ],
+      "tools": [
+        "finance_cn_disclosures"
+      ],
+      "sources": [
+        "cailianpress"
+      ],
+      "auth": "none",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "market",
+      "pitGrade": "current",
+      "allowedParams": [
+        "asOf",
+        "endDate",
+        "limit",
+        "startDate",
+        "tradeDate",
+        "variant"
+      ],
+      "defaultLimit": 50,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-025",
+      "liveProbe": "capability-025",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "disclosures.global-news",
+      "upstreamCapabilityId": "capability-026",
+      "upstreamCallables": [
+        "eastmoney_global_news"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "eastmoney_global_news",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-031.py",
+            "symbol": "eastmoney_global_news"
+          },
+          "toolName": "finance_cn_disclosures",
+          "dataCapability": "disclosures",
+          "dataset": "global-news"
+        }
+      ],
+      "tools": [
+        "finance_cn_disclosures"
+      ],
+      "sources": [
+        "eastmoney-push2"
+      ],
+      "auth": "none",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "market",
+      "pitGrade": "current",
+      "allowedParams": [
+        "asOf",
+        "endDate",
+        "limit",
+        "startDate",
+        "tradeDate",
+        "variant"
+      ],
+      "defaultLimit": 50,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-026",
+      "liveProbe": "capability-026",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "fundamentals.tdx-finance-snapshot",
+      "upstreamCapabilityId": "capability-027",
+      "upstreamCallables": [
+        "tdx_client.finance"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "tdx_client.finance",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-032.py",
+            "symbol": "tdx_client.finance"
+          },
+          "toolName": "finance_cn_fundamentals",
+          "dataCapability": "fundamentals",
+          "dataset": "tdx-finance-snapshot"
+        }
+      ],
+      "tools": [
+        "finance_cn_fundamentals"
+      ],
+      "sources": [
+        "mootdx"
+      ],
+      "auth": "none",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "instrument",
+      "pitGrade": "partial",
+      "allowedParams": [
+        "asOf",
+        "category",
+        "instrument",
+        "limit",
+        "variant"
+      ],
+      "defaultLimit": 20,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-027",
+      "liveProbe": "capability-027",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "fundamentals.tdx-f10",
+      "upstreamCapabilityId": "capability-028",
+      "upstreamCallables": [
+        "tdx_client.F10"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "tdx_client.F10",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-033.py",
+            "symbol": "tdx_client.F10"
+          },
+          "toolName": "finance_cn_fundamentals",
+          "dataCapability": "fundamentals",
+          "dataset": "tdx-f10"
+        }
+      ],
+      "tools": [
+        "finance_cn_fundamentals"
+      ],
+      "sources": [
+        "mootdx"
+      ],
+      "auth": "none",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "instrument",
+      "pitGrade": "partial",
+      "allowedParams": [
+        "asOf",
+        "category",
+        "instrument",
+        "limit",
+        "variant"
+      ],
+      "defaultLimit": 20,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-028",
+      "liveProbe": "capability-028",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "instrument.company-profile",
+      "upstreamCapabilityId": "capability-029",
+      "upstreamCallables": [
+        "eastmoney_stock_info"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "eastmoney_stock_info",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-034.py",
+            "symbol": "eastmoney_stock_info"
+          },
+          "toolName": "finance_cn_instrument",
+          "dataCapability": "instrument-reference",
+          "dataset": "company-profile"
+        }
+      ],
+      "tools": [
+        "finance_cn_instrument"
+      ],
+      "sources": [
+        "eastmoney-push2"
+      ],
+      "auth": "none",
+      "implementation": "implemented-canonical",
+      "contractTier": "canonical",
+      "scope": "instrument",
+      "pitGrade": "partial",
+      "allowedParams": [
+        "asOf",
+        "instrument",
+        "limit",
+        "variant"
+      ],
+      "defaultLimit": 20,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-029",
+      "liveProbe": "capability-029",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "fundamentals.financial-statements",
+      "upstreamCapabilityId": "capability-030",
+      "upstreamCallables": [
+        "sina_financial_report"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "sina_financial_report",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-035.py",
+            "symbol": "sina_financial_report"
+          },
+          "toolName": "finance_cn_fundamentals",
+          "dataCapability": "fundamentals",
+          "dataset": "financial-statements"
+        }
+      ],
+      "tools": [
+        "finance_cn_fundamentals"
+      ],
+      "sources": [
+        "sina-finance"
+      ],
+      "auth": "none",
+      "implementation": "implemented-canonical",
+      "contractTier": "canonical",
+      "scope": "instrument",
+      "pitGrade": "partial",
+      "allowedParams": [
+        "asOf",
+        "instrument",
+        "limit",
+        "statement",
+        "variant"
+      ],
+      "defaultLimit": 20,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-030",
+      "liveProbe": "capability-030",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "fundamentals.valuation-history",
+      "upstreamCapabilityId": "capability-031",
+      "upstreamCallables": [
+        "baostock_valuation_history"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "baostock_valuation_history",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-036.py",
+            "symbol": "baostock_valuation_history"
+          },
+          "toolName": "finance_cn_fundamentals",
+          "dataCapability": "fundamentals",
+          "dataset": "valuation-history"
+        }
+      ],
+      "tools": [
+        "finance_cn_fundamentals"
+      ],
+      "sources": [
+        "baostock"
+      ],
+      "auth": "client",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "instrument",
+      "pitGrade": "partial",
+      "allowedParams": [
+        "asOf",
+        "endDate",
+        "instrument",
+        "limit",
+        "startDate",
+        "variant"
+      ],
+      "defaultLimit": 20,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-031",
+      "liveProbe": "capability-031",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "instrument.listing-status",
+      "upstreamCapabilityId": "capability-032",
+      "upstreamCallables": [
+        "baostock_stock_basic"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "baostock_stock_basic",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-037.py",
+            "symbol": "baostock_stock_basic"
+          },
+          "toolName": "finance_cn_instrument",
+          "dataCapability": "instrument-reference",
+          "dataset": "listing-status"
+        }
+      ],
+      "tools": [
+        "finance_cn_instrument"
+      ],
+      "sources": [
+        "baostock"
+      ],
+      "auth": "client",
+      "implementation": "implemented-canonical",
+      "contractTier": "canonical",
+      "scope": "instrument",
+      "pitGrade": "partial",
+      "allowedParams": [
+        "asOf",
+        "instrument",
+        "limit",
+        "variant"
+      ],
+      "defaultLimit": 20,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-032",
+      "liveProbe": "capability-032",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "instrument.sw-industry",
+      "upstreamCapabilityId": "capability-033",
+      "upstreamCallables": [
+        "sw_industry_history",
+        "sw_industry_as_of"
+      ],
+      "variants": [
+        {
+          "id": "history",
+          "upstreamCallable": "sw_industry_history",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-038.py",
+            "symbol": "sw_industry_history"
+          },
+          "toolName": "finance_cn_instrument",
+          "dataCapability": "industry-classification",
+          "dataset": "sw-industry"
+        },
+        {
+          "id": "as-of",
+          "upstreamCallable": "sw_industry_as_of",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-038.py",
+            "symbol": "sw_industry_as_of"
+          },
+          "toolName": "finance_cn_instrument",
+          "dataCapability": "industry-classification",
+          "dataset": "sw-industry"
+        }
+      ],
+      "tools": [
+        "finance_cn_instrument"
+      ],
+      "sources": [
+        "sw-research"
+      ],
+      "auth": "none",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "instrument",
+      "pitGrade": "partial",
+      "allowedParams": [
+        "asOf",
+        "instrument",
+        "limit",
+        "variant"
+      ],
+      "defaultLimit": 20,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-033",
+      "liveProbe": "capability-033",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "disclosures.announcement",
+      "upstreamCapabilityId": "capability-034",
+      "upstreamCallables": [
+        "cninfo_announcements"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "cninfo_announcements",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-039.py",
+            "symbol": "cninfo_announcements"
+          },
+          "toolName": "finance_cn_disclosures",
+          "dataCapability": "disclosures",
+          "dataset": "announcement"
+        }
+      ],
+      "tools": [
+        "finance_cn_disclosures"
+      ],
+      "sources": [
+        "cninfo"
+      ],
+      "auth": "none",
+      "implementation": "implemented-canonical",
+      "contractTier": "canonical",
+      "scope": "instrument",
+      "pitGrade": "partial",
+      "allowedParams": [
+        "asOf",
+        "instrument",
+        "limit",
+        "variant"
+      ],
+      "defaultLimit": 20,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-034",
+      "liveProbe": "capability-034",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "disclosures.tdx-announcement-summary",
+      "upstreamCapabilityId": "capability-035",
+      "upstreamCallables": [
+        "tdx_client.F10"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "tdx_client.F10",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-040.py",
+            "symbol": "tdx_client.F10"
+          },
+          "toolName": "finance_cn_disclosures",
+          "dataCapability": "disclosures",
+          "dataset": "tdx-announcement-summary"
+        }
+      ],
+      "tools": [
+        "finance_cn_disclosures"
+      ],
+      "sources": [
+        "mootdx"
+      ],
+      "auth": "none",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "instrument",
+      "pitGrade": "partial",
+      "allowedParams": [
+        "asOf",
+        "category",
+        "instrument",
+        "limit",
+        "variant"
+      ],
+      "defaultLimit": 20,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-035",
+      "liveProbe": "capability-035",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "market-activity.limit-up-pool",
+      "upstreamCapabilityId": "capability-036",
+      "upstreamCallables": [
+        "em_zt_pool"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "em_zt_pool",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-041.py",
+            "symbol": "em_zt_pool"
+          },
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "market-signal",
+          "dataset": "limit-up-pool"
+        }
+      ],
+      "tools": [
+        "finance_cn_market_activity"
+      ],
+      "sources": [
+        "eastmoney-push2"
+      ],
+      "auth": "none",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "market",
+      "pitGrade": "current",
+      "allowedParams": [
+        "asOf",
+        "endDate",
+        "limit",
+        "startDate",
+        "tradeDate",
+        "variant"
+      ],
+      "defaultLimit": 50,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-036",
+      "liveProbe": "capability-036",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "market-activity.broken-limit-pool",
+      "upstreamCapabilityId": "capability-037",
+      "upstreamCallables": [
+        "em_zb_pool"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "em_zb_pool",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-041.py",
+            "symbol": "em_zb_pool"
+          },
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "market-signal",
+          "dataset": "broken-limit-pool"
+        }
+      ],
+      "tools": [
+        "finance_cn_market_activity"
+      ],
+      "sources": [
+        "eastmoney-push2"
+      ],
+      "auth": "none",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "market",
+      "pitGrade": "current",
+      "allowedParams": [
+        "asOf",
+        "endDate",
+        "limit",
+        "startDate",
+        "tradeDate",
+        "variant"
+      ],
+      "defaultLimit": 50,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-037",
+      "liveProbe": "capability-037",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "market-activity.limit-down-pool",
+      "upstreamCapabilityId": "capability-038",
+      "upstreamCallables": [
+        "em_dt_pool"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "em_dt_pool",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-041.py",
+            "symbol": "em_dt_pool"
+          },
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "market-signal",
+          "dataset": "limit-down-pool"
+        }
+      ],
+      "tools": [
+        "finance_cn_market_activity"
+      ],
+      "sources": [
+        "eastmoney-push2"
+      ],
+      "auth": "none",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "market",
+      "pitGrade": "current",
+      "allowedParams": [
+        "asOf",
+        "endDate",
+        "limit",
+        "startDate",
+        "tradeDate",
+        "variant"
+      ],
+      "defaultLimit": 50,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-038",
+      "liveProbe": "capability-038",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "market-activity.previous-limit-up-pool",
+      "upstreamCapabilityId": "capability-039",
+      "upstreamCallables": [
+        "em_yzt_pool"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "em_yzt_pool",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-041.py",
+            "symbol": "em_yzt_pool"
+          },
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "market-signal",
+          "dataset": "previous-limit-up-pool"
+        }
+      ],
+      "tools": [
+        "finance_cn_market_activity"
+      ],
+      "sources": [
+        "eastmoney-push2"
+      ],
+      "auth": "none",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "market",
+      "pitGrade": "current",
+      "allowedParams": [
+        "asOf",
+        "endDate",
+        "limit",
+        "startDate",
+        "tradeDate",
+        "variant"
+      ],
+      "defaultLimit": 50,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-039",
+      "liveProbe": "capability-039",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "market-activity.limit-up-reason",
+      "upstreamCapabilityId": "capability-040",
+      "upstreamCallables": [
+        "ths_limit_up_pool"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "ths_limit_up_pool",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-042.py",
+            "symbol": "ths_limit_up_pool"
+          },
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "market-signal",
+          "dataset": "limit-up-reason"
+        }
+      ],
+      "tools": [
+        "finance_cn_market_activity"
+      ],
+      "sources": [
+        "ths-hot"
+      ],
+      "auth": "none",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "market",
+      "pitGrade": "current",
+      "allowedParams": [
+        "asOf",
+        "endDate",
+        "limit",
+        "startDate",
+        "tradeDate",
+        "variant"
+      ],
+      "defaultLimit": 50,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-040",
+      "liveProbe": "capability-040",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "market-activity.limit-up-sentiment",
+      "upstreamCapabilityId": "capability-041",
+      "upstreamCallables": [
+        "limit_up_sentiment"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "limit_up_sentiment",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-043.py",
+            "symbol": "limit_up_sentiment"
+          },
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "market-signal",
+          "dataset": "limit-up-sentiment"
+        }
+      ],
+      "tools": [
+        "finance_cn_market_activity"
+      ],
+      "sources": [
+        "eastmoney-push2"
+      ],
+      "auth": "none",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "market",
+      "pitGrade": "current",
+      "allowedParams": [
+        "asOf",
+        "endDate",
+        "limit",
+        "startDate",
+        "tradeDate",
+        "variant"
+      ],
+      "defaultLimit": 50,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-041",
+      "liveProbe": "capability-041",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "market-activity.stock-monitor",
+      "upstreamCapabilityId": "capability-042",
+      "upstreamCallables": [
+        "em_stock_monitor"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "em_stock_monitor",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-044.py",
+            "symbol": "em_stock_monitor"
+          },
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "risk-data",
+          "dataset": "stock-monitor"
+        }
+      ],
+      "tools": [
+        "finance_cn_market_activity"
+      ],
+      "sources": [
+        "eastmoney-push2"
+      ],
+      "auth": "none",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "market",
+      "pitGrade": "current",
+      "allowedParams": [
+        "asOf",
+        "endDate",
+        "limit",
+        "startDate",
+        "tradeDate",
+        "variant"
+      ],
+      "defaultLimit": 50,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-042",
+      "liveProbe": "capability-042",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "market-activity.price-anomaly-events",
+      "upstreamCapabilityId": "capability-043",
+      "upstreamCallables": [
+        "em_price_anomaly"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "em_price_anomaly",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-045.py",
+            "symbol": "em_price_anomaly"
+          },
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "market-signal",
+          "dataset": "price-anomaly-events"
+        }
+      ],
+      "tools": [
+        "finance_cn_market_activity"
+      ],
+      "sources": [
+        "eastmoney-push2"
+      ],
+      "auth": "none",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "market",
+      "pitGrade": "current",
+      "allowedParams": [
+        "asOf",
+        "endDate",
+        "limit",
+        "startDate",
+        "tradeDate",
+        "variant"
+      ],
+      "defaultLimit": 50,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-043",
+      "liveProbe": "capability-043",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "market-activity.price-anomaly-count",
+      "upstreamCapabilityId": "capability-044",
+      "upstreamCallables": [
+        "em_price_anomaly_count"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "em_price_anomaly_count",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-045.py",
+            "symbol": "em_price_anomaly_count"
+          },
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "market-signal",
+          "dataset": "price-anomaly-count"
+        }
+      ],
+      "tools": [
+        "finance_cn_market_activity"
+      ],
+      "sources": [
+        "eastmoney-push2"
+      ],
+      "auth": "none",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "market",
+      "pitGrade": "current",
+      "allowedParams": [
+        "asOf",
+        "endDate",
+        "limit",
+        "startDate",
+        "tradeDate",
+        "variant"
+      ],
+      "defaultLimit": 50,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-044",
+      "liveProbe": "capability-044",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "market-activity.option-contracts",
+      "upstreamCapabilityId": "capability-045",
+      "upstreamCallables": [
+        "sina_option_codes"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "sina_option_codes",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-046.py",
+            "symbol": "sina_option_codes"
+          },
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "market-signal",
+          "dataset": "option-contracts"
+        }
+      ],
+      "tools": [
+        "finance_cn_market_activity"
+      ],
+      "sources": [
+        "sina-finance"
+      ],
+      "auth": "none",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "derivative",
+      "pitGrade": "current",
+      "allowedParams": [
+        "asOf",
+        "instrument",
+        "limit",
+        "optionCode",
+        "optionType",
+        "underlying",
+        "variant"
+      ],
+      "defaultLimit": 20,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-045",
+      "liveProbe": "capability-045",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "market-activity.option-tquote",
+      "upstreamCapabilityId": "capability-046",
+      "upstreamCallables": [
+        "sina_option_tquote"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "sina_option_tquote",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-046.py",
+            "symbol": "sina_option_tquote"
+          },
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "quote",
+          "dataset": "option-tquote"
+        }
+      ],
+      "tools": [
+        "finance_cn_market_activity"
+      ],
+      "sources": [
+        "sina-finance"
+      ],
+      "auth": "none",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "derivative",
+      "pitGrade": "current",
+      "allowedParams": [
+        "asOf",
+        "instrument",
+        "limit",
+        "optionCode",
+        "optionType",
+        "underlying",
+        "variant"
+      ],
+      "defaultLimit": 20,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-046",
+      "liveProbe": "capability-046",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "market-activity.option-greeks",
+      "upstreamCapabilityId": "capability-047",
+      "upstreamCallables": [
+        "sina_option_greeks"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "sina_option_greeks",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-046.py",
+            "symbol": "sina_option_greeks"
+          },
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "risk-data",
+          "dataset": "option-greeks"
+        }
+      ],
+      "tools": [
+        "finance_cn_market_activity"
+      ],
+      "sources": [
+        "sina-finance"
+      ],
+      "auth": "none",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "derivative",
+      "pitGrade": "current",
+      "allowedParams": [
+        "asOf",
+        "instrument",
+        "limit",
+        "optionCode",
+        "optionType",
+        "underlying",
+        "variant"
+      ],
+      "defaultLimit": 20,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-047",
+      "liveProbe": "capability-047",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "disclosures.investor-relations-qa",
+      "upstreamCapabilityId": "capability-048",
+      "upstreamCallables": [
+        "cninfo_irm"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "cninfo_irm",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-047.py",
+            "symbol": "cninfo_irm"
+          },
+          "toolName": "finance_cn_disclosures",
+          "dataCapability": "disclosures",
+          "dataset": "investor-relations-qa"
+        }
+      ],
+      "tools": [
+        "finance_cn_disclosures"
+      ],
+      "sources": [
+        "cninfo"
+      ],
+      "auth": "none",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "instrument",
+      "pitGrade": "partial",
+      "allowedParams": [
+        "asOf",
+        "instrument",
+        "limit",
+        "page",
+        "variant"
+      ],
+      "defaultLimit": 20,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-048",
+      "liveProbe": "capability-048",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "market-activity.ths-hot-list",
+      "upstreamCapabilityId": "capability-049",
+      "upstreamCallables": [
+        "ths_hot_list"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "ths_hot_list",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-048.py",
+            "symbol": "ths_hot_list"
+          },
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "market-signal",
+          "dataset": "ths-hot-list"
+        }
+      ],
+      "tools": [
+        "finance_cn_market_activity"
+      ],
+      "sources": [
+        "ths-hot"
+      ],
+      "auth": "none",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "market",
+      "pitGrade": "current",
+      "allowedParams": [
+        "asOf",
+        "endDate",
+        "limit",
+        "period",
+        "startDate",
+        "tradeDate",
+        "variant"
+      ],
+      "defaultLimit": 50,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-049",
+      "liveProbe": "capability-049",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "market-activity.eastmoney-hot-rank",
+      "upstreamCapabilityId": "capability-050",
+      "upstreamCallables": [
+        "em_hot_rank"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "em_hot_rank",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-048.py",
+            "symbol": "em_hot_rank"
+          },
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "market-signal",
+          "dataset": "eastmoney-hot-rank"
+        }
+      ],
+      "tools": [
+        "finance_cn_market_activity"
+      ],
+      "sources": [
+        "eastmoney-push2"
+      ],
+      "auth": "none",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "market",
+      "pitGrade": "current",
+      "allowedParams": [
+        "asOf",
+        "endDate",
+        "limit",
+        "startDate",
+        "tradeDate",
+        "variant"
+      ],
+      "defaultLimit": 50,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-050",
+      "liveProbe": "capability-050",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "market-activity.hot-concept",
+      "upstreamCapabilityId": "capability-051",
+      "upstreamCallables": [
+        "em_hot_concept"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "em_hot_concept",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-048.py",
+            "symbol": "em_hot_concept"
+          },
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "market-signal",
+          "dataset": "hot-concept"
+        }
+      ],
+      "tools": [
+        "finance_cn_market_activity"
+      ],
+      "sources": [
+        "eastmoney-push2"
+      ],
+      "auth": "none",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "instrument",
+      "pitGrade": "partial",
+      "allowedParams": [
+        "asOf",
+        "instrument",
+        "limit",
+        "variant"
+      ],
+      "defaultLimit": 20,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-051",
+      "liveProbe": "capability-051",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "macro.social-financing-flow",
+      "upstreamCapabilityId": "capability-052",
+      "upstreamCallables": [
+        "pboc_social_financing"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "pboc_social_financing",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-049.py",
+            "symbol": "pboc_social_financing"
+          },
+          "toolName": "finance_cn_macro_index",
+          "dataCapability": "macro",
+          "dataset": "social-financing-flow"
+        }
+      ],
+      "tools": [
+        "finance_cn_macro_index"
+      ],
+      "sources": [
+        "pboc"
+      ],
+      "auth": "none",
+      "implementation": "implemented-canonical",
+      "contractTier": "canonical",
+      "scope": "macro",
+      "pitGrade": "date-bounded",
+      "allowedParams": [
+        "asOf",
+        "endDate",
+        "limit",
+        "startDate",
+        "variant",
+        "year"
+      ],
+      "defaultLimit": 20,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-052",
+      "liveProbe": "capability-052",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "macro.pmi",
+      "upstreamCapabilityId": "capability-053",
+      "upstreamCallables": [
+        "nbs_pmi"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "nbs_pmi",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-050.py",
+            "symbol": "nbs_pmi"
+          },
+          "toolName": "finance_cn_macro_index",
+          "dataCapability": "macro",
+          "dataset": "pmi"
+        }
+      ],
+      "tools": [
+        "finance_cn_macro_index"
+      ],
+      "sources": [
+        "nbs"
+      ],
+      "auth": "none",
+      "implementation": "implemented-canonical",
+      "contractTier": "canonical",
+      "scope": "macro",
+      "pitGrade": "date-bounded",
+      "allowedParams": [
+        "asOf",
+        "endDate",
+        "limit",
+        "startDate",
+        "variant",
+        "year"
+      ],
+      "defaultLimit": 20,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-053",
+      "liveProbe": "capability-053",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "index.constituents",
+      "upstreamCapabilityId": "capability-054",
+      "upstreamCallables": [
+        "index_constituents"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "index_constituents",
+          "runtime": {
+            "kind": "generated-module",
+            "symbol": "index_constituents"
+          },
+          "toolName": "finance_cn_macro_index",
+          "dataCapability": "index",
+          "dataset": "index-constituents"
+        }
+      ],
+      "tools": [
+        "finance_cn_macro_index"
+      ],
+      "sources": [
+        "csi",
+        "cni"
+      ],
+      "auth": "none",
+      "implementation": "implemented-canonical",
+      "contractTier": "canonical",
+      "scope": "index",
+      "pitGrade": "date-bounded",
+      "allowedParams": [
+        "asOf",
+        "instrument",
+        "limit",
+        "officialProvider",
+        "variant"
+      ],
+      "defaultLimit": 500,
+      "maxLimit": 1000,
+      "fixture": "features.json#capability-054",
+      "liveProbe": "capability-054",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "index.weights",
+      "upstreamCapabilityId": "capability-055",
+      "upstreamCallables": [
+        "index_weights"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "index_weights",
+          "runtime": {
+            "kind": "generated-module",
+            "symbol": "index_weights"
+          },
+          "toolName": "finance_cn_macro_index",
+          "dataCapability": "index",
+          "dataset": "index-weights"
+        }
+      ],
+      "tools": [
+        "finance_cn_macro_index"
+      ],
+      "sources": [
+        "csi",
+        "cni"
+      ],
+      "auth": "none",
+      "implementation": "implemented-canonical",
+      "contractTier": "canonical",
+      "scope": "index",
+      "pitGrade": "date-bounded",
+      "allowedParams": [
+        "asOf",
+        "instrument",
+        "limit",
+        "officialProvider",
+        "variant"
+      ],
+      "defaultLimit": 500,
+      "maxLimit": 1000,
+      "fixture": "features.json#capability-055",
+      "liveProbe": "capability-055",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "index.valuation",
+      "upstreamCapabilityId": "capability-056",
+      "upstreamCallables": [
+        "index_valuation"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "index_valuation",
+          "runtime": {
+            "kind": "generated-module",
+            "symbol": "index_valuation"
+          },
+          "toolName": "finance_cn_macro_index",
+          "dataCapability": "index",
+          "dataset": "index-valuation"
+        }
+      ],
+      "tools": [
+        "finance_cn_macro_index"
+      ],
+      "sources": [
+        "csi"
+      ],
+      "auth": "none",
+      "implementation": "implemented-canonical",
+      "contractTier": "canonical",
+      "scope": "index",
+      "pitGrade": "date-bounded",
+      "allowedParams": [
+        "asOf",
+        "instrument",
+        "limit",
+        "officialProvider",
+        "variant"
+      ],
+      "defaultLimit": 500,
+      "maxLimit": 1000,
+      "fixture": "features.json#capability-056",
+      "liveProbe": "capability-056",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "index.trading-calendar",
+      "upstreamCapabilityId": "capability-057",
+      "upstreamCallables": [
+        "trading_calendar"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "trading_calendar",
+          "runtime": {
+            "kind": "generated-module",
+            "symbol": "trading_calendar"
+          },
+          "toolName": "finance_cn_macro_index",
+          "dataCapability": "trading-calendar",
+          "dataset": "trading-calendar"
+        }
+      ],
+      "tools": [
+        "finance_cn_macro_index"
+      ],
+      "sources": [
+        "szse-official"
+      ],
+      "auth": "none",
+      "implementation": "implemented-canonical",
+      "contractTier": "canonical",
+      "scope": "market",
+      "pitGrade": "current",
+      "allowedParams": [
+        "asOf",
+        "endDate",
+        "limit",
+        "startDate",
+        "tradeDate",
+        "variant"
+      ],
+      "defaultLimit": 50,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-057",
+      "liveProbe": "capability-057",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "market-activity.margin-trading-official",
+      "upstreamCapabilityId": "capability-058",
+      "upstreamCallables": [
+        "margin_trading_backup"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "upstreamCallable": "margin_trading_backup",
+          "runtime": {
+            "kind": "generated-module",
+            "symbol": "margin_trading_backup"
+          },
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "capital-flow",
+          "dataset": "margin-trading-official"
+        }
+      ],
+      "tools": [
+        "finance_cn_market_activity"
+      ],
+      "sources": [
+        "szse-official",
+        "sse-official"
+      ],
+      "auth": "none",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "instrument",
+      "pitGrade": "partial",
+      "allowedParams": [
+        "asOf",
+        "instrument",
+        "limit",
+        "tradeDate",
+        "variant"
+      ],
+      "defaultLimit": 20,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-058",
+      "liveProbe": "capability-058",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "market.bse-official",
+      "upstreamCapabilityId": "capability-059",
+      "upstreamCallables": [
+        "bse_quote_backup"
+      ],
+      "variants": [
+        {
+          "id": "quote",
+          "upstreamCallable": "bse_quote_backup",
+          "runtime": {
+            "kind": "generated-module",
+            "symbol": "bse_quote_backup"
+          },
+          "toolName": "finance_cn_quote",
+          "dataCapability": "quote",
+          "dataset": "bse-snapshot"
+        },
+        {
+          "id": "order-book",
+          "upstreamCallable": "bse_quote_backup",
+          "runtime": {
+            "kind": "generated-module",
+            "symbol": "bse_quote_backup"
+          },
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "order-book",
+          "dataset": "bse-order-book"
+        }
+      ],
+      "tools": [
+        "finance_cn_quote",
+        "finance_cn_market_activity"
+      ],
+      "sources": [
+        "bse-official"
+      ],
+      "auth": "session",
+      "implementation": "implemented-canonical",
+      "contractTier": "canonical",
+      "scope": "instrument",
+      "pitGrade": "partial",
+      "allowedParams": [
+        "asOf",
+        "instrument",
+        "limit",
+        "tradeDate",
+        "variant"
+      ],
+      "defaultLimit": 20,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-059",
+      "liveProbe": "capability-059",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    },
+    {
+      "featureId": "market-activity.official-backups",
+      "upstreamCapabilityId": "capability-060",
+      "upstreamCallables": [
+        "dragon_tiger_backup",
+        "fund_flow_backup",
+        "announcements_backup"
+      ],
+      "variants": [
+        {
+          "id": "dragon-tiger",
+          "upstreamCallable": "dragon_tiger_backup",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-062.py",
+            "symbol": "dragon_tiger_backup"
+          },
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "market-signal",
+          "dataset": "dragon-tiger-backup"
+        },
+        {
+          "id": "fund-flow",
+          "upstreamCallable": "fund_flow_backup",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-062.py",
+            "symbol": "fund_flow_backup"
+          },
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "capital-flow",
+          "dataset": "fund-flow-backup"
+        },
+        {
+          "id": "announcement",
+          "upstreamCallable": "announcements_backup",
+          "runtime": {
+            "kind": "generated-block",
+            "block": "block-062.py",
+            "symbol": "announcements_backup"
+          },
+          "toolName": "finance_cn_disclosures",
+          "dataCapability": "disclosures",
+          "dataset": "announcement-backup"
+        }
+      ],
+      "tools": [
+        "finance_cn_market_activity",
+        "finance_cn_disclosures"
+      ],
+      "sources": [
+        "sse-official",
+        "szse-official",
+        "sina-finance",
+        "eastmoney-push2"
+      ],
+      "auth": "none",
+      "implementation": "implemented-experimental",
+      "contractTier": "experimental-records-v1",
+      "scope": "market",
+      "pitGrade": "current",
+      "allowedParams": [
+        "asOf",
+        "endDate",
+        "limit",
+        "startDate",
+        "tradeDate",
+        "variant"
+      ],
+      "defaultLimit": 50,
+      "maxLimit": 500,
+      "fixture": "features.json#capability-060",
+      "liveProbe": "capability-060",
+      "fieldUnits": {
+        "source_date": "ISO-8601"
+      },
+      "limitations": [
+        "Best-effort public data; availability and schema may change.",
+        "Empty upstream responses require validated success metadata before no-data is reported."
+      ]
+    }
+  ]
+}

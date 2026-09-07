@@ -197,6 +197,9 @@ def compute_covariance(
             os.path.normpath(os.path.join(pkg_root, "..")),
             "data", "exposure_history",
         )
+    cache_identity = getattr(adapter, "cache_identity", None)
+    if cache_identity:
+        cache_dir = os.path.join(cache_dir, f"snapshot-{cache_identity}")
 
     t0 = time.perf_counter()
     bundle = adapter.load_bundle(end_date)

@@ -18,7 +18,7 @@
     - id: agent-presets
       name: '@deepseek-ai/dsh-agent-presets'
       config:
-        default: finance-analyst
+        default: !!js process.env.NGFI_AGENT_PRESET || 'finance-analyst'
         roots: []
         includeUserRoot: true
 
@@ -31,4 +31,4 @@
       inject: [headlessStartup]
       config:
         task: !!js ctx.headlessStartup.task
-        preset: finance-analyst
+        preset: !!js process.env.NGFI_AGENT_PRESET || 'finance-analyst'

@@ -8,6 +8,9 @@ export const BEHAVIOR_REFERENCE_TOPICS = [
   'market-aggregation',
   'diagnosis-and-evidence',
   'interventions-and-boundaries',
+  'v2-cpt-toolkit',
+  'v2-belief-toolkit',
+  'v2-market-toolkit',
 ] as const
 
 export type BehaviorReferenceTopic = typeof BEHAVIOR_REFERENCE_TOPICS[number]
@@ -18,6 +21,9 @@ const TOPIC_FILES: Record<BehaviorReferenceTopic, string> = {
   'market-aggregation': 'market-aggregation.md',
   'diagnosis-and-evidence': 'diagnosis-and-evidence.md',
   'interventions-and-boundaries': 'interventions-and-boundaries.md',
+  'v2-cpt-toolkit': 'v2-cpt-toolkit.md',
+  'v2-belief-toolkit': 'v2-belief-toolkit.md',
+  'v2-market-toolkit': 'v2-market-toolkit.md',
 }
 
 export interface BehaviorReferenceOptions {

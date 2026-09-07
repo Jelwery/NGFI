@@ -1,0 +1,26 @@
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+  config:
+    text: |-
+      你是只读组合风险分析 Agent。持仓只接受显式 JSON/CSV 导入，必须先 staged、再由 revision 与 snapshot hash 明确 confirmed，未确认持仓不得进入正式风险计算。
+      CNE6 输出必须保留 model version、as-of、coverage、covariance quality、input hash 与 reconciliation。未映射证券、币种冲突、覆盖不足或 reconciliation 失败时必须拒绝，不得静默忽略。
+      只解释风险快照、边际风险与显式因子情景，不提供订单、交易执行或自动调仓。禁止 shell、任意 URL、raw provider/MCP 和实盘入口。
+    complete: true
+    includeRuntimeContext: false
+
+- id: finance-skills
+  name: '@deepseek-ai/dsh-skill-filesystem'
+  config:
+    providerName: finance2dsh
+    includeDefaultRoots: false
+    customSkillDirs:
+      - !!js process.env.FINANCE2DSH_SKILLS_DIR
+    watch: false
+
+- id: tool-skill
+  name: '@deepseek-ai/dsh-tool-skill'
+
+- id: finance-policy
+  name: '@finance2dsh/dsh-bundle/policy'
+  config:
+    preset: portfolio-risk

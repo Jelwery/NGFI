@@ -1,0 +1,8 @@
+members = index_constituents("000300")
+weights = index_weights("399006", provider="cni")
+valuation = index_valuation("000300")
+days = trading_calendar(2026, 9)
+print(members[["date", "code", "name"]].head())
+print(weights[["date", "code", "weight_percent"]].head())
+print(valuation.tail(1))
+print(days.loc[days.is_open, "date"].tolist())

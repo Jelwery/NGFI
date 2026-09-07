@@ -15,7 +15,7 @@
 
 - id: agent-presets
   config:
-    default: finance-analyst
+    default: !!js process.env.NGFI_AGENT_PRESET || 'finance-analyst'
     roots: []
     includeUserRoot: true
 

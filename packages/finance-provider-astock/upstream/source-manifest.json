@@ -1,0 +1,783 @@
+{
+  "schemaVersion": 1,
+  "repository": "https://github.com/simonlin1212/a-stock-data.git",
+  "upstreamVersion": "v3.8.0",
+  "tagObject": "9f995e66ee792255e492a15627f98615627041c6",
+  "peeledCommit": "2012ce7cd0e75d379c5e6cbd3115514f300f3bc8",
+  "tree": "8a7a81801271bda328d6015ad6304e5c0960a01f",
+  "snapshotFiles": [
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "7351f9b3bda299aca84977c9599c6a8d24200ea78255b9f6c03d48d2b1298cae",
+      "gitBlob": "ff64b7dac5a2c736fda7f35c1cf83740dd3958cd",
+      "size": 59840,
+      "lines": 752
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "199bab40163ad21135c2c4d5db43bffdadb14ed80762b048f04931cc48700bbf",
+      "gitBlob": "088c0826ad3a02908696b1ff6c9e4fbd9b2823af",
+      "size": 10760,
+      "lines": 190
+    },
+    {
+      "path": "SKILL.md",
+      "sha256": "a914594fef090d4d23535b3572573986a6e663f0b4c837cd95b357ca569c5975",
+      "gitBlob": "7b5894fc284ac8e54c2755e50ff94bfd17cdbbf4",
+      "size": 232206,
+      "lines": 4552
+    },
+    {
+      "path": "docs/source-integration-v3.8.0.md",
+      "sha256": "c05f982d3bfe5c75b0692bb715f7a4b7c9c5bc476a027996c0d2ba2c14da23d9",
+      "gitBlob": "ae06091bef47275894a8c89bb330eda8a38b4274",
+      "size": 7023,
+      "lines": 88
+    },
+    {
+      "path": "tests/test_official_data.py",
+      "sha256": "f4c62fb65753dc68ce94fe613e96d44444ca358b33142535243067e5f8acf107",
+      "gitBlob": "d5d76ba49ea1bc6c6ff57f836bf684a081741034",
+      "size": 16061,
+      "lines": 314
+    }
+  ],
+  "pythonDependencies": [
+    {
+      "name": "baostock",
+      "requirement": ">=0.8",
+      "usedBy": [
+        "baostock"
+      ],
+      "license": null,
+      "status": "declared"
+    },
+    {
+      "name": "mootdx",
+      "requirement": ">=0.10",
+      "usedBy": [
+        "mootdx"
+      ],
+      "license": "MIT",
+      "status": "declared"
+    },
+    {
+      "name": "numpy",
+      "requirement": null,
+      "usedBy": [],
+      "license": "BSD-3-Clause",
+      "status": "declared"
+    },
+    {
+      "name": "openpyxl",
+      "requirement": null,
+      "usedBy": [
+        "cni",
+        "pboc",
+        "szse-official"
+      ],
+      "license": "MIT",
+      "status": "declared"
+    },
+    {
+      "name": "pandas",
+      "requirement": null,
+      "usedBy": [
+        "baostock",
+        "bse-official",
+        "cni",
+        "csi",
+        "eastmoney-datacenter",
+        "eastmoney-push2",
+        "nbs",
+        "pboc",
+        "sse-official",
+        "sw-research",
+        "szse-official",
+        "ths-basic",
+        "ths-hot",
+        "ths-hsgt"
+      ],
+      "license": "BSD-3-Clause",
+      "status": "declared"
+    },
+    {
+      "name": "requests",
+      "requirement": null,
+      "usedBy": [
+        "baidu-gushitong",
+        "bse-official",
+        "cailianpress",
+        "cni",
+        "cninfo",
+        "csi",
+        "eastmoney-datacenter",
+        "eastmoney-push2",
+        "eastmoney-reportapi",
+        "iwencai",
+        "nbs",
+        "pboc",
+        "sina-finance",
+        "sse-official",
+        "sw-research",
+        "szse-official",
+        "ths-basic",
+        "ths-hot",
+        "ths-hsgt"
+      ],
+      "license": "Apache-2.0",
+      "status": "declared"
+    },
+    {
+      "name": "stockstats",
+      "requirement": null,
+      "usedBy": [],
+      "license": "BSD-3-Clause",
+      "status": "declared"
+    },
+    {
+      "name": "xlrd",
+      "requirement": ">=2.0",
+      "usedBy": [
+        "csi",
+        "sw-research"
+      ],
+      "license": "BSD-3-Clause",
+      "status": "declared"
+    }
+  ],
+  "sources": [
+    {
+      "id": "baidu-gushitong",
+      "name": "Baidu Gushitong public market data",
+      "kind": "public-web",
+      "hosts": [
+        "finance.pae.baidu.com",
+        "gushitong.baidu.com"
+      ],
+      "capabilityIds": [
+        "capability-003"
+      ],
+      "auth": {
+        "mode": "none",
+        "environment": []
+      },
+      "dependencies": [
+        "requests"
+      ],
+      "license": null,
+      "risks": [
+        "Rate limits and redistribution rights are not established by the upstream project",
+        "Undocumented public-web contract may change without notice"
+      ],
+      "policyStatus": "experimental"
+    },
+    {
+      "id": "baostock",
+      "name": "BaoStock community data service",
+      "kind": "community",
+      "hosts": [],
+      "capabilityIds": [
+        "capability-023",
+        "capability-031",
+        "capability-032"
+      ],
+      "auth": {
+        "mode": "client",
+        "environment": []
+      },
+      "dependencies": [
+        "baostock",
+        "pandas"
+      ],
+      "license": null,
+      "risks": [
+        "Beijing Stock Exchange instruments are unsupported",
+        "Community service has no availability guarantee",
+        "Service endpoint is encapsulated by the client library"
+      ],
+      "policyStatus": "experimental"
+    },
+    {
+      "id": "bse-official",
+      "name": "Beijing Stock Exchange",
+      "kind": "official",
+      "hosts": [
+        "www.bse.cn"
+      ],
+      "capabilityIds": [
+        "capability-059"
+      ],
+      "auth": {
+        "mode": "session",
+        "environment": []
+      },
+      "dependencies": [
+        "pandas",
+        "requests"
+      ],
+      "license": null,
+      "risks": [
+        "Anonymous cookie session must be established before the quote request",
+        "Current snapshot cannot be used as historical backfill",
+        "Pagination totals and trading dates must be validated"
+      ],
+      "policyStatus": "approved"
+    },
+    {
+      "id": "cailianpress",
+      "name": "Cailianpress public news feed",
+      "kind": "public-web",
+      "hosts": [
+        "www.cls.cn"
+      ],
+      "capabilityIds": [
+        "capability-025"
+      ],
+      "auth": {
+        "mode": "none",
+        "environment": []
+      },
+      "dependencies": [
+        "requests"
+      ],
+      "license": null,
+      "risks": [
+        "Content redistribution rights are not granted by the upstream Apache license",
+        "Public-web signature algorithm and response schema may change"
+      ],
+      "policyStatus": "experimental"
+    },
+    {
+      "id": "cni",
+      "name": "CNI Index",
+      "kind": "official",
+      "hosts": [
+        "www.cnindex.com.cn"
+      ],
+      "capabilityIds": [
+        "capability-054",
+        "capability-055"
+      ],
+      "auth": {
+        "mode": "none",
+        "environment": []
+      },
+      "dependencies": [
+        "openpyxl",
+        "pandas",
+        "requests"
+      ],
+      "license": null,
+      "risks": [
+        "Non-six-digit constituent codes are rejected to avoid cross-market mislabeling",
+        "Published files are latest month-end snapshots, not point-in-time history"
+      ],
+      "policyStatus": "approved"
+    },
+    {
+      "id": "cninfo",
+      "name": "CNInfo disclosure and investor-relations services",
+      "kind": "official",
+      "hosts": [
+        "irm.cninfo.com.cn",
+        "www.cninfo.com.cn"
+      ],
+      "capabilityIds": [
+        "capability-034",
+        "capability-048"
+      ],
+      "auth": {
+        "mode": "none",
+        "environment": []
+      },
+      "dependencies": [
+        "requests"
+      ],
+      "license": null,
+      "risks": [
+        "Document content and source data retain their own terms",
+        "Public website endpoints may impose rate limits or schema changes"
+      ],
+      "policyStatus": "approved"
+    },
+    {
+      "id": "csi",
+      "name": "China Securities Index",
+      "kind": "official",
+      "hosts": [
+        "oss-ch.csindex.com.cn"
+      ],
+      "capabilityIds": [
+        "capability-054",
+        "capability-055",
+        "capability-056"
+      ],
+      "auth": {
+        "mode": "none",
+        "environment": []
+      },
+      "dependencies": [
+        "pandas",
+        "requests",
+        "xlrd"
+      ],
+      "license": null,
+      "risks": [
+        "Constituent and weight files may have different effective dates",
+        "Published snapshots are not complete point-in-time constituent history",
+        "Valuation files provide PE and dividend yield but not PB"
+      ],
+      "policyStatus": "approved"
+    },
+    {
+      "id": "eastmoney-datacenter",
+      "name": "Eastmoney Data Center public endpoints",
+      "kind": "public-web",
+      "hosts": [
+        "datacenter-web.eastmoney.com"
+      ],
+      "capabilityIds": [
+        "capability-013",
+        "capability-014",
+        "capability-017",
+        "capability-018",
+        "capability-019",
+        "capability-020",
+        "capability-021"
+      ],
+      "auth": {
+        "mode": "none",
+        "environment": []
+      },
+      "dependencies": [
+        "pandas",
+        "requests"
+      ],
+      "license": null,
+      "risks": [
+        "Empty responses must not be interpreted as authoritative no-data",
+        "Requests are subject to IP-level throttling and blocking",
+        "Undocumented public-web contract may drift"
+      ],
+      "policyStatus": "experimental"
+    },
+    {
+      "id": "eastmoney-push2",
+      "name": "Eastmoney public market, ranking, and news endpoints",
+      "kind": "public-web",
+      "hosts": [
+        "dycalchis.eastmoney.com",
+        "emappdata.eastmoney.com",
+        "mobappconfig.securities.eastmoney.com",
+        "np-anotice-stock.eastmoney.com",
+        "np-weblist.eastmoney.com",
+        "push2.eastmoney.com",
+        "push2ex.eastmoney.com",
+        "push2his.eastmoney.com",
+        "search-api-web.eastmoney.com"
+      ],
+      "capabilityIds": [
+        "capability-011",
+        "capability-012",
+        "capability-015",
+        "capability-016",
+        "capability-022",
+        "capability-024",
+        "capability-026",
+        "capability-029",
+        "capability-036",
+        "capability-037",
+        "capability-038",
+        "capability-039",
+        "capability-041",
+        "capability-042",
+        "capability-043",
+        "capability-044",
+        "capability-050",
+        "capability-051",
+        "capability-060"
+      ],
+      "auth": {
+        "mode": "none",
+        "environment": []
+      },
+      "dependencies": [
+        "pandas",
+        "requests"
+      ],
+      "license": null,
+      "risks": [
+        "Endpoint families share IP-level throttling and blocking",
+        "Pagination, duplicate records, stale quotes, and empty responses require validation",
+        "Undocumented public-web contracts may drift independently"
+      ],
+      "policyStatus": "experimental"
+    },
+    {
+      "id": "eastmoney-reportapi",
+      "name": "Eastmoney research-report and PDF endpoints",
+      "kind": "public-web",
+      "hosts": [
+        "pdf.dfcfw.com",
+        "reportapi.eastmoney.com"
+      ],
+      "capabilityIds": [
+        "capability-005",
+        "capability-006"
+      ],
+      "auth": {
+        "mode": "none",
+        "environment": []
+      },
+      "dependencies": [
+        "requests"
+      ],
+      "license": null,
+      "risks": [
+        "Downloaded reports retain publisher and author rights",
+        "Referer-sensitive public-web endpoints may change without notice",
+        "Requests share Eastmoney IP-level throttling"
+      ],
+      "policyStatus": "experimental"
+    },
+    {
+      "id": "iwencai",
+      "name": "iWenCai SkillHub OpenAPI",
+      "kind": "licensed",
+      "hosts": [
+        "openapi.iwencai.com"
+      ],
+      "capabilityIds": [
+        "capability-008"
+      ],
+      "auth": {
+        "mode": "api-key",
+        "environment": [
+          "IWENCAI_API_KEY"
+        ]
+      },
+      "dependencies": [
+        "requests"
+      ],
+      "license": null,
+      "risks": [
+        "Credentials must never enter snapshots, fixtures, logs, or generated source",
+        "Requires a separately issued API key and applicable service rights"
+      ],
+      "policyStatus": "blocked"
+    },
+    {
+      "id": "mootdx",
+      "name": "mootdx community adapter for TongdaXin protocol",
+      "kind": "community",
+      "hosts": [
+        "110.41.147.114",
+        "116.205.163.254",
+        "116.205.183.150",
+        "119.97.185.59",
+        "121.36.225.169",
+        "123.60.70.228",
+        "123.60.73.44",
+        "124.70.133.119",
+        "124.71.187.122",
+        "124.71.9.153"
+      ],
+      "capabilityIds": [
+        "capability-001",
+        "capability-023",
+        "capability-027",
+        "capability-028",
+        "capability-035"
+      ],
+      "auth": {
+        "mode": "none",
+        "environment": []
+      },
+      "dependencies": [
+        "mootdx"
+      ],
+      "license": "MIT",
+      "risks": [
+        "Community protocol adapter has no service-level guarantee",
+        "Server discovery and live-data validation are required before use",
+        "TCP port 7709 may be unavailable outside mainland China"
+      ],
+      "policyStatus": "experimental"
+    },
+    {
+      "id": "nbs",
+      "name": "National Bureau of Statistics of China",
+      "kind": "official",
+      "hosts": [
+        "www.stats.gov.cn"
+      ],
+      "capabilityIds": [
+        "capability-053"
+      ],
+      "auth": {
+        "mode": "none",
+        "environment": []
+      },
+      "dependencies": [
+        "pandas",
+        "requests"
+      ],
+      "license": null,
+      "risks": [
+        "Publication page layout and full-width typography are part of the parser contract",
+        "Publication timing must be preserved rather than inferred"
+      ],
+      "policyStatus": "approved"
+    },
+    {
+      "id": "pboc",
+      "name": "People's Bank of China",
+      "kind": "official",
+      "hosts": [
+        "www.pbc.gov.cn"
+      ],
+      "capabilityIds": [
+        "capability-052"
+      ],
+      "auth": {
+        "mode": "none",
+        "environment": []
+      },
+      "dependencies": [
+        "openpyxl",
+        "pandas",
+        "requests"
+      ],
+      "license": null,
+      "risks": [
+        "Unpublished months must be omitted rather than synthesized as missing-value rows",
+        "Workbook links and schemas may change between publications"
+      ],
+      "policyStatus": "approved"
+    },
+    {
+      "id": "sina-finance",
+      "name": "Sina Finance public endpoints",
+      "kind": "public-web",
+      "hosts": [
+        "finance.sina.com.cn",
+        "hq.sinajs.cn",
+        "quotes.sina.cn",
+        "stock.finance.sina.com.cn",
+        "vip.stock.finance.sina.com.cn"
+      ],
+      "capabilityIds": [
+        "capability-004",
+        "capability-030",
+        "capability-045",
+        "capability-046",
+        "capability-047",
+        "capability-060"
+      ],
+      "auth": {
+        "mode": "none",
+        "environment": []
+      },
+      "dependencies": [
+        "requests"
+      ],
+      "license": null,
+      "risks": [
+        "Adjustment factors are unavailable for Beijing Stock Exchange instruments",
+        "Some endpoints require a Referer header",
+        "Undocumented endpoints and encodings may change without notice"
+      ],
+      "policyStatus": "experimental"
+    },
+    {
+      "id": "sse-official",
+      "name": "Shanghai Stock Exchange",
+      "kind": "official",
+      "hosts": [
+        "query.sse.com.cn",
+        "www.sse.com.cn",
+        "yunhq.sse.com.cn"
+      ],
+      "capabilityIds": [
+        "capability-058",
+        "capability-060"
+      ],
+      "auth": {
+        "mode": "none",
+        "environment": []
+      },
+      "dependencies": [
+        "pandas",
+        "requests"
+      ],
+      "license": null,
+      "risks": [
+        "Margin pages must be checked for complete pagination and requested date",
+        "Referer-sensitive endpoints may enforce request limits"
+      ],
+      "policyStatus": "approved"
+    },
+    {
+      "id": "sw-research",
+      "name": "Shenwan Hongyuan Research public classification file",
+      "kind": "public-web",
+      "hosts": [
+        "www.swsresearch.com"
+      ],
+      "capabilityIds": [
+        "capability-033"
+      ],
+      "auth": {
+        "mode": "none",
+        "environment": []
+      },
+      "dependencies": [
+        "pandas",
+        "requests",
+        "xlrd"
+      ],
+      "license": null,
+      "risks": [
+        "Data usage terms are separate from the upstream Apache license",
+        "Public XLS location and schema may change",
+        "The file contains industry codes without a complete Chinese-name dictionary"
+      ],
+      "policyStatus": "experimental"
+    },
+    {
+      "id": "szse-official",
+      "name": "Shenzhen Stock Exchange",
+      "kind": "official",
+      "hosts": [
+        "disc.static.szse.cn",
+        "www.szse.cn"
+      ],
+      "capabilityIds": [
+        "capability-057",
+        "capability-058",
+        "capability-060"
+      ],
+      "auth": {
+        "mode": "none",
+        "environment": []
+      },
+      "dependencies": [
+        "openpyxl",
+        "pandas",
+        "requests"
+      ],
+      "license": null,
+      "risks": [
+        "Calendar responses must include the complete requested month",
+        "Referer-sensitive endpoints may enforce request limits",
+        "Unpublished margin files may contain only headers and must not be treated as zero balances"
+      ],
+      "policyStatus": "approved"
+    },
+    {
+      "id": "tencent-finance",
+      "name": "Tencent Finance public quote and K-line endpoints",
+      "kind": "public-web",
+      "hosts": [
+        "ifzq.gtimg.cn",
+        "qt.gtimg.cn"
+      ],
+      "capabilityIds": [
+        "capability-002"
+      ],
+      "auth": {
+        "mode": "none",
+        "environment": []
+      },
+      "dependencies": [],
+      "license": null,
+      "risks": [
+        "Migrated Beijing Stock Exchange legacy codes can return stale quotes",
+        "Rate limits and redistribution rights are not established by the upstream project",
+        "Undocumented public-web contract may change without notice"
+      ],
+      "policyStatus": "experimental"
+    },
+    {
+      "id": "ths-basic",
+      "name": "Tonghuashun public fundamentals pages",
+      "kind": "public-web",
+      "hosts": [
+        "basic.10jqka.com.cn"
+      ],
+      "capabilityIds": [
+        "capability-007"
+      ],
+      "auth": {
+        "mode": "none",
+        "environment": []
+      },
+      "dependencies": [
+        "pandas",
+        "requests"
+      ],
+      "license": null,
+      "risks": [
+        "HTML and JSON page structures are undocumented and may drift",
+        "Requests require browser-like headers and must stop on access challenges"
+      ],
+      "policyStatus": "experimental"
+    },
+    {
+      "id": "ths-hsgt",
+      "name": "Tonghuashun northbound-flow public endpoint",
+      "kind": "public-web",
+      "hosts": [
+        "data.hexin.cn"
+      ],
+      "capabilityIds": [
+        "capability-010"
+      ],
+      "auth": {
+        "mode": "none",
+        "environment": []
+      },
+      "dependencies": [
+        "pandas",
+        "requests"
+      ],
+      "license": null,
+      "risks": [
+        "Local history is a derived cache rather than source-provided history",
+        "Shenzhen Connect intraday values are documented upstream as reference-only",
+        "Undocumented public-web contract may change without notice"
+      ],
+      "policyStatus": "experimental"
+    },
+    {
+      "id": "ths-hot",
+      "name": "Tonghuashun public hot-stock and limit-up endpoints",
+      "kind": "public-web",
+      "hosts": [
+        "data.10jqka.com.cn",
+        "dq.10jqka.com.cn",
+        "zx.10jqka.com.cn"
+      ],
+      "capabilityIds": [
+        "capability-009",
+        "capability-040",
+        "capability-049"
+      ],
+      "auth": {
+        "mode": "none",
+        "environment": []
+      },
+      "dependencies": [
+        "pandas",
+        "requests"
+      ],
+      "license": null,
+      "risks": [
+        "Requests must be low-frequency and fail closed on CAPTCHA or authorization barriers",
+        "Undocumented public-web contracts may change or present access challenges"
+      ],
+      "policyStatus": "experimental"
+    }
+  ]
+}

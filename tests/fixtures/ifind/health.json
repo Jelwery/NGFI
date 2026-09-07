@@ -1,0 +1,10 @@
+{
+  "fixtureVersion": "1",
+  "capturedAt": "2026-09-05T00:00:00Z",
+  "source": "configuration-only; no live iFinD response captured",
+  "providerId": "ifind-official",
+  "status": "dormant",
+  "message": "blocked: missing IFIND_MCP_URL or credential",
+  "containsCredential": false,
+  "containsCookie": false
+}

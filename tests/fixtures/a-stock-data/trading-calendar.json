@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "ngfi-a-stock-fixture-1",
+  "capturedAt": "2026-08-28T08:00:00Z",
+  "upstreamSource": "recorded-contract-fixture",
+  "sourceKind": "user",
+  "records": [
+    {"exchange": "SSE", "startDate": "2026-08-27", "endDate": "2026-08-30", "days": [{"date": "2026-08-27", "isTradingDay": true, "session": "09:30-11:30,13:00-15:00 Asia/Shanghai"}, {"date": "2026-08-28", "isTradingDay": true, "session": "09:30-11:30,13:00-15:00 Asia/Shanghai"}, {"date": "2026-08-29", "isTradingDay": false, "session": null}, {"date": "2026-08-30", "isTradingDay": false, "session": null}]},
+    {"exchange": "SZSE", "startDate": "2026-08-27", "endDate": "2026-08-30", "days": [{"date": "2026-08-27", "isTradingDay": true, "session": "09:30-11:30,13:00-15:00 Asia/Shanghai"}, {"date": "2026-08-28", "isTradingDay": true, "session": "09:30-11:30,13:00-15:00 Asia/Shanghai"}, {"date": "2026-08-29", "isTradingDay": false, "session": null}, {"date": "2026-08-30", "isTradingDay": false, "session": null}]},
+    {"exchange": "BSE", "startDate": "2026-08-27", "endDate": "2026-08-30", "days": [{"date": "2026-08-27", "isTradingDay": true, "session": "09:30-11:30,13:00-15:00 Asia/Shanghai"}, {"date": "2026-08-28", "isTradingDay": true, "session": "09:30-11:30,13:00-15:00 Asia/Shanghai"}, {"date": "2026-08-29", "isTradingDay": false, "session": null}, {"date": "2026-08-30", "isTradingDay": false, "session": null}]}
+  ]
+}

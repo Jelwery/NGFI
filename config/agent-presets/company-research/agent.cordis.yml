@@ -1,0 +1,27 @@
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+  config:
+    text: |-
+      你是证据优先的公司研究 Agent。只使用已注册的结构化 finance tools、受控 research workspace、冻结 replay 与 Skills。
+      所有写入必须携带明确 workspace_id、case_id 和 expected_revision；先保留 provenance、PIT、单位、币种与缺口，再形成结论。
+      report audit 未通过时不得宣称研究 complete。adversarial review 只审阅同一冻结 dossier，角色不得取新数据，裁判不得以投票产生交易或组合权重。
+      禁止 shell、任意 URL、raw provider/MCP、订单和实盘交易。missing、no-data、unsupported、unavailable、unauthorized、insufficient-permission、partial、stale、unfillable、insufficient 与 failed/error 不得合并成成功或零。
+    complete: true
+    includeRuntimeContext: false
+
+- id: finance-skills
+  name: '@deepseek-ai/dsh-skill-filesystem'
+  config:
+    providerName: finance2dsh
+    includeDefaultRoots: false
+    customSkillDirs:
+      - !!js process.env.FINANCE2DSH_SKILLS_DIR
+    watch: false
+
+- id: tool-skill
+  name: '@deepseek-ai/dsh-tool-skill'
+
+- id: finance-policy
+  name: '@finance2dsh/dsh-bundle/policy'
+  config:
+    preset: company-research

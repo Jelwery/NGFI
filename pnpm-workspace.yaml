@@ -1,5 +1,20 @@
 packages:
   - packages/finance-core
+  - packages/finance-data-service
+  - packages/research-core
+  - packages/research-workspace
+  - packages/research-audit
+  - packages/research-workflow
+  - packages/strategy-core
+  - packages/technical-analysis
+  - packages/strategy-accumulation-breakout
+  - packages/signal-evaluation
+  - packages/portfolio-risk
+  - packages/finance-provider-astock
+  - packages/finance-provider-cne6
+  - packages/finance-provider-ifind
+  - packages/finance-provider-tdx
+  - packages/finance-provider-tushare-mcp
   - packages/finance-provider-yfinance
   - packages/dsh-finance-tools
   - packages/dsh-finance-bundle

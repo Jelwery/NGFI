@@ -38,11 +38,18 @@ __pycache__/
 *secrets*.json
 *.local.*
 
-# Local engineering/reference documents are intentionally not distributed
-/docs/
-**/docs/
+# Versioned governance, interface, workflow, domain and rule documentation is
+# part of the product contract. Only explicitly private/local notes stay out.
+/docs/private-*
 **/参考资料/
-/evals/README.md
-/packages/combinatorial-optimization/README.md
-AGENTS.md
-CLAUDE.md
+/AGENTS.local.md
+/CLAUDE.local.md
+
+# Skill helper outputs and local report workspaces
+/_data.json
+/_ratios.json
+/_risk.json
+/_valuation.json
+/_provenance.json
+/scenario.json
+/tests/session-logs/

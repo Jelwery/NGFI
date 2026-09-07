@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "repository": "https://github.com/simonlin1212/a-stock-data.git",
+  "refType": "annotated-tag",
+  "version": "v3.8.0",
+  "tagObject": "9f995e66ee792255e492a15627f98615627041c6",
+  "peeledCommit": "2012ce7cd0e75d379c5e6cbd3115514f300f3bc8",
+  "tree": "8a7a81801271bda328d6015ad6304e5c0960a01f",
+  "fetchedAt": "2026-09-05T01:42:49Z",
+  "license": "Apache-2.0",
+  "extractionSpecVersion": 1,
+  "files": [
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "7351f9b3bda299aca84977c9599c6a8d24200ea78255b9f6c03d48d2b1298cae",
+      "gitBlob": "ff64b7dac5a2c736fda7f35c1cf83740dd3958cd",
+      "size": 59840,
+      "lines": 752
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "199bab40163ad21135c2c4d5db43bffdadb14ed80762b048f04931cc48700bbf",
+      "gitBlob": "088c0826ad3a02908696b1ff6c9e4fbd9b2823af",
+      "size": 10760,
+      "lines": 190
+    },
+    {
+      "path": "SKILL.md",
+      "sha256": "a914594fef090d4d23535b3572573986a6e663f0b4c837cd95b357ca569c5975",
+      "gitBlob": "7b5894fc284ac8e54c2755e50ff94bfd17cdbbf4",
+      "size": 232206,
+      "lines": 4552
+    },
+    {
+      "path": "docs/source-integration-v3.8.0.md",
+      "sha256": "c05f982d3bfe5c75b0692bb715f7a4b7c9c5bc476a027996c0d2ba2c14da23d9",
+      "gitBlob": "ae06091bef47275894a8c89bb330eda8a38b4274",
+      "size": 7023,
+      "lines": 88
+    },
+    {
+      "path": "tests/test_official_data.py",
+      "sha256": "f4c62fb65753dc68ce94fe613e96d44444ca358b33142535243067e5f8acf107",
+      "gitBlob": "d5d76ba49ea1bc6c6ff57f836bf684a081741034",
+      "size": 16061,
+      "lines": 314
+    }
+  ],
+  "generated": {
+    "path": "python/generated/astock_upstream.py",
+    "bodySha256": "d30ff1673a3f89f1238f99512c1512d27960b86e64920575950e5b7d863bd46c"
+  },
+  "inventory": {
+    "advertisedCapabilities": 60,
+    "advertisedSources": 22,
+    "pythonFenceCount": 62,
+    "discoveredDefOccurrences": 112,
+    "discoveredUniqueDefinitions": 111,
+    "topLevelDefOccurrences": 107
+  }
+}

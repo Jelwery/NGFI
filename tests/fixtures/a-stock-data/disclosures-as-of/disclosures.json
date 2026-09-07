@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "ngfi-a-stock-fixture-1",
+  "capturedAt": "2026-08-30T08:00:00Z",
+  "upstreamSource": "recorded-contract-fixture",
+  "sourceKind": "user",
+  "records": [
+    {
+      "instrument": {"market": "CN", "exchange": "SSE", "symbol": "600519", "assetType": "equity"},
+      "items": [
+        {
+          "id": "future-day",
+          "title": "Future-day disclosure",
+          "category": "announcement",
+          "publishedAt": "2026-08-29T09:00:00+08:00",
+          "documentRef": "sse://disclosure/future-day"
+        },
+        {
+          "id": "same-day-after-cutoff",
+          "title": "Same-day disclosure after cutoff",
+          "category": "announcement",
+          "publishedAt": "2026-08-28T10:00:01+08:00",
+          "documentRef": "sse://disclosure/same-day-after-cutoff"
+        },
+        {
+          "id": "at-cutoff",
+          "title": "Disclosure at cutoff",
+          "category": "announcement",
+          "publishedAt": "2026-08-28T10:00:00+08:00",
+          "documentRef": "sse://disclosure/at-cutoff"
+        },
+        {
+          "id": "same-day-before-cutoff",
+          "title": "Same-day disclosure before cutoff",
+          "category": "announcement",
+          "publishedAt": "2026-08-28T09:59:59+08:00",
+          "documentRef": "sse://disclosure/same-day-before-cutoff"
+        },
+        {
+          "id": "prior-day",
+          "title": "Prior-day disclosure",
+          "category": "announcement",
+          "publishedAt": "2026-08-27T16:00:00+08:00",
+          "documentRef": "sse://disclosure/prior-day"
+        }
+      ]
+    }
+  ]
+}

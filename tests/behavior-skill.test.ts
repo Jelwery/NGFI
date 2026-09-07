@@ -10,6 +10,9 @@ const topics = [
   'market-aggregation',
   'diagnosis-and-evidence',
   'interventions-and-boundaries',
+  'v2-cpt-toolkit',
+  'v2-belief-toolkit',
+  'v2-market-toolkit',
 ]
 
 describe('investment behavior diagnosis skill', () => {
@@ -25,7 +28,7 @@ describe('investment behavior diagnosis skill', () => {
     expect(content).not.toMatch(/yfinance|CNE6/iu)
   })
 
-  it('ships exactly five referenced progressive-disclosure topics', async () => {
+  it('ships the production and V2 compatibility progressive-disclosure topics', async () => {
     const content = await readFile(join(skillRoot, 'SKILL.md'), 'utf8')
     for (const topic of topics) {
       expect(content).toContain(topic)
@@ -50,5 +53,19 @@ describe('investment behavior diagnosis skill', () => {
     }
     expect(corpus).toContain('不能计算该定义下的 PGR/PLR')
     expect(corpus).toContain('不能据此声称某位用户“损失痛苦正好是 2.25 倍”')
+  })
+
+  it('keeps the existing behavior eval contract valid', async () => {
+    const payload = JSON.parse(await readFile(join(skillRoot, 'evals/evals.json'), 'utf8')) as {
+      skill_name: string
+      evals: Array<{ id: number; prompt: string; expectations: string[] }>
+    }
+    expect(payload.skill_name).toBe('investment-behavior-diagnosis')
+    expect(payload.evals).toHaveLength(12)
+    expect(new Set(payload.evals.map(item => item.id)).size).toBe(12)
+    for (const item of payload.evals) {
+      expect(item.prompt.trim()).not.toBe('')
+      expect(item.expectations.length).toBeGreaterThanOrEqual(3)
+    }
   })
 })

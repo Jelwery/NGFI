@@ -5,7 +5,6 @@ on:
   push:
     branches:
       - main
-      - 'codex/**'
 
 permissions:
   contents: read
@@ -44,6 +43,7 @@ jobs:
           corepack enable pnpm
           pnpm install --frozen-lockfile
           uv sync --frozen
+          uv sync --project packages/quant-research --frozen
           uv sync --project packages/combinatorial-optimization --extra dev --frozen
 
       - name: Run complete offline gate

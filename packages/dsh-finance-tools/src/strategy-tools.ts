@@ -58,7 +58,7 @@ async function quantBridge(
       cwd: project, stdio: ['pipe', 'pipe', 'pipe'],
       env: {
         PATH: process.env.PATH,
-        UV_CACHE_DIR: resolve(project, '.uv-cache'),
+        UV_CACHE_DIR: process.env.UV_CACHE_DIR ?? resolve(project, '.uv-cache'),
         PYTHONDONTWRITEBYTECODE: '1',
       },
     })

@@ -22,7 +22,10 @@ describe('quant-research BacktestRun bridge', () => {
     const project = path.join(process.cwd(), 'packages/quant-research')
     const output = execFileSync('uv', [
       'run', '--offline', '--frozen', '--project', project, 'python', '-c', python,
-    ], { encoding: 'utf8', env: { ...process.env, UV_CACHE_DIR: path.join(process.cwd(), '.uv-cache') } })
+    ], {
+      encoding: 'utf8',
+      env: { ...process.env, UV_CACHE_DIR: process.env.UV_CACHE_DIR ?? path.join(process.cwd(), '.uv-cache') },
+    })
     const run = JSON.parse(output) as BacktestRun
     expect(() => assertBacktestRun(run)).not.toThrow()
     expect(run.id).toBe(backtestRunId(run))

@@ -14,6 +14,12 @@ import type {
   InstrumentId,
 } from '@finance2dsh/core'
 import type { FinanceDataService, RouteOptions } from '@finance2dsh/data-service'
+import {
+  ASHARE_FEATURES,
+  getAshareFeature,
+  type AshareFeatureDefinition,
+  type AshareFeatureVariant,
+} from '@finance2dsh/provider-astock'
 import { defineTool, type ToolDefinition } from '@deepseek-ai/dsh-tools'
 import type { AshareDataComposition, AshareProviderId } from './ashare-composition.js'
 
@@ -39,6 +45,21 @@ const SOURCES = [
 ] as const
 const EXCHANGES = ['SSE', 'SZSE', 'BSE'] as const
 const ASSET_TYPES = ['equity', 'index', 'etf', 'fund', 'bond'] as const
+const featureIdsFor = (toolName: string): string[] => ASHARE_FEATURES
+  .filter(item => item.tools.includes(toolName)).map(item => item.featureId)
+const datasetsFor = (toolName: string): string[] => [...new Set(ASHARE_FEATURES.flatMap(item => (
+  item.variants.filter(variant => variant.toolName === toolName).map(variant => variant.dataset)
+)))]
+const variantsFor = (toolName: string): string[] => [...new Set(ASHARE_FEATURES.flatMap(item => (
+  item.variants.filter(variant => variant.toolName === toolName).map(variant => variant.id)
+)))]
+const INSTRUMENT_FEATURES = featureIdsFor('finance_cn_instrument')
+const QUOTE_FEATURES = featureIdsFor('finance_cn_quote')
+const BARS_FEATURES = featureIdsFor('finance_cn_bars')
+const FUNDAMENTAL_FEATURES = featureIdsFor('finance_cn_fundamentals')
+const DISCLOSURE_FEATURES = featureIdsFor('finance_cn_disclosures')
+const ACTIVITY_FEATURES = featureIdsFor('finance_cn_market_activity')
+const MACRO_INDEX_FEATURES = featureIdsFor('finance_cn_macro_index')
 
 type ToolSource = typeof SOURCES[number]
 type JsonRecord = Record<string, unknown>
@@ -71,6 +92,7 @@ export interface AshareToolBackend {
   readonly service: Pick<FinanceDataService, 'execute'>
   readonly approvedProviderIds: readonly AshareProviderId[]
   catalog(): ReturnType<AshareDataComposition['catalog']>
+  readonly iwencaiConfigured?: boolean
 }
 
 const JSON_OUTPUT = {
@@ -116,6 +138,70 @@ function jsonSafe(value: unknown): never {
 
 function routeOptions(source: ToolSource): RouteOptions {
   return source === 'auto' ? { provider: 'auto' } : { provider: source, fallback: false }
+}
+
+function selectedFeature(
+  toolName: string,
+  featureId: string | undefined,
+  dataset: string | undefined,
+  variantId?: string,
+): { definition: AshareFeatureDefinition; variant: AshareFeatureVariant } | undefined {
+  if (featureId === undefined && dataset === undefined) return undefined
+  let candidates = ASHARE_FEATURES.flatMap(definition => definition.variants
+    .filter(variant => variant.toolName === toolName
+      && (featureId === undefined || definition.featureId === featureId)
+      && (dataset === undefined || variant.dataset === dataset)
+      && (variantId === undefined || variant.id === variantId))
+    .map(variant => ({ definition, variant })))
+  if (candidates.length > 1 && featureId !== undefined && dataset === undefined && variantId === undefined) {
+    const definition = getAshareFeature(featureId)
+    const preferred = candidates.find(item => item.variant.id === definition.variants[0]?.id)
+    if (preferred !== undefined) candidates = [preferred]
+  }
+  if (candidates.length !== 1) throw new TypeError('feature and dataset must select exactly one curated A-share variant')
+  return candidates[0]
+}
+
+function optionalCanonical(value: unknown): string | undefined {
+  if (value === undefined) return undefined
+  if (typeof value !== 'string') throw new TypeError('instrument must be a canonical or six-digit string')
+  const normalized = normalizeAshareInstrument(value)
+  return 'CN:' + normalized.exchange + ':' + normalized.symbol + ':' + normalized.assetType
+}
+
+async function executeFeature(
+  backend: AshareToolBackend,
+  selected: { definition: AshareFeatureDefinition; variant: AshareFeatureVariant },
+  args: Record<string, unknown>,
+  signal: AbortSignal,
+): Promise<never> {
+  if (args.source !== undefined && args.source !== 'auto' && args.source !== 'a-stock-public') {
+    throw new FinanceDataError('curated A-share features are implemented by a-stock-public', 'invalid-request', { retryable: false })
+  }
+  const definition = getAshareFeature(selected.definition.featureId)
+  const instrument = optionalCanonical(args.instrument ?? args.query)
+  if ((definition.scope === 'instrument' || definition.scope === 'index') && instrument === undefined) {
+    throw new TypeError('selected feature requires instrument')
+  }
+  const params: Record<string, unknown> = {
+    featureId: definition.featureId,
+    variant: selected.variant.id,
+    limit: boundedInteger((args.limit as number | undefined) ?? definition.defaultLimit, 'limit', 1, definition.maxLimit),
+  }
+  const mappings: Array<[string, string]> = [
+    ['start_date', 'startDate'], ['end_date', 'endDate'], ['trade_date', 'tradeDate'],
+    ['as_of', 'asOf'], ['official_provider', 'officialProvider'], ['industry_code', 'industryCode'],
+    ['board_type', 'boardType'], ['period', 'period'], ['year', 'year'], ['page', 'page'],
+    ['lookback_days', 'lookbackDays'], ['forward_days', 'forwardDays'], ['category', 'category'],
+    ['statement', 'statement'], ['search_text', 'searchText'], ['channel', 'channel'],
+    ['underlying', 'underlying'], ['option_code', 'optionCode'], ['option_type', 'optionType'],
+    ['interval', 'interval'], ['adjustment', 'adjustment'],
+  ]
+  for (const [external, internal] of mappings) if (args[external] !== undefined) params[internal] = args[external]
+  return executeAshare(
+    backend, selected.variant.dataCapability, instrument, args.as_of as string | undefined, params,
+    'a-stock-public', signal,
+  )
 }
 
 function buildRequest(
@@ -384,18 +470,28 @@ export function createAshareFinanceTools(backend: AshareToolBackend): ToolDefini
           'market-signal', 'industry-classification', 'index', 'macro', 'trading-calendar', 'risk-data',
         ] },
         source: SOURCE_PARAMETER,
+        feature: { type: 'string', enum: ASHARE_FEATURES.map(item => item.featureId) },
       },
       output: JSON_OUTPUT,
       timeoutMs: 30_000,
       isConcurrencySafe: () => true,
       async execute(args) {
         const catalog = await backend.catalog()
+        const features = ASHARE_FEATURES.filter(item => (
+          args.feature === undefined || item.featureId === args.feature
+        )).map(item => ({
+          ...item,
+          health: item.auth === 'api-key' && backend.iwencaiConfigured !== true
+            ? 'blocked-auth'
+            : catalog.find(entry => entry.providerId === 'a-stock-public')?.health.status ?? 'unavailable',
+        }))
         return jsonSafe({
           market: 'CN',
           providers: catalog.filter(entry => (
             (args.source === undefined || args.source === 'auto' || entry.providerId === args.source)
             && (args.capability === undefined || entry.capabilities.includes(args.capability as DataCapability))
           )),
+          features,
         })
       },
     })),
@@ -408,6 +504,11 @@ export function createAshareFinanceTools(backend: AshareToolBackend): ToolDefini
         exchange: { type: 'string', enum: EXCHANGES },
         asset_type: { type: 'string', enum: ASSET_TYPES },
         source: SOURCE_PARAMETER,
+        dataset: { type: 'string', enum: datasetsFor('finance_cn_instrument') },
+        feature: { type: 'string', enum: INSTRUMENT_FEATURES },
+        variant: { type: 'string', enum: variantsFor('finance_cn_instrument') },
+        as_of: AS_OF_PARAMETER,
+        limit: { type: 'integer' },
       },
       output: JSON_OUTPUT,
       timeoutMs: 60_000,
@@ -417,6 +518,10 @@ export function createAshareFinanceTools(backend: AshareToolBackend): ToolDefini
           ...(args.exchange === undefined ? {} : { exchange: args.exchange as Extract<Exchange, 'SSE' | 'SZSE' | 'BSE'> }),
           ...(args.asset_type === undefined ? {} : { assetType: args.asset_type as Extract<AssetType, 'equity' | 'index' | 'etf' | 'fund' | 'bond'> }),
         })
+        const selected = selectedFeature('finance_cn_instrument', args.feature, args.dataset, args.variant)
+        if (selected !== undefined) {
+          return executeFeature(backend, selected, { ...args, instrument: args.query }, exec.signal)
+        }
         return executeAshare(backend, 'instrument-reference',
           'CN:' + normalized.exchange + ':' + normalized.symbol + ':' + normalized.assetType,
           undefined, {}, args.source ?? 'auto', exec.signal)
@@ -430,11 +535,21 @@ export function createAshareFinanceTools(backend: AshareToolBackend): ToolDefini
         instrument: { type: 'string', required: true, description: 'Canonical MARKET:EXCHANGE:SYMBOL:ASSET_TYPE id.' },
         as_of: AS_OF_PARAMETER,
         source: SOURCE_PARAMETER,
+        dataset: { type: 'string', enum: ['snapshot', ...datasetsFor('finance_cn_quote')] },
+        feature: { type: 'string', enum: QUOTE_FEATURES },
+        variant: { type: 'string', enum: variantsFor('finance_cn_quote') },
+        include_order_book: { type: 'boolean' },
+        trade_date: { type: 'string' },
+        limit: { type: 'integer' },
       },
       output: JSON_OUTPUT,
       timeoutMs: 60_000,
       isConcurrencySafe: () => true,
       async execute(args, exec) {
+        const selected = selectedFeature(
+          'finance_cn_quote', args.feature, args.dataset === 'snapshot' ? undefined : args.dataset, args.variant,
+        )
+        if (selected !== undefined) return executeFeature(backend, selected, args, exec.signal)
         if (args.as_of === undefined) {
           const response = await executeAshare(
             backend, 'quote', args.instrument, undefined, {}, args.source ?? 'auto', exec.signal,
@@ -460,23 +575,35 @@ export function createAshareFinanceTools(backend: AshareToolBackend): ToolDefini
         instrument: { type: 'string', required: true },
         start_date: { type: 'string', required: true },
         end_date: { type: 'string', required: true },
-        interval: { type: 'string', enum: ['1d'] },
+        interval: { type: 'string', enum: ['1m', '5m', '15m', '30m', '60m', '1d', '1wk', '1mo'] },
         adjustment: { type: 'string', enum: ['none', 'qfq', 'hfq'], required: true },
         limit: { type: 'integer' },
         page: { type: 'integer' },
         as_of: AS_OF_PARAMETER,
         source: SOURCE_PARAMETER,
+        dataset: { type: 'string', enum: ['price-bars', ...datasetsFor('finance_cn_bars')] },
+        feature: { type: 'string', enum: BARS_FEATURES },
+        variant: { type: 'string', enum: variantsFor('finance_cn_bars') },
       },
       output: JSON_OUTPUT,
       timeoutMs: 90_000,
       isConcurrencySafe: () => true,
-      execute: (args, exec) => executeAshare(backend, 'market-bars', args.instrument, args.as_of, {
-        ...dateRange(args.start_date, args.end_date),
-        interval: args.interval ?? '1d',
-        adjustment: args.adjustment,
-        limit: boundedInteger(args.limit ?? 500, 'limit', 1, 5_000),
-        ...(page(args.page) === 1 ? {} : {}),
-      }, args.source ?? 'auto', exec.signal),
+      execute: (args, exec) => {
+        const selected = selectedFeature(
+          'finance_cn_bars', args.feature, args.dataset === 'price-bars' ? undefined : args.dataset, args.variant,
+        )
+        if (selected !== undefined) return executeFeature(backend, selected, args, exec.signal)
+        if (args.interval !== undefined && args.interval !== '1d') {
+          throw new TypeError('intraday intervals require a curated feature')
+        }
+        return executeAshare(backend, 'market-bars', args.instrument, args.as_of, {
+          ...dateRange(args.start_date, args.end_date),
+          interval: args.interval ?? '1d',
+          adjustment: args.adjustment,
+          limit: boundedInteger(args.limit ?? 500, 'limit', 1, 5_000),
+          ...(page(args.page) === 1 ? {} : {}),
+        }, args.source ?? 'auto', exec.signal)
+      },
     })),
     strictTool(defineTool({
       name: 'finance_cn_fundamentals',
@@ -484,7 +611,9 @@ export function createAshareFinanceTools(backend: AshareToolBackend): ToolDefini
       parameters: {
         market: { type: 'string', enum: ['CN'] },
         instrument: { type: 'string', required: true },
-        dataset: { type: 'string', enum: ['fundamentals', 'corporate-actions'] },
+        dataset: { type: 'string', enum: ['fundamentals', 'corporate-actions', ...datasetsFor('finance_cn_fundamentals')] },
+        feature: { type: 'string', enum: FUNDAMENTAL_FEATURES },
+        variant: { type: 'string', enum: variantsFor('finance_cn_fundamentals') },
         report_period: { type: 'string', description: 'Optional fiscal period in YYYY-MM-DD form.' },
         start_date: { type: 'string' },
         end_date: { type: 'string' },
@@ -492,12 +621,22 @@ export function createAshareFinanceTools(backend: AshareToolBackend): ToolDefini
         page: { type: 'integer' },
         as_of: AS_OF_PARAMETER,
         source: SOURCE_PARAMETER,
+        trade_date: { type: 'string' },
+        forward_days: { type: 'integer' },
+        category: { type: 'string' },
+        statement: { type: 'string', enum: ['lrb', 'fzb', 'llb'] },
       },
       output: JSON_OUTPUT,
       timeoutMs: 90_000,
       isConcurrencySafe: () => true,
       async execute(args, exec) {
         page(args.page)
+        const selected = selectedFeature(
+          'finance_cn_fundamentals', args.feature,
+          args.dataset === undefined || ['fundamentals', 'corporate-actions'].includes(args.dataset)
+            ? undefined : args.dataset, args.variant,
+        )
+        if (selected !== undefined) return executeFeature(backend, selected, args, exec.signal)
         if (args.dataset === 'corporate-actions') {
           throw new FinanceDataError(
             'corporate-actions is not mapped by an installed provider yet',
@@ -532,7 +671,7 @@ export function createAshareFinanceTools(backend: AshareToolBackend): ToolDefini
           && (range.endDate === undefined || item.fiscalPeriod <= range.endDate)
         ))
         const periods = matchingPeriods.slice(0, requestedLimit)
-        const selected = periods[0]
+        const selectedPeriod = periods[0]
         const filteringWarning = 'Fundamentals were filtered to the requested fiscal period or date range before applying the response limit.'
         return jsonSafe({
           ...response,
@@ -543,7 +682,7 @@ export function createAshareFinanceTools(backend: AshareToolBackend): ToolDefini
             returned: periods.length,
             truncated: response.data.truncated === true || matchingPeriods.length > periods.length,
           },
-          provenance: alignedFundamentalsProvenance(response.provenance, selected),
+          provenance: alignedFundamentalsProvenance(response.provenance, selectedPeriod),
           warnings: periods.length === 0
             ? [...response.warnings, 'No fiscal period matched the requested filter.']
             : hasPeriodFilter ? appendWarning(response.warnings, filteringWarning) : response.warnings,
@@ -555,20 +694,38 @@ export function createAshareFinanceTools(backend: AshareToolBackend): ToolDefini
       description: 'Fetch bounded A-share announcements. Research consensus is a stable controlled surface but may be unsupported when no healthy routable provider is mapped.',
       parameters: {
         market: { type: 'string', enum: ['CN'] },
-        instrument: { type: 'string', required: true },
-        document_type: { type: 'string', enum: ['announcement', 'research-consensus'] },
-        start_date: { type: 'string', required: true },
-        end_date: { type: 'string', required: true },
+        instrument: { type: 'string' },
+        document_type: { type: 'string', enum: ['announcement', 'research-consensus', ...datasetsFor('finance_cn_disclosures')] },
+        dataset: { type: 'string', enum: datasetsFor('finance_cn_disclosures') },
+        feature: { type: 'string', enum: DISCLOSURE_FEATURES },
+        variant: { type: 'string', enum: variantsFor('finance_cn_disclosures') },
+        start_date: { type: 'string' },
+        end_date: { type: 'string' },
         limit: { type: 'integer' },
         page: { type: 'integer' },
         as_of: AS_OF_PARAMETER,
         source: SOURCE_PARAMETER,
+        trade_date: { type: 'string' },
+        industry_code: { type: 'string' },
+        category: { type: 'string' },
+        search_text: { type: 'string' },
+        channel: { type: 'string', enum: ['report', 'announcement', 'news'] },
       },
       output: JSON_OUTPUT,
       timeoutMs: 90_000,
       isConcurrencySafe: () => true,
       async execute(args, exec) {
         page(args.page)
+        const selected = selectedFeature(
+          'finance_cn_disclosures', args.feature,
+          args.dataset ?? (args.document_type === undefined || ['announcement', 'research-consensus'].includes(args.document_type)
+            ? undefined : args.document_type), args.variant,
+        )
+        if (selected !== undefined) return executeFeature(backend, selected, args, exec.signal)
+        if (args.instrument === undefined) throw new TypeError('canonical disclosure surface requires instrument')
+        if (args.start_date === undefined || args.end_date === undefined) {
+          throw new TypeError('start_date and end_date are required for the canonical announcement surface')
+        }
         const capability = args.document_type === 'research-consensus' ? 'research-consensus' : 'disclosures'
         const source = args.source ?? 'auto'
         if (capability === 'research-consensus') {
@@ -585,7 +742,10 @@ export function createAshareFinanceTools(backend: AshareToolBackend): ToolDefini
       description: 'Stable controlled surface for A-share market activity. It may return canonical unsupported when catalog has no healthy routable provider; arbitrary endpoints are never accepted.',
       parameters: {
         market: { type: 'string', enum: ['CN'] },
-        capability: { type: 'string', enum: ['capital-flow', 'market-signal', 'order-book'], required: true },
+        capability: { type: 'string', enum: ['capital-flow', 'market-signal', 'order-book', 'quote', 'risk-data'] },
+        feature: { type: 'string', enum: ACTIVITY_FEATURES },
+        dataset: { type: 'string', enum: datasetsFor('finance_cn_market_activity') },
+        variant: { type: 'string', enum: variantsFor('finance_cn_market_activity') },
         instrument: { type: 'string' },
         start_date: { type: 'string' },
         end_date: { type: 'string' },
@@ -593,12 +753,24 @@ export function createAshareFinanceTools(backend: AshareToolBackend): ToolDefini
         page: { type: 'integer' },
         as_of: AS_OF_PARAMETER,
         source: SOURCE_PARAMETER,
+        trade_date: { type: 'string' },
+        industry_code: { type: 'string' },
+        board_type: { type: 'string', enum: ['industry', 'concept', 'region'] },
+        period: { type: 'string' },
+        lookback_days: { type: 'integer' },
+        forward_days: { type: 'integer' },
+        underlying: { type: 'string' },
+        option_code: { type: 'string' },
+        option_type: { type: 'string', enum: ['call', 'put'] },
       },
       output: JSON_OUTPUT,
       timeoutMs: 90_000,
       isConcurrencySafe: () => true,
       async execute(args, exec) {
         page(args.page)
+        const selected = selectedFeature('finance_cn_market_activity', args.feature, args.dataset, args.variant)
+        if (selected !== undefined) return executeFeature(backend, selected, args, exec.signal)
+        if (args.capability === undefined) throw new TypeError('capability or curated feature is required')
         const source = args.source ?? 'auto'
         await ensureRoutableCapability(backend, args.capability, source)
         return executeAshare(backend, args.capability, args.instrument, args.as_of, {
@@ -612,7 +784,10 @@ export function createAshareFinanceTools(backend: AshareToolBackend): ToolDefini
       description: 'Fetch a controlled China index, trading-calendar, or macro dataset. Macro may be unsupported when catalog has no healthy routable provider.',
       parameters: {
         market: { type: 'string', enum: ['CN'] },
-        capability: { type: 'string', enum: ['index', 'trading-calendar', 'macro'], required: true },
+        capability: { type: 'string', enum: ['index', 'trading-calendar', 'macro'] },
+        feature: { type: 'string', enum: MACRO_INDEX_FEATURES },
+        dataset: { type: 'string', enum: datasetsFor('finance_cn_macro_index') },
+        variant: { type: 'string', enum: variantsFor('finance_cn_macro_index') },
         instrument: { type: 'string' },
         exchange: { type: 'string', enum: EXCHANGES },
         start_date: { type: 'string' },
@@ -621,12 +796,17 @@ export function createAshareFinanceTools(backend: AshareToolBackend): ToolDefini
         page: { type: 'integer' },
         as_of: AS_OF_PARAMETER,
         source: SOURCE_PARAMETER,
+        official_provider: { type: 'string', enum: ['csi', 'cni'] },
+        year: { type: 'integer' },
       },
       output: JSON_OUTPUT,
       timeoutMs: 90_000,
       isConcurrencySafe: () => true,
       async execute(args, exec) {
         page(args.page)
+        const selected = selectedFeature('finance_cn_macro_index', args.feature, args.dataset, args.variant)
+        if (selected !== undefined) return executeFeature(backend, selected, args, exec.signal)
+        if (args.capability === undefined) throw new TypeError('capability or curated feature is required')
         if (args.capability === 'index' && args.instrument === undefined) {
           throw new TypeError('index capability requires instrument')
         }

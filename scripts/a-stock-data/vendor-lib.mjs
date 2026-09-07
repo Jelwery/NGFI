@@ -14,6 +14,7 @@ export const GENERATED_HEADER_LINES = 9
 export const CAPABILITY_STATUSES = Object.freeze([
   'implemented-canonical',
   'implemented-experimental',
+  'implemented-optional-auth',
   'blocked-auth',
   'deferred-policy',
   'unsupported',
@@ -67,6 +68,7 @@ export function resolveRepoPaths(root = resolve(THIS_DIR, '../..')) {
     sourceManifest: join(upstreamRoot, 'source-manifest.json'),
     capabilityManifest: join(upstreamRoot, 'capability-manifest.json'),
     generatedRoot,
+    featureRegistry: join(providerRoot, 'feature-registry.json'),
     generatedModule: join(generatedRoot, 'astock_upstream.py'),
     generatedInit: join(generatedRoot, '__init__.py'),
     blocksRoot: join(generatedRoot, 'blocks'),
@@ -633,7 +635,7 @@ function runtimeLedgerByCapability(spec, ledger, sourceIds) {
       }
       const hasRoute = typeof mapping.providerId === 'string' && mapping.providerId.length > 0
         && typeof mapping.operation === 'string' && mapping.operation.length > 0
-      if (['implemented-canonical', 'implemented-experimental'].includes(mapping.status) && !hasRoute) {
+      if (['implemented-canonical', 'implemented-experimental', 'implemented-optional-auth'].includes(mapping.status) && !hasRoute) {
         throw new VendorError(`implemented runtime mapping requires providerId and operation for ${capability.id}:${mapping.upstreamCallable}`, { code: 'runtime-ledger', blocked: true })
       }
       if (!Array.isArray(mapping.runtimeSourceIds)
@@ -642,9 +644,11 @@ function runtimeLedgerByCapability(spec, ledger, sourceIds) {
       }
     }
     const mappedStatuses = entry.runtimeMappings.map(mapping => mapping.status)
-    const aggregateStatus = mappedStatuses.every(status => status === 'implemented-canonical')
+    const aggregateStatus = mappedStatuses.every(status => status === 'implemented-optional-auth')
+      ? 'implemented-optional-auth'
+      : mappedStatuses.every(status => status === 'implemented-canonical')
       ? 'implemented-canonical'
-      : mappedStatuses.some(status => ['implemented-canonical', 'implemented-experimental'].includes(status))
+      : mappedStatuses.some(status => ['implemented-canonical', 'implemented-experimental', 'implemented-optional-auth'].includes(status))
         ? 'implemented-experimental'
         : mappedStatuses.every(status => status === 'blocked-auth')
           ? 'blocked-auth'
@@ -677,7 +681,7 @@ export function buildCapabilityManifest({ skillText, lock, extraction, sourceMan
     const runtime = runtimeLedger.get(capability.id)
     capability.status = runtime.status
     capability.generated = names.some(name => generated.has(name))
-    capability.auth = runtime.auth ?? (capability.status === 'blocked-auth' ? 'api-key' : 'none')
+    capability.auth = runtime.auth ?? (capability.status === 'implemented-optional-auth' ? 'api-key' : 'none')
     capability.canonicalMapping = capability.status === 'implemented-canonical'
       ? [...new Set(runtime.runtimeMappings.map(mapping => `${mapping.providerId}.${mapping.operation}`))].join(' / ')
       : null
@@ -1011,6 +1015,8 @@ export async function checkVendor(options = {}) {
     ], 'upstream'))
     errors.push(...await validateAttribution(paths, lock))
     artifacts = await buildArtifacts({ ...options, paths, lock })
+    const featureRegistry = await readJson(paths.featureRegistry)
+    errors.push(...validateFeatureRegistry(featureRegistry, artifacts.capabilityManifest, artifacts.sourceManifest, lock))
     errors.push(...await validateClosedTree(paths.generatedRoot, artifacts.files.keys(), 'generated'))
     const expected = expectedGeneratedHash(lock)
     if (expected && expected !== sha256(artifacts.extraction.code)) errors.push('generated module hash differs from lock')
@@ -1053,6 +1059,43 @@ export async function checkVendor(options = {}) {
     blockers: blockers.sort(),
     summary: artifacts ? artifacts.capabilityManifest.summary : null,
   }
+}
+
+function validateFeatureRegistry(registry, capabilityManifest, sourceManifest, lock) {
+  const errors = []
+  if (registry?.schemaVersion !== 1 || !Array.isArray(registry.features) || registry.features.length !== 60) {
+    return ['feature registry must contain exactly 60 version-1 features']
+  }
+  for (const key of ['repository', 'version', 'tagObject', 'peeledCommit']) {
+    const lockKey = key === 'peeledCommit' ? (lock.peeledCommit ?? lock.commit) : lock[key]
+    if (registry.upstream?.[key] !== lockKey) errors.push(`feature registry upstream ${key} differs from lock`)
+  }
+  const capabilities = new Map(capabilityManifest.capabilities.map(item => [item.id, item]))
+  const sources = new Map((sourceManifest?.sources ?? []).map(item => [item.id, item]))
+  const seenFeatures = new Set()
+  const seenCapabilities = new Set()
+  for (const feature of registry.features) {
+    const label = feature?.featureId ?? '<unknown>'
+    if (typeof feature?.featureId !== 'string' || seenFeatures.has(feature.featureId)) errors.push(`duplicate or invalid featureId ${label}`)
+    else seenFeatures.add(feature.featureId)
+    if (typeof feature?.upstreamCapabilityId !== 'string' || seenCapabilities.has(feature.upstreamCapabilityId)) errors.push(`duplicate or invalid capability for ${label}`)
+    else seenCapabilities.add(feature.upstreamCapabilityId)
+    const capability = capabilities.get(feature?.upstreamCapabilityId)
+    if (!capability) { errors.push(`feature ${label} references unknown capability`); continue }
+    const mapped = [...new Set((feature.variants ?? []).map(item => item?.upstreamCallable))].sort()
+    if (JSON.stringify(mapped) !== JSON.stringify([...capability.upstreamCallables].sort())) errors.push(`feature ${label} callable coverage differs from manifest`)
+    if (feature.implementation !== capability.status) errors.push(`feature ${label} status differs from manifest`)
+    if (feature.auth !== capability.auth && !(feature.auth === 'client' && capability.auth === 'none') && !(feature.auth === 'session' && capability.auth === 'none')) errors.push(`feature ${label} auth differs from manifest`)
+    for (const sourceId of feature.sources ?? []) if (!sources.has(sourceId)) errors.push(`feature ${label} references unknown source ${sourceId}`)
+    for (const variant of feature.variants ?? []) {
+      if (!variant?.toolName || !variant?.dataCapability || !variant?.dataset || !variant?.runtime?.symbol) errors.push(`feature ${label} has incomplete runtime variant`)
+    }
+    if (!feature.fixture || !feature.liveProbe || !feature.contractTier) errors.push(`feature ${label} is missing fixture/live/contract metadata`)
+  }
+  if (seenCapabilities.size !== capabilities.size) errors.push('feature registry does not cover every capability')
+  const optional = registry.features.filter(item => item.auth === 'api-key')
+  if (optional.length !== 1 || optional[0]?.upstreamCapabilityId !== 'capability-008') errors.push('iWenCai capability-008 must be the only api-key feature')
+  return errors
 }
 
 async function atomicWrite(path, content) {

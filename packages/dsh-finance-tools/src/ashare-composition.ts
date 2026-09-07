@@ -54,6 +54,7 @@ export interface AshareDataComposition {
   readonly approvedProviderIds: readonly AshareProviderId[]
   catalog(): Promise<AshareProviderCatalogEntry[]>
   close(): Promise<void>
+  readonly iwencaiConfigured: boolean
 }
 
 export interface AshareDataCompositionOptions {
@@ -248,6 +249,7 @@ export function createDefaultAshareDataComposition(
   return {
     service,
     approvedProviderIds: ASHARE_PROVIDER_IDS,
+    iwencaiConfigured: configured(env, 'IWENCAI_API_KEY'),
     async catalog() {
       const routed = (await service.registry.catalog()).map(entry => ({
         ...entry,

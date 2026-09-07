@@ -54,8 +54,10 @@ describe('AStockProvider recorded contract', () => {
   it('ships the isolated runner and advertises the curated core capabilities', async () => {
     await expect(access(pythonRunner)).resolves.toBeUndefined()
     expect(ASTOCK_CAPABILITIES).toEqual([
-      'instrument-reference', 'quote', 'market-bars', 'fundamentals',
-      'disclosures', 'index', 'trading-calendar',
+      'instrument-reference', 'quote', 'market-bars', 'order-book', 'fundamentals',
+      'corporate-actions', 'disclosures', 'research-consensus', 'capital-flow',
+      'market-signal', 'industry-classification', 'index', 'macro',
+      'trading-calendar', 'risk-data',
     ])
     await expect(fixtureProvider().health()).resolves.toMatchObject({
       providerId: 'a-stock-public',

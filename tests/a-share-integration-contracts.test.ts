@@ -29,10 +29,14 @@ function tool(name: string, execute: (request: CapabilityRequest) => Promise<Can
 }
 
 describe('curated A-share tool contracts', () => {
-  it('advertises only intervals implemented by the default public bars route', () => {
+  it('advertises closed intervals and requires a curated feature for intraday bars', async () => {
     const selected = tool('finance_cn_bars', async () => { throw new Error('not used') })
     const properties = selected.parameters.properties as Record<string, unknown>
-    expect(properties.interval).toMatchObject({ enum: ['1d'] })
+    expect(properties.interval).toMatchObject({ enum: ['1m', '5m', '15m', '30m', '60m', '1d', '1wk', '1mo'] })
+    await expect(selected.execute({
+      instrument: canonical, start_date: '2026-09-01', end_date: '2026-09-04',
+      interval: '1m', adjustment: 'none',
+    }, exec)).rejects.toThrow(/intraday intervals require a curated feature/)
   })
 
   it('maps an as-of quote to a stable quote snapshot with historical provenance', async () => {

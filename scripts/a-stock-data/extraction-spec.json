@@ -6,11 +6,28 @@
   "expectedUniqueDefinitions": 111,
   "expectedUniqueTopLevelDefinitions": 106,
   "expectedImportConflictBindings": [
-    "date", "datetime", "json", "timedelta", "urllib"
+    "date",
+    "datetime",
+    "json",
+    "timedelta",
+    "urllib"
   ],
   "expectedAssignmentCollisionNames": [
-    "UA", "_UA", "anns", "articles", "blocks", "c", "client",
-    "data", "df", "flow", "hist", "hot", "news", "quotes", "reports"
+    "UA",
+    "_UA",
+    "anns",
+    "articles",
+    "blocks",
+    "c",
+    "client",
+    "data",
+    "df",
+    "flow",
+    "hist",
+    "hot",
+    "news",
+    "quotes",
+    "reports"
   ],
   "expectedCrossBlockReferenceCount": 325,
   "selectors": [
@@ -117,49 +134,74 @@
         "tdx_client.quotes",
         "tdx_client.transaction"
       ],
-      "status": "implemented-experimental",
+      "status": "implemented-canonical",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "tdx_client.bars",
           "status": "implemented-canonical",
-          "providerId": "tdx-community",
+          "providerId": "a-stock-public",
           "operation": "market-bars",
+          "featureId": "market.tdx",
+          "variantId": "bars",
+          "toolName": "finance_cn_bars",
+          "dataCapability": "market-bars",
+          "dataset": "tdx-bars",
+          "contractTier": "canonical",
+          "fixture": "features.json#capability-001",
+          "liveProbe": "capability-001",
+          "defaultSource": "mootdx",
+          "fallbackSources": [],
           "coverage": "full",
-          "implementation": "native-adapter",
+          "implementation": "locked-snapshot-adapter",
           "runtimeSourceIds": [
             "mootdx"
           ]
         },
         {
           "upstreamCallable": "tdx_client.quotes",
-          "status": "implemented-experimental",
-          "providerId": "tdx-community",
-          "operation": "quote",
-          "coverage": "partial",
-          "implementation": "native-adapter",
+          "status": "implemented-canonical",
+          "providerId": "a-stock-public",
+          "operation": "order-book",
+          "featureId": "market.tdx",
+          "variantId": "order-book",
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "order-book",
+          "dataset": "order-book",
+          "contractTier": "canonical",
+          "fixture": "features.json#capability-001",
+          "liveProbe": "capability-001",
+          "defaultSource": "mootdx",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
           "runtimeSourceIds": [
             "mootdx"
-          ],
-          "canonicalCapabilities": [
-            "quote"
-          ],
-          "unmappedCanonicalCapabilities": [
-            "order-book"
-          ],
-          "reason": "The canonical quote mapping exposes best bid/ask only, not the upstream five-level order book."
+          ]
         },
         {
           "upstreamCallable": "tdx_client.transaction",
-          "status": "unsupported",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": [],
-          "reason": "No curated transaction operation is registered."
+          "status": "implemented-canonical",
+          "providerId": "a-stock-public",
+          "operation": "order-book",
+          "featureId": "market.tdx",
+          "variantId": "time-and-sales",
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "order-book",
+          "dataset": "time-and-sales",
+          "contractTier": "canonical",
+          "fixture": "features.json#capability-001",
+          "liveProbe": "capability-001",
+          "defaultSource": "mootdx",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "mootdx"
+          ]
         }
       ],
-      "reason": "TDX bars are routed, quotes expose only the canonical quote subset while order-book is not exposed, and transaction has no curated runtime operation."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-002",
@@ -167,27 +209,32 @@
       "upstreamCallables": [
         "tencent_quote"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-canonical",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "tencent_quote",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": [],
-          "replacementRuntime": {
-            "providerId": "a-stock-public",
-            "operation": "quote",
-            "runtimeSourceIds": [
-              "eastmoney-push2"
-            ]
-          },
-          "reason": "The curated quote operation uses East Money and does not invoke Tencent quote."
+          "status": "implemented-canonical",
+          "providerId": "a-stock-public",
+          "operation": "quote",
+          "featureId": "quote.tencent",
+          "variantId": "default",
+          "toolName": "finance_cn_quote",
+          "dataCapability": "quote",
+          "dataset": "tencent-quote",
+          "contractTier": "canonical",
+          "fixture": "features.json#capability-002",
+          "liveProbe": "capability-002",
+          "defaultSource": "tencent-finance",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "tencent-finance"
+          ]
         }
       ],
-      "reason": "The canonical quote runtime uses East Money, not the inventoried Tencent endpoint."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-003",
@@ -195,19 +242,32 @@
       "upstreamCallables": [
         "baidu_kline_with_ma"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "baidu_kline_with_ma",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "market-bars",
+          "featureId": "bars.baidu-ma",
+          "variantId": "default",
+          "toolName": "finance_cn_bars",
+          "dataCapability": "market-bars",
+          "dataset": "baidu-bars-ma",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-003",
+          "liveProbe": "capability-003",
+          "defaultSource": "baidu-gushitong",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "baidu-gushitong"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-004",
@@ -216,28 +276,53 @@
         "sina_adjust_factor",
         "apply_adjust"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-canonical",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "sina_adjust_factor",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-canonical",
+          "providerId": "a-stock-public",
+          "operation": "market-bars",
+          "featureId": "bars.adjustment",
+          "variantId": "factor",
+          "toolName": "finance_cn_bars",
+          "dataCapability": "market-bars",
+          "dataset": "adjustment-data",
+          "contractTier": "canonical",
+          "fixture": "features.json#capability-004",
+          "liveProbe": "capability-004",
+          "defaultSource": "sina-finance",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "sina-finance"
+          ]
         },
         {
           "upstreamCallable": "apply_adjust",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-canonical",
+          "providerId": "a-stock-public",
+          "operation": "market-bars",
+          "featureId": "bars.adjustment",
+          "variantId": "adjusted-bars",
+          "toolName": "finance_cn_bars",
+          "dataCapability": "market-bars",
+          "dataset": "adjustment-data",
+          "contractTier": "canonical",
+          "fixture": "features.json#capability-004",
+          "liveProbe": "capability-004",
+          "defaultSource": "sina-finance",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "sina-finance"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-005",
@@ -245,19 +330,32 @@
       "upstreamCallables": [
         "eastmoney_reports"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "eastmoney_reports",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "disclosures",
+          "featureId": "disclosures.research-report",
+          "variantId": "stock",
+          "toolName": "finance_cn_disclosures",
+          "dataCapability": "disclosures",
+          "dataset": "research-report",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-005",
+          "liveProbe": "capability-005",
+          "defaultSource": "eastmoney-reportapi",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "eastmoney-reportapi"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-006",
@@ -265,19 +363,32 @@
       "upstreamCallables": [
         "download_pdf"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "download_pdf",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "disclosures",
+          "featureId": "disclosures.research-document",
+          "variantId": "default",
+          "toolName": "finance_cn_disclosures",
+          "dataCapability": "disclosures",
+          "dataset": "research-document",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-006",
+          "liveProbe": "capability-006",
+          "defaultSource": "eastmoney-reportapi",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "eastmoney-reportapi"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-007",
@@ -285,19 +396,32 @@
       "upstreamCallables": [
         "ths_eps_forecast"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "ths_eps_forecast",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "research-consensus",
+          "featureId": "disclosures.eps-consensus",
+          "variantId": "default",
+          "toolName": "finance_cn_disclosures",
+          "dataCapability": "research-consensus",
+          "dataset": "eps-consensus",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-007",
+          "liveProbe": "capability-007",
+          "defaultSource": "ths-basic",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "ths-basic"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-008",
@@ -306,29 +430,53 @@
         "iwencai_search",
         "iwencai_query"
       ],
-      "status": "blocked-auth",
+      "status": "implemented-optional-auth",
       "auth": "api-key",
       "runtimeMappings": [
         {
           "upstreamCallable": "iwencai_search",
-          "status": "blocked-auth",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-optional-auth",
+          "providerId": "a-stock-public",
+          "operation": "research-consensus",
+          "featureId": "disclosures.iwencai-semantic",
+          "variantId": "search",
+          "toolName": "finance_cn_disclosures",
+          "dataCapability": "research-consensus",
+          "dataset": "iwencai-semantic-search",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-008",
+          "liveProbe": "capability-008",
+          "defaultSource": "iwencai",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "iwencai"
+          ]
         },
         {
           "upstreamCallable": "iwencai_query",
-          "status": "blocked-auth",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-optional-auth",
+          "providerId": "a-stock-public",
+          "operation": "research-consensus",
+          "featureId": "disclosures.iwencai-semantic",
+          "variantId": "query",
+          "toolName": "finance_cn_disclosures",
+          "dataCapability": "research-consensus",
+          "dataset": "iwencai-semantic-search",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-008",
+          "liveProbe": "capability-008",
+          "defaultSource": "iwencai",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "iwencai"
+          ]
         }
       ],
-      "reason": "The upstream iWenCai entry requires authentication and has no configured curated runtime route."
+      "reason": "Implemented; IWENCAI_API_KEY is optional and blocks only this capability when absent."
     },
     {
       "id": "capability-009",
@@ -336,19 +484,32 @@
       "upstreamCallables": [
         "ths_hot_reason"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "ths_hot_reason",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "market-signal",
+          "featureId": "market-activity.hot-reason",
+          "variantId": "default",
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "market-signal",
+          "dataset": "hot-reason",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-009",
+          "liveProbe": "capability-009",
+          "defaultSource": "ths-hot",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "ths-hot"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-010",
@@ -356,19 +517,32 @@
       "upstreamCallables": [
         "hsgt_realtime"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "hsgt_realtime",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "capital-flow",
+          "featureId": "market-activity.northbound-minute-flow",
+          "variantId": "default",
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "capital-flow",
+          "dataset": "northbound-minute-flow",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-010",
+          "liveProbe": "capability-010",
+          "defaultSource": "ths-hsgt",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "ths-hsgt"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-011",
@@ -376,19 +550,32 @@
       "upstreamCallables": [
         "eastmoney_concept_blocks"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "eastmoney_concept_blocks",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "industry-classification",
+          "featureId": "instrument.concept-membership",
+          "variantId": "default",
+          "toolName": "finance_cn_instrument",
+          "dataCapability": "industry-classification",
+          "dataset": "concept-membership",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-011",
+          "liveProbe": "capability-011",
+          "defaultSource": "eastmoney-push2",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "eastmoney-push2"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-012",
@@ -396,19 +583,32 @@
       "upstreamCallables": [
         "eastmoney_fund_flow_minute"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "eastmoney_fund_flow_minute",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "capital-flow",
+          "featureId": "market-activity.stock-fund-flow-minute",
+          "variantId": "default",
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "capital-flow",
+          "dataset": "stock-fund-flow-minute",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-012",
+          "liveProbe": "capability-012",
+          "defaultSource": "eastmoney-push2",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "eastmoney-push2"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-013",
@@ -416,19 +616,32 @@
       "upstreamCallables": [
         "dragon_tiger_board"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "dragon_tiger_board",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "market-signal",
+          "featureId": "market-activity.dragon-tiger-stock",
+          "variantId": "default",
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "market-signal",
+          "dataset": "dragon-tiger-stock",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-013",
+          "liveProbe": "capability-013",
+          "defaultSource": "eastmoney-datacenter",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "eastmoney-datacenter"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-014",
@@ -436,19 +649,32 @@
       "upstreamCallables": [
         "lockup_expiry"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "lockup_expiry",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "corporate-actions",
+          "featureId": "fundamentals.lockup-expiry",
+          "variantId": "default",
+          "toolName": "finance_cn_fundamentals",
+          "dataCapability": "corporate-actions",
+          "dataset": "lockup-expiry",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-014",
+          "liveProbe": "capability-014",
+          "defaultSource": "eastmoney-datacenter",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "eastmoney-datacenter"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-015",
@@ -456,19 +682,32 @@
       "upstreamCallables": [
         "industry_comparison"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "industry_comparison",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "market-signal",
+          "featureId": "market-activity.industry-performance-ranking",
+          "variantId": "default",
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "market-signal",
+          "dataset": "industry-performance-ranking",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-015",
+          "liveProbe": "capability-015",
+          "defaultSource": "eastmoney-push2",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "eastmoney-push2"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-016",
@@ -476,19 +715,32 @@
       "upstreamCallables": [
         "board_fund_flow"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "board_fund_flow",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "capital-flow",
+          "featureId": "market-activity.board-fund-flow",
+          "variantId": "default",
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "capital-flow",
+          "dataset": "board-fund-flow",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-016",
+          "liveProbe": "capability-016",
+          "defaultSource": "eastmoney-push2",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "eastmoney-push2"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-017",
@@ -496,19 +748,32 @@
       "upstreamCallables": [
         "daily_dragon_tiger"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "daily_dragon_tiger",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "market-signal",
+          "featureId": "market-activity.dragon-tiger-market",
+          "variantId": "default",
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "market-signal",
+          "dataset": "dragon-tiger-market",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-017",
+          "liveProbe": "capability-017",
+          "defaultSource": "eastmoney-datacenter",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "eastmoney-datacenter"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-018",
@@ -516,19 +781,32 @@
       "upstreamCallables": [
         "margin_trading"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "margin_trading",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "capital-flow",
+          "featureId": "market-activity.margin-trading",
+          "variantId": "default",
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "capital-flow",
+          "dataset": "margin-trading",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-018",
+          "liveProbe": "capability-018",
+          "defaultSource": "eastmoney-datacenter",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "eastmoney-datacenter"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-019",
@@ -536,19 +814,32 @@
       "upstreamCallables": [
         "block_trade"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "block_trade",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "market-signal",
+          "featureId": "market-activity.block-trade",
+          "variantId": "default",
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "market-signal",
+          "dataset": "block-trade",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-019",
+          "liveProbe": "capability-019",
+          "defaultSource": "eastmoney-datacenter",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "eastmoney-datacenter"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-020",
@@ -556,19 +847,32 @@
       "upstreamCallables": [
         "holder_num_change"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "holder_num_change",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "fundamentals",
+          "featureId": "fundamentals.holder-count-change",
+          "variantId": "default",
+          "toolName": "finance_cn_fundamentals",
+          "dataCapability": "fundamentals",
+          "dataset": "holder-count-change",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-020",
+          "liveProbe": "capability-020",
+          "defaultSource": "eastmoney-datacenter",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "eastmoney-datacenter"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-021",
@@ -576,19 +880,32 @@
       "upstreamCallables": [
         "dividend_history"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "dividend_history",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "corporate-actions",
+          "featureId": "fundamentals.dividend-history",
+          "variantId": "default",
+          "toolName": "finance_cn_fundamentals",
+          "dataCapability": "corporate-actions",
+          "dataset": "dividend-history",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-021",
+          "liveProbe": "capability-021",
+          "defaultSource": "eastmoney-datacenter",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "eastmoney-datacenter"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-022",
@@ -596,19 +913,32 @@
       "upstreamCallables": [
         "stock_fund_flow_120d"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "stock_fund_flow_120d",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "capital-flow",
+          "featureId": "market-activity.stock-fund-flow-daily",
+          "variantId": "default",
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "capital-flow",
+          "dataset": "stock-fund-flow-daily",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-022",
+          "liveProbe": "capability-022",
+          "defaultSource": "eastmoney-push2",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "eastmoney-push2"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-023",
@@ -616,19 +946,35 @@
       "upstreamCallables": [
         "chip_distribution"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "chip_distribution",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "market-signal",
+          "featureId": "market-activity.chip-distribution",
+          "variantId": "default",
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "market-signal",
+          "dataset": "chip-distribution",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-023",
+          "liveProbe": "capability-023",
+          "defaultSource": "mootdx",
+          "fallbackSources": [
+            "baostock"
+          ],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "mootdx",
+            "baostock"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-024",
@@ -636,19 +982,32 @@
       "upstreamCallables": [
         "eastmoney_stock_news"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "eastmoney_stock_news",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "disclosures",
+          "featureId": "disclosures.stock-news",
+          "variantId": "default",
+          "toolName": "finance_cn_disclosures",
+          "dataCapability": "disclosures",
+          "dataset": "stock-news",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-024",
+          "liveProbe": "capability-024",
+          "defaultSource": "eastmoney-push2",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "eastmoney-push2"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-025",
@@ -656,19 +1015,32 @@
       "upstreamCallables": [
         "cls_telegraph"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "cls_telegraph",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "disclosures",
+          "featureId": "disclosures.market-telegraph",
+          "variantId": "default",
+          "toolName": "finance_cn_disclosures",
+          "dataCapability": "disclosures",
+          "dataset": "market-telegraph",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-025",
+          "liveProbe": "capability-025",
+          "defaultSource": "cailianpress",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "cailianpress"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-026",
@@ -676,19 +1048,32 @@
       "upstreamCallables": [
         "eastmoney_global_news"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "eastmoney_global_news",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "disclosures",
+          "featureId": "disclosures.global-news",
+          "variantId": "default",
+          "toolName": "finance_cn_disclosures",
+          "dataCapability": "disclosures",
+          "dataset": "global-news",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-026",
+          "liveProbe": "capability-026",
+          "defaultSource": "eastmoney-push2",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "eastmoney-push2"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-027",
@@ -696,19 +1081,32 @@
       "upstreamCallables": [
         "tdx_client.finance"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "tdx_client.finance",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "fundamentals",
+          "featureId": "fundamentals.tdx-finance-snapshot",
+          "variantId": "default",
+          "toolName": "finance_cn_fundamentals",
+          "dataCapability": "fundamentals",
+          "dataset": "tdx-finance-snapshot",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-027",
+          "liveProbe": "capability-027",
+          "defaultSource": "mootdx",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "mootdx"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-028",
@@ -716,19 +1114,32 @@
       "upstreamCallables": [
         "tdx_client.F10"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "tdx_client.F10",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "fundamentals",
+          "featureId": "fundamentals.tdx-f10",
+          "variantId": "default",
+          "toolName": "finance_cn_fundamentals",
+          "dataCapability": "fundamentals",
+          "dataset": "tdx-f10",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-028",
+          "liveProbe": "capability-028",
+          "defaultSource": "mootdx",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "mootdx"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-029",
@@ -737,19 +1148,31 @@
         "eastmoney_stock_info"
       ],
       "status": "implemented-canonical",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "eastmoney_stock_info",
           "status": "implemented-canonical",
           "providerId": "a-stock-public",
           "operation": "instrument-reference",
-          "coverage": "curated",
-          "implementation": "native-adapter",
+          "featureId": "instrument.company-profile",
+          "variantId": "default",
+          "toolName": "finance_cn_instrument",
+          "dataCapability": "instrument-reference",
+          "dataset": "company-profile",
+          "contractTier": "canonical",
+          "fixture": "features.json#capability-029",
+          "liveProbe": "capability-029",
+          "defaultSource": "eastmoney-push2",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
           "runtimeSourceIds": [
             "eastmoney-push2"
           ]
         }
-      ]
+      ],
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-030",
@@ -758,19 +1181,31 @@
         "sina_financial_report"
       ],
       "status": "implemented-canonical",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "sina_financial_report",
           "status": "implemented-canonical",
           "providerId": "a-stock-public",
           "operation": "fundamentals",
-          "coverage": "curated",
-          "implementation": "native-adapter",
+          "featureId": "fundamentals.financial-statements",
+          "variantId": "default",
+          "toolName": "finance_cn_fundamentals",
+          "dataCapability": "fundamentals",
+          "dataset": "financial-statements",
+          "contractTier": "canonical",
+          "fixture": "features.json#capability-030",
+          "liveProbe": "capability-030",
+          "defaultSource": "sina-finance",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
           "runtimeSourceIds": [
             "sina-finance"
           ]
         }
-      ]
+      ],
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-031",
@@ -778,19 +1213,32 @@
       "upstreamCallables": [
         "baostock_valuation_history"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "client",
       "runtimeMappings": [
         {
           "upstreamCallable": "baostock_valuation_history",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "fundamentals",
+          "featureId": "fundamentals.valuation-history",
+          "variantId": "default",
+          "toolName": "finance_cn_fundamentals",
+          "dataCapability": "fundamentals",
+          "dataset": "valuation-history",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-031",
+          "liveProbe": "capability-031",
+          "defaultSource": "baostock",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "baostock"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-032",
@@ -798,19 +1246,32 @@
       "upstreamCallables": [
         "baostock_stock_basic"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-canonical",
+      "auth": "client",
       "runtimeMappings": [
         {
           "upstreamCallable": "baostock_stock_basic",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-canonical",
+          "providerId": "a-stock-public",
+          "operation": "instrument-reference",
+          "featureId": "instrument.listing-status",
+          "variantId": "default",
+          "toolName": "finance_cn_instrument",
+          "dataCapability": "instrument-reference",
+          "dataset": "listing-status",
+          "contractTier": "canonical",
+          "fixture": "features.json#capability-032",
+          "liveProbe": "capability-032",
+          "defaultSource": "baostock",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "baostock"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-033",
@@ -819,28 +1280,53 @@
         "sw_industry_history",
         "sw_industry_as_of"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "sw_industry_history",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "industry-classification",
+          "featureId": "instrument.sw-industry",
+          "variantId": "history",
+          "toolName": "finance_cn_instrument",
+          "dataCapability": "industry-classification",
+          "dataset": "sw-industry",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-033",
+          "liveProbe": "capability-033",
+          "defaultSource": "sw-research",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "sw-research"
+          ]
         },
         {
           "upstreamCallable": "sw_industry_as_of",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "industry-classification",
+          "featureId": "instrument.sw-industry",
+          "variantId": "as-of",
+          "toolName": "finance_cn_instrument",
+          "dataCapability": "industry-classification",
+          "dataset": "sw-industry",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-033",
+          "liveProbe": "capability-033",
+          "defaultSource": "sw-research",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "sw-research"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-034",
@@ -849,20 +1335,31 @@
         "cninfo_announcements"
       ],
       "status": "implemented-canonical",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "cninfo_announcements",
           "status": "implemented-canonical",
           "providerId": "a-stock-public",
           "operation": "disclosures",
-          "coverage": "curated",
-          "implementation": "native-adapter",
+          "featureId": "disclosures.announcement",
+          "variantId": "default",
+          "toolName": "finance_cn_disclosures",
+          "dataCapability": "disclosures",
+          "dataset": "announcement",
+          "contractTier": "canonical",
+          "fixture": "features.json#capability-034",
+          "liveProbe": "capability-034",
+          "defaultSource": "cninfo",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
           "runtimeSourceIds": [
-            "cninfo",
-            "szse-official"
+            "cninfo"
           ]
         }
-      ]
+      ],
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-035",
@@ -870,19 +1367,32 @@
       "upstreamCallables": [
         "tdx_client.F10"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "tdx_client.F10",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "disclosures",
+          "featureId": "disclosures.tdx-announcement-summary",
+          "variantId": "default",
+          "toolName": "finance_cn_disclosures",
+          "dataCapability": "disclosures",
+          "dataset": "tdx-announcement-summary",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-035",
+          "liveProbe": "capability-035",
+          "defaultSource": "mootdx",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "mootdx"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-036",
@@ -890,19 +1400,32 @@
       "upstreamCallables": [
         "em_zt_pool"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "em_zt_pool",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "market-signal",
+          "featureId": "market-activity.limit-up-pool",
+          "variantId": "default",
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "market-signal",
+          "dataset": "limit-up-pool",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-036",
+          "liveProbe": "capability-036",
+          "defaultSource": "eastmoney-push2",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "eastmoney-push2"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-037",
@@ -910,19 +1433,32 @@
       "upstreamCallables": [
         "em_zb_pool"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "em_zb_pool",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "market-signal",
+          "featureId": "market-activity.broken-limit-pool",
+          "variantId": "default",
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "market-signal",
+          "dataset": "broken-limit-pool",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-037",
+          "liveProbe": "capability-037",
+          "defaultSource": "eastmoney-push2",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "eastmoney-push2"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-038",
@@ -930,19 +1466,32 @@
       "upstreamCallables": [
         "em_dt_pool"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "em_dt_pool",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "market-signal",
+          "featureId": "market-activity.limit-down-pool",
+          "variantId": "default",
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "market-signal",
+          "dataset": "limit-down-pool",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-038",
+          "liveProbe": "capability-038",
+          "defaultSource": "eastmoney-push2",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "eastmoney-push2"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-039",
@@ -950,19 +1499,32 @@
       "upstreamCallables": [
         "em_yzt_pool"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "em_yzt_pool",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "market-signal",
+          "featureId": "market-activity.previous-limit-up-pool",
+          "variantId": "default",
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "market-signal",
+          "dataset": "previous-limit-up-pool",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-039",
+          "liveProbe": "capability-039",
+          "defaultSource": "eastmoney-push2",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "eastmoney-push2"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-040",
@@ -970,19 +1532,32 @@
       "upstreamCallables": [
         "ths_limit_up_pool"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "ths_limit_up_pool",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "market-signal",
+          "featureId": "market-activity.limit-up-reason",
+          "variantId": "default",
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "market-signal",
+          "dataset": "limit-up-reason",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-040",
+          "liveProbe": "capability-040",
+          "defaultSource": "ths-hot",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "ths-hot"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-041",
@@ -990,19 +1565,32 @@
       "upstreamCallables": [
         "limit_up_sentiment"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "limit_up_sentiment",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "market-signal",
+          "featureId": "market-activity.limit-up-sentiment",
+          "variantId": "default",
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "market-signal",
+          "dataset": "limit-up-sentiment",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-041",
+          "liveProbe": "capability-041",
+          "defaultSource": "eastmoney-push2",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "eastmoney-push2"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-042",
@@ -1010,19 +1598,32 @@
       "upstreamCallables": [
         "em_stock_monitor"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "em_stock_monitor",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "risk-data",
+          "featureId": "market-activity.stock-monitor",
+          "variantId": "default",
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "risk-data",
+          "dataset": "stock-monitor",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-042",
+          "liveProbe": "capability-042",
+          "defaultSource": "eastmoney-push2",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "eastmoney-push2"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-043",
@@ -1030,19 +1631,32 @@
       "upstreamCallables": [
         "em_price_anomaly"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "em_price_anomaly",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "market-signal",
+          "featureId": "market-activity.price-anomaly-events",
+          "variantId": "default",
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "market-signal",
+          "dataset": "price-anomaly-events",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-043",
+          "liveProbe": "capability-043",
+          "defaultSource": "eastmoney-push2",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "eastmoney-push2"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-044",
@@ -1050,19 +1664,32 @@
       "upstreamCallables": [
         "em_price_anomaly_count"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "em_price_anomaly_count",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "market-signal",
+          "featureId": "market-activity.price-anomaly-count",
+          "variantId": "default",
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "market-signal",
+          "dataset": "price-anomaly-count",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-044",
+          "liveProbe": "capability-044",
+          "defaultSource": "eastmoney-push2",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "eastmoney-push2"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-045",
@@ -1070,19 +1697,32 @@
       "upstreamCallables": [
         "sina_option_codes"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "sina_option_codes",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "market-signal",
+          "featureId": "market-activity.option-contracts",
+          "variantId": "default",
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "market-signal",
+          "dataset": "option-contracts",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-045",
+          "liveProbe": "capability-045",
+          "defaultSource": "sina-finance",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "sina-finance"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-046",
@@ -1090,19 +1730,32 @@
       "upstreamCallables": [
         "sina_option_tquote"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "sina_option_tquote",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "quote",
+          "featureId": "market-activity.option-tquote",
+          "variantId": "default",
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "quote",
+          "dataset": "option-tquote",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-046",
+          "liveProbe": "capability-046",
+          "defaultSource": "sina-finance",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "sina-finance"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-047",
@@ -1110,19 +1763,32 @@
       "upstreamCallables": [
         "sina_option_greeks"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "sina_option_greeks",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "risk-data",
+          "featureId": "market-activity.option-greeks",
+          "variantId": "default",
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "risk-data",
+          "dataset": "option-greeks",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-047",
+          "liveProbe": "capability-047",
+          "defaultSource": "sina-finance",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "sina-finance"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-048",
@@ -1130,19 +1796,32 @@
       "upstreamCallables": [
         "cninfo_irm"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "cninfo_irm",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "disclosures",
+          "featureId": "disclosures.investor-relations-qa",
+          "variantId": "default",
+          "toolName": "finance_cn_disclosures",
+          "dataCapability": "disclosures",
+          "dataset": "investor-relations-qa",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-048",
+          "liveProbe": "capability-048",
+          "defaultSource": "cninfo",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "cninfo"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-049",
@@ -1150,19 +1829,32 @@
       "upstreamCallables": [
         "ths_hot_list"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "ths_hot_list",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "market-signal",
+          "featureId": "market-activity.ths-hot-list",
+          "variantId": "default",
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "market-signal",
+          "dataset": "ths-hot-list",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-049",
+          "liveProbe": "capability-049",
+          "defaultSource": "ths-hot",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "ths-hot"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-050",
@@ -1170,19 +1862,32 @@
       "upstreamCallables": [
         "em_hot_rank"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "em_hot_rank",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "market-signal",
+          "featureId": "market-activity.eastmoney-hot-rank",
+          "variantId": "default",
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "market-signal",
+          "dataset": "eastmoney-hot-rank",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-050",
+          "liveProbe": "capability-050",
+          "defaultSource": "eastmoney-push2",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "eastmoney-push2"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-051",
@@ -1190,19 +1895,32 @@
       "upstreamCallables": [
         "em_hot_concept"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "em_hot_concept",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "market-signal",
+          "featureId": "market-activity.hot-concept",
+          "variantId": "default",
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "market-signal",
+          "dataset": "hot-concept",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-051",
+          "liveProbe": "capability-051",
+          "defaultSource": "eastmoney-push2",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "eastmoney-push2"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-052",
@@ -1210,19 +1928,32 @@
       "upstreamCallables": [
         "pboc_social_financing"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-canonical",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "pboc_social_financing",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-canonical",
+          "providerId": "a-stock-public",
+          "operation": "macro",
+          "featureId": "macro.social-financing-flow",
+          "variantId": "default",
+          "toolName": "finance_cn_macro_index",
+          "dataCapability": "macro",
+          "dataset": "social-financing-flow",
+          "contractTier": "canonical",
+          "fixture": "features.json#capability-052",
+          "liveProbe": "capability-052",
+          "defaultSource": "pboc",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "pboc"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-053",
@@ -1230,19 +1961,32 @@
       "upstreamCallables": [
         "nbs_pmi"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-canonical",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "nbs_pmi",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-canonical",
+          "providerId": "a-stock-public",
+          "operation": "macro",
+          "featureId": "macro.pmi",
+          "variantId": "default",
+          "toolName": "finance_cn_macro_index",
+          "dataCapability": "macro",
+          "dataset": "pmi",
+          "contractTier": "canonical",
+          "fixture": "features.json#capability-053",
+          "liveProbe": "capability-053",
+          "defaultSource": "nbs",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "nbs"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-054",
@@ -1251,21 +1995,34 @@
         "index_constituents"
       ],
       "status": "implemented-canonical",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "index_constituents",
           "status": "implemented-canonical",
           "providerId": "a-stock-public",
           "operation": "index",
+          "featureId": "index.constituents",
+          "variantId": "default",
+          "toolName": "finance_cn_macro_index",
+          "dataCapability": "index",
+          "dataset": "index-constituents",
+          "contractTier": "canonical",
+          "fixture": "features.json#capability-054",
+          "liveProbe": "capability-054",
+          "defaultSource": "csi",
+          "fallbackSources": [
+            "cni"
+          ],
           "coverage": "full",
-          "implementation": "generated",
-          "generatedCallable": "index_constituents",
+          "implementation": "generated-wrapper",
           "runtimeSourceIds": [
             "csi",
             "cni"
           ]
         }
-      ]
+      ],
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-055",
@@ -1273,20 +2030,35 @@
       "upstreamCallables": [
         "index_weights"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-canonical",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "index_weights",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "generated-only",
-          "implementation": "generated",
-          "generatedCallable": "index_weights",
-          "runtimeSourceIds": []
+          "status": "implemented-canonical",
+          "providerId": "a-stock-public",
+          "operation": "index",
+          "featureId": "index.weights",
+          "variantId": "default",
+          "toolName": "finance_cn_macro_index",
+          "dataCapability": "index",
+          "dataset": "index-weights",
+          "contractTier": "canonical",
+          "fixture": "features.json#capability-055",
+          "liveProbe": "capability-055",
+          "defaultSource": "csi",
+          "fallbackSources": [
+            "cni"
+          ],
+          "coverage": "full",
+          "implementation": "generated-wrapper",
+          "runtimeSourceIds": [
+            "csi",
+            "cni"
+          ]
         }
       ],
-      "reason": "Generated and importable for audited compatibility, but no curated provider operation invokes it."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-056",
@@ -1294,20 +2066,32 @@
       "upstreamCallables": [
         "index_valuation"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-canonical",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "index_valuation",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "generated-only",
-          "implementation": "generated",
-          "generatedCallable": "index_valuation",
-          "runtimeSourceIds": []
+          "status": "implemented-canonical",
+          "providerId": "a-stock-public",
+          "operation": "index",
+          "featureId": "index.valuation",
+          "variantId": "default",
+          "toolName": "finance_cn_macro_index",
+          "dataCapability": "index",
+          "dataset": "index-valuation",
+          "contractTier": "canonical",
+          "fixture": "features.json#capability-056",
+          "liveProbe": "capability-056",
+          "defaultSource": "csi",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "generated-wrapper",
+          "runtimeSourceIds": [
+            "csi"
+          ]
         }
       ],
-      "reason": "Generated and importable for audited compatibility, but no curated provider operation invokes it."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-057",
@@ -1316,20 +2100,31 @@
         "trading_calendar"
       ],
       "status": "implemented-canonical",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "trading_calendar",
           "status": "implemented-canonical",
           "providerId": "a-stock-public",
           "operation": "trading-calendar",
+          "featureId": "index.trading-calendar",
+          "variantId": "default",
+          "toolName": "finance_cn_macro_index",
+          "dataCapability": "trading-calendar",
+          "dataset": "trading-calendar",
+          "contractTier": "canonical",
+          "fixture": "features.json#capability-057",
+          "liveProbe": "capability-057",
+          "defaultSource": "szse-official",
+          "fallbackSources": [],
           "coverage": "full",
-          "implementation": "generated",
-          "generatedCallable": "trading_calendar",
+          "implementation": "generated-wrapper",
           "runtimeSourceIds": [
             "szse-official"
           ]
         }
-      ]
+      ],
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-058",
@@ -1337,20 +2132,35 @@
       "upstreamCallables": [
         "margin_trading_backup"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "margin_trading_backup",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "generated-only",
-          "implementation": "generated",
-          "generatedCallable": "margin_trading_backup",
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "capital-flow",
+          "featureId": "market-activity.margin-trading-official",
+          "variantId": "default",
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "capital-flow",
+          "dataset": "margin-trading-official",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-058",
+          "liveProbe": "capability-058",
+          "defaultSource": "szse-official",
+          "fallbackSources": [
+            "sse-official"
+          ],
+          "coverage": "full",
+          "implementation": "generated-wrapper",
+          "runtimeSourceIds": [
+            "szse-official",
+            "sse-official"
+          ]
         }
       ],
-      "reason": "Generated and importable for audited compatibility, but no curated provider operation invokes it."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-059",
@@ -1358,20 +2168,32 @@
       "upstreamCallables": [
         "bse_quote_backup"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-canonical",
+      "auth": "session",
       "runtimeMappings": [
         {
           "upstreamCallable": "bse_quote_backup",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "generated-only",
-          "implementation": "generated",
-          "generatedCallable": "bse_quote_backup",
-          "runtimeSourceIds": []
+          "status": "implemented-canonical",
+          "providerId": "a-stock-public",
+          "operation": "quote",
+          "featureId": "market.bse-official",
+          "variantId": "quote",
+          "toolName": "finance_cn_quote",
+          "dataCapability": "quote",
+          "dataset": "bse-snapshot",
+          "contractTier": "canonical",
+          "fixture": "features.json#capability-059",
+          "liveProbe": "capability-059",
+          "defaultSource": "bse-official",
+          "fallbackSources": [],
+          "coverage": "full",
+          "implementation": "generated-wrapper",
+          "runtimeSourceIds": [
+            "bse-official"
+          ]
         }
       ],
-      "reason": "Generated and importable for audited compatibility, but no curated provider operation invokes it."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     },
     {
       "id": "capability-060",
@@ -1381,349 +2203,407 @@
         "fund_flow_backup",
         "announcements_backup"
       ],
-      "status": "deferred-policy",
+      "status": "implemented-experimental",
+      "auth": "none",
       "runtimeMappings": [
         {
           "upstreamCallable": "dragon_tiger_backup",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "market-signal",
+          "featureId": "market-activity.official-backups",
+          "variantId": "dragon-tiger",
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "market-signal",
+          "dataset": "dragon-tiger-backup",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-060",
+          "liveProbe": "capability-060",
+          "defaultSource": "sse-official",
+          "fallbackSources": [
+            "szse-official",
+            "sina-finance",
+            "eastmoney-push2"
+          ],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "sse-official",
+            "szse-official",
+            "sina-finance",
+            "eastmoney-push2"
+          ]
         },
         {
           "upstreamCallable": "fund_flow_backup",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "capital-flow",
+          "featureId": "market-activity.official-backups",
+          "variantId": "fund-flow",
+          "toolName": "finance_cn_market_activity",
+          "dataCapability": "capital-flow",
+          "dataset": "fund-flow-backup",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-060",
+          "liveProbe": "capability-060",
+          "defaultSource": "sse-official",
+          "fallbackSources": [
+            "szse-official",
+            "sina-finance",
+            "eastmoney-push2"
+          ],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "sse-official",
+            "szse-official",
+            "sina-finance",
+            "eastmoney-push2"
+          ]
         },
         {
           "upstreamCallable": "announcements_backup",
-          "status": "deferred-policy",
-          "providerId": null,
-          "operation": null,
-          "coverage": "none",
-          "implementation": null,
-          "runtimeSourceIds": []
+          "status": "implemented-experimental",
+          "providerId": "a-stock-public",
+          "operation": "disclosures",
+          "featureId": "market-activity.official-backups",
+          "variantId": "announcement",
+          "toolName": "finance_cn_disclosures",
+          "dataCapability": "disclosures",
+          "dataset": "announcement-backup",
+          "contractTier": "experimental-records-v1",
+          "fixture": "features.json#capability-060",
+          "liveProbe": "capability-060",
+          "defaultSource": "sse-official",
+          "fallbackSources": [
+            "szse-official",
+            "sina-finance",
+            "eastmoney-push2"
+          ],
+          "coverage": "full",
+          "implementation": "locked-snapshot-adapter",
+          "runtimeSourceIds": [
+            "sse-official",
+            "szse-official",
+            "sina-finance",
+            "eastmoney-push2"
+          ]
         }
       ],
-      "reason": "Inventoried upstream capability; not exposed through a curated canonical runtime."
+      "reason": "Mapped to the curated A-share feature registry and fixed runtime dispatcher."
     }
   ],
   "pythonBlocks": [
-  {
-    "index": 1,
-    "heading": "### mootdx 客户端（必读，规避 0.11.x BESTIP 空串 bug）",
-    "expectedBodySha256": "bdeefdfac06fc7132dfc2345436a14d4d631b61f094106ffabfb99dfdca517ab"
-  },
-  {
-    "index": 2,
-    "heading": "### 市场前缀规则（全局通用）",
-    "expectedBodySha256": "46006f12beffc8b79864a783171fcc70a80411c9f2de90a3311354766cd358cc"
-  },
-  {
-    "index": 3,
-    "heading": "### Ticker 格式归一化",
-    "expectedBodySha256": "f6dc565aa41e2b8e69a78270267fd7deadc65140f35674847fd2f4f1bba12d71"
-  },
-  {
-    "index": 4,
-    "heading": "### 东财数据中心统一查询（共用 helper）",
-    "expectedBodySha256": "129b5aebc91fe8f9dfbdfc44335d22dda32b2236c42d6325a1830c94e8284b60"
-  },
-  {
-    "index": 5,
-    "heading": "### 1.1 mootdx — K线 + 五档盘口 + 逐笔成交",
-    "expectedBodySha256": "0d65aae24797724cee619ecda8700073c48ebd3ac0d3c102f441576b1685480e"
-  },
-  {
-    "index": 6,
-    "heading": "### 1.2 腾讯财经 API — PE/PB/市值/换手率/涨跌停/指数/ETF",
-    "expectedBodySha256": "6ec80528f719d0a9440fca29771c9204c61644f27be0e7a951167c5f4f6127fb"
-  },
-  {
-    "index": 7,
-    "heading": "### 1.3 百度股市通 K线 — 带MA5/MA10/MA20（V3.0 新增）",
-    "expectedBodySha256": "1173725a4c4ec1667466d0e37566df93fe523bfde66da9ea54dd52393e426941"
-  },
-  {
-    "index": 8,
-    "heading": "### 1.4 新浪复权因子 — qfq / hfq（V3.7.0 新增）",
-    "expectedBodySha256": "6643f0d8c90f8b2abddebaaed4d5d8aec03ca09dfb4cfabf476491f6242d9614"
-  },
-  {
-    "index": 9,
-    "heading": "### 2.1 东财研报 API — 研报列表 + PDF下载（主力）",
-    "expectedBodySha256": "08e3f9ac962e18e274434b395817e2dec1f6ffe51e7b547d313bd5d8d4286c50"
-  },
-  {
-    "index": 10,
-    "heading": "#### 行业研报列表（qType=1）",
-    "expectedBodySha256": "8208f51d54618f27704ebc2611e49f445232dd6260785d544c322f40ccc24381"
-  },
-  {
-    "index": 11,
-    "heading": "### 2.2 同花顺一致预期EPS（直连 basic.10jqka.com.cn）",
-    "expectedBodySha256": "12b287e5c0d037d8be430bc4a08c3d9c2487be3842674461e78c1f0a3d0f8925"
-  },
-  {
-    "index": 12,
-    "heading": "### 2.3 iwencai — NL语义搜索研报（唯一能力）",
-    "expectedBodySha256": "cbd6de9ea81fe0956be8512ffdc896dbe3e73e6acb1c4dead246ccb9ebe4abf2"
-  },
-  {
-    "index": 13,
-    "heading": "### 3.1 同花顺热点 — 当日强势股 + 题材归因 reason tags（独家）",
-    "expectedBodySha256": "e43a9e384917d71bc6fdb3cb58d424d6e25035d06745dde4f3c3bc9d58f48aec"
-  },
-  {
-    "index": 14,
-    "heading": "### 3.2 同花顺北向资金 — hsgtApi 实时分钟流向 + 本地自缓存历史",
-    "expectedBodySha256": "e3539b9daa79c74ad9d7b81bcdb5f29d59c65b05bfa33dc9c24ed265259d8afc"
-  },
-  {
-    "index": 15,
-    "heading": "### 3.3 东财 slist — 个股所属板块/概念归属（V3.2.2 替换百度）",
-    "expectedBodySha256": "156227e5e1abbb9f8af478c0e2ffd046017d518c4dbe312c9108fbabe3a50705"
-  },
-  {
-    "index": 16,
-    "heading": "### 3.4 东财 push2 — 个股资金流向（分钟级）",
-    "expectedBodySha256": "08c47d46039141dabec169706dbe0f0b1cf520b0cefb45da806cebdcb3e15655"
-  },
-  {
-    "index": 17,
-    "heading": "### 3.5 龙虎榜席位 — 个股上榜记录 + 买卖席位 TOP5 + 机构动向",
-    "expectedBodySha256": "b3005249fe884459767476744adfe167123228bcd212920a0fbd1a7f8ea43d46"
-  },
-  {
-    "index": 18,
-    "heading": "### 3.6 限售解禁日历 — 历史解禁 + 未来 90 天待解禁",
-    "expectedBodySha256": "d477dff14422e97632c523634e12ea525689e37b217137939f22ce8607372395"
-  },
-  {
-    "index": 19,
-    "heading": "### 3.7 行业板块排名（V3.0 改用东财 — 同花顺加了反爬401）",
-    "expectedBodySha256": "69519b26a7c9b692a59663c50d9be16efe52c3b0a94206319a93e4eec02ac9ab"
-  },
-  {
-    "index": 20,
-    "heading": "### 3.8 板块资金流向（行业/概念/地域 × 今日/5日/10日）",
-    "expectedBodySha256": "7e76f9e7362aa80c15afe16e4b591698d292ebc9419db5a787e1d60920070837"
-  },
-  {
-    "index": 21,
-    "heading": "### 3.9 全市场龙虎榜",
-    "expectedBodySha256": "09579b98d4379073ca378667e6bf7520dc684187f30b9cf07ac23fe5656bd8d3"
-  },
-  {
-    "index": 22,
-    "heading": "### 3.10 信号层组合用法：题材热度 + 资金验证",
-    "expectedBodySha256": "751e395f8011735bec53c363109de37f34646b9a80a6970604fec40081f6dde2"
-  },
-  {
-    "index": 23,
-    "heading": "### 4.1 融资融券明细",
-    "expectedBodySha256": "44cbc69e1c9f1204d7d52f1b226df950ee169cddd4e9fd91e377850abb752601"
-  },
-  {
-    "index": 24,
-    "heading": "### 4.2 大宗交易",
-    "expectedBodySha256": "6fb11102a6f3d5578dce8d668aadc9f97b2059aeec353d10ecaee9e13d39dc8d"
-  },
-  {
-    "index": 25,
-    "heading": "### 4.3 股东户数变化",
-    "expectedBodySha256": "58587d55aeeabbb36c7d4d59a54d08df0ae8d28560190ef5b4fc22c09d64c7b6"
-  },
-  {
-    "index": 26,
-    "heading": "### 4.4 分红送转历史",
-    "expectedBodySha256": "48ff9882c4a58c5e7acc924bd1bbf963ef75142630a08eca30440fd9d21d4eed"
-  },
-  {
-    "index": 27,
-    "heading": "### 4.5 个股资金流（120日，日级）",
-    "expectedBodySha256": "a1c082615aafe5f77b548a77269548f89105aaab1769743d7d11fb3018e52b88"
-  },
-  {
-    "index": 28,
-    "heading": "### 4.6 筹码分布 CYQ — 获利比例 / 平均成本 / 成本区间（V3.7.0 新增）",
-    "expectedBodySha256": "ed5555b9b0f509b7a44d370291f18a42ce815f0b13d7b80a3eb8d1d58d2ead8b"
-  },
-  {
-    "index": 29,
-    "heading": "### 5.1 东财个股新闻（直连 search-api-web）",
-    "expectedBodySha256": "1e39a8e5522e7e8d3a855baf95a5b03cccd7990810f106d60398bf932a30aaac"
-  },
-  {
-    "index": 30,
-    "heading": "### 5.2 财联社快讯（直连 cls.cn，v1 API + 本地签名）✅ 已复活（2026-07）",
-    "expectedBodySha256": "be3c5f6b7ecfecdc965477bb6cea0db022aa3bfd598e19f1ef2ff4d552630dd3"
-  },
-  {
-    "index": 31,
-    "heading": "### 5.3 东财全球资讯（7x24）",
-    "expectedBodySha256": "6837e476cb87ca405bd0a4fb182911d26af5f5409f255d785fc3d9aac5131e55"
-  },
-  {
-    "index": 32,
-    "heading": "### 6.1 mootdx 财务快照（37字段季报数据）",
-    "expectedBodySha256": "d7941d52a7923049e5355827263ea51011c94f0e7725ba9171bee0a5a8f08f6e"
-  },
-  {
-    "index": 33,
-    "heading": "### 6.2 mootdx F10（公司文本资料）",
-    "expectedBodySha256": "62d62391f6e42030af6a3ca281c0e11e5567972b9c9ffa48786731329c072123"
-  },
-  {
-    "index": 34,
-    "heading": "### 6.3 东财个股基本面（直连 push2 API）",
-    "expectedBodySha256": "4d48667bb41c9abe93f51355cabdc10fa2ac23954071890a491683ecc63b293e"
-  },
-  {
-    "index": 35,
-    "heading": "### 6.4 新浪财报三表（资产负债表/利润表/现金流量表）",
-    "expectedBodySha256": "591f1485993cae0451ff1ed8a355eb32bd541c73dbbc44b74b1a9b048f6920a1"
-  },
-  {
-    "index": 36,
-    "heading": "### 6.5 baostock 估值历史 — PE/PB/PS/PCF + 换手率 + 停牌 + ST（V3.7.0 新增）",
-    "expectedBodySha256": "f20c63c976e999ce0d0c63f1c5566410b76105a736af6ef34f829ce1559294a3"
-  },
-  {
-    "index": 37,
-    "heading": "### 6.6 baostock 标的基本信息 — 上市日 / 退市日 / 状态（V3.7.0 新增）",
-    "expectedBodySha256": "cecb43483ebfaf573b86363b933370b1cb4362dcaac3884bb3c0d4c59e4ce684"
-  },
-  {
-    "index": 38,
-    "heading": "### 6.7 申万行业分类历史 — 消除行业前视偏差（V3.7.0 新增）",
-    "expectedBodySha256": "357cc6900fdc228f28f315620d83243f599a617352aaa2862e498d05d0dd1846"
-  },
-  {
-    "index": 39,
-    "heading": "### 7.1 巨潮公告（直连 cninfo.com.cn）",
-    "expectedBodySha256": "029a13096390e38b174f7b47c1e756cb63c889c4d2d126175030c4051d2ecf04"
-  },
-  {
-    "index": 40,
-    "heading": "### 7.2 mootdx F10 公告摘要",
-    "expectedBodySha256": "4d5f1d90238139b80ca2b79060f3374234f1ceecb4e02318fdeafa47f411cfa1"
-  },
-  {
-    "index": 41,
-    "heading": "### 8.1 东财涨停板池 — 涨停 / 炸板 / 跌停 / 昨日涨停",
-    "expectedBodySha256": "a78c37b161cb72c5273eb1cb26b3671aa596568ff96a3cfd67cd70390d9aabfd"
-  },
-  {
-    "index": 42,
-    "heading": "### 8.2 同花顺涨停揭秘 — 涨停原因题材 + 封板成功率 + 板型",
-    "expectedBodySha256": "326bd1b0ffb7c8ffcfb6ebd850f8612714c9daef9c1f66490d5a49aa09a62267"
-  },
-  {
-    "index": 43,
-    "heading": "### 8.3 打板情绪速算 — 炸板率 / 连板高度 / 连板梯队",
-    "expectedBodySha256": "83fe052b4f78bc891a0722f4ee4ded2af42a09348e35fee9dbe86a1bb4284dc8"
-  },
-  {
-    "index": 44,
-    "heading": "### 8.4 东财重点监控池（V3.6.0 新增 · #15）",
-    "expectedBodySha256": "597c826a762adcb6d2ec4b8eb05cecb849dab2877f2c045438a4c73843ecc521"
-  },
-  {
-    "index": 45,
-    "heading": "### 8.5 东财日内异动池 — 严重异常波动（V3.6.0 新增 · #15）",
-    "expectedBodySha256": "5528dfe7589ba75b777b9754f202a16ad16072addc97cbdd5cc5f6ee5c13d13b"
-  },
-  {
-    "index": 46,
-    "heading": "### 9.1 合约清单 + T型报价 + 希腊字母",
-    "expectedBodySha256": "49212d11908cfdf91358fe9b802706be7fa066bbbdfc07e0fb83bb149f488bcd"
-  },
-  {
-    "index": 47,
-    "heading": "### 10.1 互动易问答（巨潮 — 投资者提问 + 公司回复）",
-    "expectedBodySha256": "737a58239ad1ecc73f0023cd3e5a254eb4f712d935ebdc34f5f64d3b5af30dc7"
-  },
-  {
-    "index": 48,
-    "heading": "### 10.2 同花顺热榜 + 东财人气榜（市场热度 + 概念命中）",
-    "expectedBodySha256": "e268ee2219895258e625a13e468ec281b88cfdae29464f545295300500d12285"
-  },
-  {
-    "index": 49,
-    "heading": "### 11.1 人民银行 — 社会融资规模增量",
-    "expectedBodySha256": "a2c6bed7d9ec8b3ec4f4cf256aedc4d08d28572ee5f96a4d1d247244cc0fdc7b"
-  },
-  {
-    "index": 50,
-    "heading": "### 11.2 国家统计局 — 采购经理指数 PMI",
-    "expectedBodySha256": "44a1e1e9ac6b4f4243ae1ab958a0a2e0c7568930af92380566ecd9e1326fcdca"
-  },
-  {
-    "index": 51,
-    "heading": "### 12.1–12.4 自包含实现",
-    "expectedBodySha256": "f04ff9a36319272af51036f9c2ecfb916cb78e4ff559c4e6a79a87bef3d79cb4"
-  },
-  {
-    "index": 52,
-    "heading": "### 12.1–12.4 自包含实现",
-    "expectedBodySha256": "49182024279739a44d87d8ca2e37703dc7306243e8ae7b870d2d3573b0531372"
-  },
-  {
-    "index": 53,
-    "heading": "### 前向PE",
-    "expectedBodySha256": "a5a2b18ffb8de63967db68081834b03159f70f3474a38b0c30e5cdfeac26692a"
-  },
-  {
-    "index": 54,
-    "heading": "### PE消化时间",
-    "expectedBodySha256": "3087a18c6cc930bfcbd19ddc7b0da7c87af5ac1ae145d8ad9681a7ca691ed2ce"
-  },
-  {
-    "index": 55,
-    "heading": "### PEG",
-    "expectedBodySha256": "9d8a3e4db4e64c93feaa49e9db67e6d297b96a4c5cc479d86a100ce3d31c0468"
-  },
-  {
-    "index": 56,
-    "heading": "### 流程 A: 单票完整估值（30秒）",
-    "expectedBodySha256": "ee714cd757508e6d2b6aea50d96f281b9b4daac858752b21f213a4679d2acbf8"
-  },
-  {
-    "index": 57,
-    "heading": "### 流程 B: 批量估值对比",
-    "expectedBodySha256": "519daf63f472006ed1d2a1ae2d57e99f51b14f45fe2cdb3b5016cab849e3c797"
-  },
-  {
-    "index": 58,
-    "heading": "### 流程 C: 主题研报批量检索",
-    "expectedBodySha256": "b7751c86033d7969ff97368e165f3feec8c8d06df396376713fa44f8d3999b59"
-  },
-  {
-    "index": 59,
-    "heading": "### 流程 D: 新标的快速调研（V3.0 增强版）",
-    "expectedBodySha256": "2b72cd34e6754a20619c3a86f0d0bab62b7849e70adf50d287cb278df4e2230d"
-  },
-  {
-    "index": 60,
-    "heading": "## 官方两融与北交所行情备胎（V3.8.0）",
-    "expectedBodySha256": "f4e0f57ec421a2f8a7bd3f351dc71a2c2d66ea6ea67b74171955d28ef8089182"
-  },
-  {
-    "index": 61,
-    "heading": "## 官方两融与北交所行情备胎（V3.8.0）",
-    "expectedBodySha256": "2dafbc16a35bb9908188747a39274cc0c42b4bf9476e58c3279f7f82c66fba34"
-  },
-  {
-    "index": 62,
-    "heading": "## 备用源速查 & 降级策略（东财/主源被封时用）",
-    "expectedBodySha256": "d88b0cf4191d5b38600c95f06e2d32551387826d96c032ed5f6df8d4be930d25"
-  }
-]
+    {
+      "index": 1,
+      "heading": "### mootdx 客户端（必读，规避 0.11.x BESTIP 空串 bug）",
+      "expectedBodySha256": "bdeefdfac06fc7132dfc2345436a14d4d631b61f094106ffabfb99dfdca517ab"
+    },
+    {
+      "index": 2,
+      "heading": "### 市场前缀规则（全局通用）",
+      "expectedBodySha256": "46006f12beffc8b79864a783171fcc70a80411c9f2de90a3311354766cd358cc"
+    },
+    {
+      "index": 3,
+      "heading": "### Ticker 格式归一化",
+      "expectedBodySha256": "f6dc565aa41e2b8e69a78270267fd7deadc65140f35674847fd2f4f1bba12d71"
+    },
+    {
+      "index": 4,
+      "heading": "### 东财数据中心统一查询（共用 helper）",
+      "expectedBodySha256": "129b5aebc91fe8f9dfbdfc44335d22dda32b2236c42d6325a1830c94e8284b60"
+    },
+    {
+      "index": 5,
+      "heading": "### 1.1 mootdx — K线 + 五档盘口 + 逐笔成交",
+      "expectedBodySha256": "0d65aae24797724cee619ecda8700073c48ebd3ac0d3c102f441576b1685480e"
+    },
+    {
+      "index": 6,
+      "heading": "### 1.2 腾讯财经 API — PE/PB/市值/换手率/涨跌停/指数/ETF",
+      "expectedBodySha256": "6ec80528f719d0a9440fca29771c9204c61644f27be0e7a951167c5f4f6127fb"
+    },
+    {
+      "index": 7,
+      "heading": "### 1.3 百度股市通 K线 — 带MA5/MA10/MA20（V3.0 新增）",
+      "expectedBodySha256": "1173725a4c4ec1667466d0e37566df93fe523bfde66da9ea54dd52393e426941"
+    },
+    {
+      "index": 8,
+      "heading": "### 1.4 新浪复权因子 — qfq / hfq（V3.7.0 新增）",
+      "expectedBodySha256": "6643f0d8c90f8b2abddebaaed4d5d8aec03ca09dfb4cfabf476491f6242d9614"
+    },
+    {
+      "index": 9,
+      "heading": "### 2.1 东财研报 API — 研报列表 + PDF下载（主力）",
+      "expectedBodySha256": "08e3f9ac962e18e274434b395817e2dec1f6ffe51e7b547d313bd5d8d4286c50"
+    },
+    {
+      "index": 10,
+      "heading": "#### 行业研报列表（qType=1）",
+      "expectedBodySha256": "8208f51d54618f27704ebc2611e49f445232dd6260785d544c322f40ccc24381"
+    },
+    {
+      "index": 11,
+      "heading": "### 2.2 同花顺一致预期EPS（直连 basic.10jqka.com.cn）",
+      "expectedBodySha256": "12b287e5c0d037d8be430bc4a08c3d9c2487be3842674461e78c1f0a3d0f8925"
+    },
+    {
+      "index": 12,
+      "heading": "### 2.3 iwencai — NL语义搜索研报（唯一能力）",
+      "expectedBodySha256": "cbd6de9ea81fe0956be8512ffdc896dbe3e73e6acb1c4dead246ccb9ebe4abf2"
+    },
+    {
+      "index": 13,
+      "heading": "### 3.1 同花顺热点 — 当日强势股 + 题材归因 reason tags（独家）",
+      "expectedBodySha256": "e43a9e384917d71bc6fdb3cb58d424d6e25035d06745dde4f3c3bc9d58f48aec"
+    },
+    {
+      "index": 14,
+      "heading": "### 3.2 同花顺北向资金 — hsgtApi 实时分钟流向 + 本地自缓存历史",
+      "expectedBodySha256": "e3539b9daa79c74ad9d7b81bcdb5f29d59c65b05bfa33dc9c24ed265259d8afc"
+    },
+    {
+      "index": 15,
+      "heading": "### 3.3 东财 slist — 个股所属板块/概念归属（V3.2.2 替换百度）",
+      "expectedBodySha256": "156227e5e1abbb9f8af478c0e2ffd046017d518c4dbe312c9108fbabe3a50705"
+    },
+    {
+      "index": 16,
+      "heading": "### 3.4 东财 push2 — 个股资金流向（分钟级）",
+      "expectedBodySha256": "08c47d46039141dabec169706dbe0f0b1cf520b0cefb45da806cebdcb3e15655"
+    },
+    {
+      "index": 17,
+      "heading": "### 3.5 龙虎榜席位 — 个股上榜记录 + 买卖席位 TOP5 + 机构动向",
+      "expectedBodySha256": "b3005249fe884459767476744adfe167123228bcd212920a0fbd1a7f8ea43d46"
+    },
+    {
+      "index": 18,
+      "heading": "### 3.6 限售解禁日历 — 历史解禁 + 未来 90 天待解禁",
+      "expectedBodySha256": "d477dff14422e97632c523634e12ea525689e37b217137939f22ce8607372395"
+    },
+    {
+      "index": 19,
+      "heading": "### 3.7 行业板块排名（V3.0 改用东财 — 同花顺加了反爬401）",
+      "expectedBodySha256": "69519b26a7c9b692a59663c50d9be16efe52c3b0a94206319a93e4eec02ac9ab"
+    },
+    {
+      "index": 20,
+      "heading": "### 3.8 板块资金流向（行业/概念/地域 × 今日/5日/10日）",
+      "expectedBodySha256": "7e76f9e7362aa80c15afe16e4b591698d292ebc9419db5a787e1d60920070837"
+    },
+    {
+      "index": 21,
+      "heading": "### 3.9 全市场龙虎榜",
+      "expectedBodySha256": "09579b98d4379073ca378667e6bf7520dc684187f30b9cf07ac23fe5656bd8d3"
+    },
+    {
+      "index": 22,
+      "heading": "### 3.10 信号层组合用法：题材热度 + 资金验证",
+      "expectedBodySha256": "751e395f8011735bec53c363109de37f34646b9a80a6970604fec40081f6dde2"
+    },
+    {
+      "index": 23,
+      "heading": "### 4.1 融资融券明细",
+      "expectedBodySha256": "44cbc69e1c9f1204d7d52f1b226df950ee169cddd4e9fd91e377850abb752601"
+    },
+    {
+      "index": 24,
+      "heading": "### 4.2 大宗交易",
+      "expectedBodySha256": "6fb11102a6f3d5578dce8d668aadc9f97b2059aeec353d10ecaee9e13d39dc8d"
+    },
+    {
+      "index": 25,
+      "heading": "### 4.3 股东户数变化",
+      "expectedBodySha256": "58587d55aeeabbb36c7d4d59a54d08df0ae8d28560190ef5b4fc22c09d64c7b6"
+    },
+    {
+      "index": 26,
+      "heading": "### 4.4 分红送转历史",
+      "expectedBodySha256": "48ff9882c4a58c5e7acc924bd1bbf963ef75142630a08eca30440fd9d21d4eed"
+    },
+    {
+      "index": 27,
+      "heading": "### 4.5 个股资金流（120日，日级）",
+      "expectedBodySha256": "a1c082615aafe5f77b548a77269548f89105aaab1769743d7d11fb3018e52b88"
+    },
+    {
+      "index": 28,
+      "heading": "### 4.6 筹码分布 CYQ — 获利比例 / 平均成本 / 成本区间（V3.7.0 新增）",
+      "expectedBodySha256": "ed5555b9b0f509b7a44d370291f18a42ce815f0b13d7b80a3eb8d1d58d2ead8b"
+    },
+    {
+      "index": 29,
+      "heading": "### 5.1 东财个股新闻（直连 search-api-web）",
+      "expectedBodySha256": "1e39a8e5522e7e8d3a855baf95a5b03cccd7990810f106d60398bf932a30aaac"
+    },
+    {
+      "index": 30,
+      "heading": "### 5.2 财联社快讯（直连 cls.cn，v1 API + 本地签名）✅ 已复活（2026-07）",
+      "expectedBodySha256": "be3c5f6b7ecfecdc965477bb6cea0db022aa3bfd598e19f1ef2ff4d552630dd3"
+    },
+    {
+      "index": 31,
+      "heading": "### 5.3 东财全球资讯（7x24）",
+      "expectedBodySha256": "6837e476cb87ca405bd0a4fb182911d26af5f5409f255d785fc3d9aac5131e55"
+    },
+    {
+      "index": 32,
+      "heading": "### 6.1 mootdx 财务快照（37字段季报数据）",
+      "expectedBodySha256": "d7941d52a7923049e5355827263ea51011c94f0e7725ba9171bee0a5a8f08f6e"
+    },
+    {
+      "index": 33,
+      "heading": "### 6.2 mootdx F10（公司文本资料）",
+      "expectedBodySha256": "62d62391f6e42030af6a3ca281c0e11e5567972b9c9ffa48786731329c072123"
+    },
+    {
+      "index": 34,
+      "heading": "### 6.3 东财个股基本面（直连 push2 API）",
+      "expectedBodySha256": "4d48667bb41c9abe93f51355cabdc10fa2ac23954071890a491683ecc63b293e"
+    },
+    {
+      "index": 35,
+      "heading": "### 6.4 新浪财报三表（资产负债表/利润表/现金流量表）",
+      "expectedBodySha256": "591f1485993cae0451ff1ed8a355eb32bd541c73dbbc44b74b1a9b048f6920a1"
+    },
+    {
+      "index": 36,
+      "heading": "### 6.5 baostock 估值历史 — PE/PB/PS/PCF + 换手率 + 停牌 + ST（V3.7.0 新增）",
+      "expectedBodySha256": "f20c63c976e999ce0d0c63f1c5566410b76105a736af6ef34f829ce1559294a3"
+    },
+    {
+      "index": 37,
+      "heading": "### 6.6 baostock 标的基本信息 — 上市日 / 退市日 / 状态（V3.7.0 新增）",
+      "expectedBodySha256": "cecb43483ebfaf573b86363b933370b1cb4362dcaac3884bb3c0d4c59e4ce684"
+    },
+    {
+      "index": 38,
+      "heading": "### 6.7 申万行业分类历史 — 消除行业前视偏差（V3.7.0 新增）",
+      "expectedBodySha256": "357cc6900fdc228f28f315620d83243f599a617352aaa2862e498d05d0dd1846"
+    },
+    {
+      "index": 39,
+      "heading": "### 7.1 巨潮公告（直连 cninfo.com.cn）",
+      "expectedBodySha256": "029a13096390e38b174f7b47c1e756cb63c889c4d2d126175030c4051d2ecf04"
+    },
+    {
+      "index": 40,
+      "heading": "### 7.2 mootdx F10 公告摘要",
+      "expectedBodySha256": "4d5f1d90238139b80ca2b79060f3374234f1ceecb4e02318fdeafa47f411cfa1"
+    },
+    {
+      "index": 41,
+      "heading": "### 8.1 东财涨停板池 — 涨停 / 炸板 / 跌停 / 昨日涨停",
+      "expectedBodySha256": "a78c37b161cb72c5273eb1cb26b3671aa596568ff96a3cfd67cd70390d9aabfd"
+    },
+    {
+      "index": 42,
+      "heading": "### 8.2 同花顺涨停揭秘 — 涨停原因题材 + 封板成功率 + 板型",
+      "expectedBodySha256": "326bd1b0ffb7c8ffcfb6ebd850f8612714c9daef9c1f66490d5a49aa09a62267"
+    },
+    {
+      "index": 43,
+      "heading": "### 8.3 打板情绪速算 — 炸板率 / 连板高度 / 连板梯队",
+      "expectedBodySha256": "83fe052b4f78bc891a0722f4ee4ded2af42a09348e35fee9dbe86a1bb4284dc8"
+    },
+    {
+      "index": 44,
+      "heading": "### 8.4 东财重点监控池（V3.6.0 新增 · #15）",
+      "expectedBodySha256": "597c826a762adcb6d2ec4b8eb05cecb849dab2877f2c045438a4c73843ecc521"
+    },
+    {
+      "index": 45,
+      "heading": "### 8.5 东财日内异动池 — 严重异常波动（V3.6.0 新增 · #15）",
+      "expectedBodySha256": "5528dfe7589ba75b777b9754f202a16ad16072addc97cbdd5cc5f6ee5c13d13b"
+    },
+    {
+      "index": 46,
+      "heading": "### 9.1 合约清单 + T型报价 + 希腊字母",
+      "expectedBodySha256": "49212d11908cfdf91358fe9b802706be7fa066bbbdfc07e0fb83bb149f488bcd"
+    },
+    {
+      "index": 47,
+      "heading": "### 10.1 互动易问答（巨潮 — 投资者提问 + 公司回复）",
+      "expectedBodySha256": "737a58239ad1ecc73f0023cd3e5a254eb4f712d935ebdc34f5f64d3b5af30dc7"
+    },
+    {
+      "index": 48,
+      "heading": "### 10.2 同花顺热榜 + 东财人气榜（市场热度 + 概念命中）",
+      "expectedBodySha256": "e268ee2219895258e625a13e468ec281b88cfdae29464f545295300500d12285"
+    },
+    {
+      "index": 49,
+      "heading": "### 11.1 人民银行 — 社会融资规模增量",
+      "expectedBodySha256": "a2c6bed7d9ec8b3ec4f4cf256aedc4d08d28572ee5f96a4d1d247244cc0fdc7b"
+    },
+    {
+      "index": 50,
+      "heading": "### 11.2 国家统计局 — 采购经理指数 PMI",
+      "expectedBodySha256": "44a1e1e9ac6b4f4243ae1ab958a0a2e0c7568930af92380566ecd9e1326fcdca"
+    },
+    {
+      "index": 51,
+      "heading": "### 12.1–12.4 自包含实现",
+      "expectedBodySha256": "f04ff9a36319272af51036f9c2ecfb916cb78e4ff559c4e6a79a87bef3d79cb4"
+    },
+    {
+      "index": 52,
+      "heading": "### 12.1–12.4 自包含实现",
+      "expectedBodySha256": "49182024279739a44d87d8ca2e37703dc7306243e8ae7b870d2d3573b0531372"
+    },
+    {
+      "index": 53,
+      "heading": "### 前向PE",
+      "expectedBodySha256": "a5a2b18ffb8de63967db68081834b03159f70f3474a38b0c30e5cdfeac26692a"
+    },
+    {
+      "index": 54,
+      "heading": "### PE消化时间",
+      "expectedBodySha256": "3087a18c6cc930bfcbd19ddc7b0da7c87af5ac1ae145d8ad9681a7ca691ed2ce"
+    },
+    {
+      "index": 55,
+      "heading": "### PEG",
+      "expectedBodySha256": "9d8a3e4db4e64c93feaa49e9db67e6d297b96a4c5cc479d86a100ce3d31c0468"
+    },
+    {
+      "index": 56,
+      "heading": "### 流程 A: 单票完整估值（30秒）",
+      "expectedBodySha256": "ee714cd757508e6d2b6aea50d96f281b9b4daac858752b21f213a4679d2acbf8"
+    },
+    {
+      "index": 57,
+      "heading": "### 流程 B: 批量估值对比",
+      "expectedBodySha256": "519daf63f472006ed1d2a1ae2d57e99f51b14f45fe2cdb3b5016cab849e3c797"
+    },
+    {
+      "index": 58,
+      "heading": "### 流程 C: 主题研报批量检索",
+      "expectedBodySha256": "b7751c86033d7969ff97368e165f3feec8c8d06df396376713fa44f8d3999b59"
+    },
+    {
+      "index": 59,
+      "heading": "### 流程 D: 新标的快速调研（V3.0 增强版）",
+      "expectedBodySha256": "2b72cd34e6754a20619c3a86f0d0bab62b7849e70adf50d287cb278df4e2230d"
+    },
+    {
+      "index": 60,
+      "heading": "## 官方两融与北交所行情备胎（V3.8.0）",
+      "expectedBodySha256": "f4e0f57ec421a2f8a7bd3f351dc71a2c2d66ea6ea67b74171955d28ef8089182"
+    },
+    {
+      "index": 61,
+      "heading": "## 官方两融与北交所行情备胎（V3.8.0）",
+      "expectedBodySha256": "2dafbc16a35bb9908188747a39274cc0c42b4bf9476e58c3279f7f82c66fba34"
+    },
+    {
+      "index": 62,
+      "heading": "## 备用源速查 & 降级策略（东财/主源被封时用）",
+      "expectedBodySha256": "d88b0cf4191d5b38600c95f06e2d32551387826d96c032ed5f6df8d4be930d25"
+    }
+  ]
 }

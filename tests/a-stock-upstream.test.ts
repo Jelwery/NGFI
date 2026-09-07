@@ -174,7 +174,7 @@ describe('a-stock-data immutable snapshot', () => {
     expect(analysis.definitionOccurrences).toBe(capability.summary.definitionOccurrences)
   })
 
-  it('records runtime exposure per upstream entry without promoting partial groups', async () => {
+  it('records complete runtime exposure for every upstream entry', async () => {
     const [capability, spec] = await Promise.all([json(CAPABILITY_PATH), readExtractionSpec()])
     const byId = new Map<string, any>(capability.capabilities.map((item: { id: string }) => [item.id, item]))
 
@@ -183,103 +183,119 @@ describe('a-stock-data immutable snapshot', () => {
     expect(spec.capabilityRuntimeLedger.map((item: { id: string }) => item.id))
       .toEqual(capability.capabilities.map((item: { id: string }) => item.id))
     expect(capability.summary.statusCounts).toEqual({
-      'implemented-canonical': 5,
-      'implemented-experimental': 1,
-      'blocked-auth': 1,
-      'deferred-policy': 53,
+      'implemented-canonical': 14,
+      'implemented-experimental': 45,
+      'implemented-optional-auth': 1,
+      'blocked-auth': 0,
+      'deferred-policy': 0,
       unsupported: 0,
     })
 
     expect(byId.get('capability-001')).toMatchObject({
       name: 'tdx_client.bars / tdx_client.quotes / tdx_client.transaction',
-      status: 'implemented-experimental',
-      canonicalMapping: null,
+      status: 'implemented-canonical',
+      canonicalMapping: 'a-stock-public.market-bars / a-stock-public.order-book',
       runtimeMappings: [
         {
           upstreamCallable: 'tdx_client.bars',
           status: 'implemented-canonical',
-          providerId: 'tdx-community',
+          providerId: 'a-stock-public',
           operation: 'market-bars',
+          featureId: 'market.tdx',
+          variantId: 'bars',
+          toolName: 'finance_cn_bars',
+          dataset: 'tdx-bars',
           coverage: 'full',
           sourceIds: ['mootdx'],
         },
         {
           upstreamCallable: 'tdx_client.quotes',
-          status: 'implemented-experimental',
-          providerId: 'tdx-community',
-          operation: 'quote',
-          coverage: 'partial',
+          status: 'implemented-canonical',
+          providerId: 'a-stock-public',
+          operation: 'order-book',
+          featureId: 'market.tdx',
+          variantId: 'order-book',
+          toolName: 'finance_cn_market_activity',
+          dataset: 'order-book',
+          coverage: 'full',
           sourceIds: ['mootdx'],
-          unmappedCanonicalCapabilities: ['order-book'],
         },
         {
           upstreamCallable: 'tdx_client.transaction',
-          status: 'unsupported',
-          providerId: null,
-          operation: null,
-          coverage: 'none',
-          sourceIds: [],
+          status: 'implemented-canonical',
+          providerId: 'a-stock-public',
+          operation: 'order-book',
+          featureId: 'market.tdx',
+          variantId: 'time-and-sales',
+          toolName: 'finance_cn_market_activity',
+          dataset: 'time-and-sales',
+          coverage: 'full',
+          sourceIds: ['mootdx'],
         },
       ],
     })
-    expect(byId.get('capability-001').reason).toMatch(/order-book.*transaction/u)
 
     expect(byId.get('capability-002')).toMatchObject({
       name: 'tencent_quote',
-      status: 'deferred-policy',
+      status: 'implemented-canonical',
       generated: false,
-      canonicalMapping: null,
+      canonicalMapping: 'a-stock-public.quote',
       runtimeMappings: [{
         upstreamCallable: 'tencent_quote',
-        status: 'deferred-policy',
-        providerId: null,
-        operation: null,
-        coverage: 'none',
-        sourceIds: [],
+        status: 'implemented-canonical',
+        providerId: 'a-stock-public',
+        operation: 'quote',
+        featureId: 'quote.tencent',
+        toolName: 'finance_cn_quote',
+        dataset: 'tencent-quote',
+        coverage: 'full',
+        sourceIds: ['tencent-finance'],
       }],
     })
-    expect(byId.get('capability-002').reason).toMatch(/East Money.*Tencent/u)
-    expect(byId.get('capability-002').runtimeMappings[0].replacementRuntime).toEqual({
-      providerId: 'a-stock-public',
-      operation: 'quote',
-      runtimeSourceIds: ['eastmoney-push2'],
-    })
 
-    for (const [id, name] of [
-      ['capability-055', 'index_weights'],
-      ['capability-056', 'index_valuation'],
+    for (const [id, name, featureId] of [
+      ['capability-055', 'index_weights', 'index.weights'],
+      ['capability-056', 'index_valuation', 'index.valuation'],
     ] as const) {
       expect(byId.get(id)).toMatchObject({
         name,
-        status: 'deferred-policy',
+        status: 'implemented-canonical',
         generated: true,
-        canonicalMapping: null,
+        canonicalMapping: 'a-stock-public.index',
         runtimeMappings: [{
           upstreamCallable: name,
-          status: 'deferred-policy',
-          providerId: null,
-          operation: null,
-          coverage: 'generated-only',
-          sourceIds: [],
-          generatedCallable: name,
+          status: 'implemented-canonical',
+          providerId: 'a-stock-public',
+          operation: 'index',
+          featureId,
+          toolName: 'finance_cn_macro_index',
+          coverage: 'full',
         }],
       })
-      expect(byId.get(id).reason).toMatch(/no curated provider operation invokes it/u)
     }
 
-    for (const item of capability.capabilities.filter((entry: { status: string }) => entry.status === 'implemented-canonical')) {
-      expect(item.canonicalMapping, item.id).toMatch(/^[a-z0-9-]+\.[a-z0-9-]+$/u)
-      expect(item.runtimeMappings, item.id).not.toHaveLength(0)
-      expect(item.runtimeMappings.every((mapping: { status: string; providerId: unknown; operation: unknown }) => (
-        mapping.status === 'implemented-canonical'
+    const implemented = new Set([
+      'implemented-canonical', 'implemented-experimental', 'implemented-optional-auth',
+    ])
+    for (const item of capability.capabilities) {
+      expect(implemented.has(item.status), item.id).toBe(true)
+      expect(item.runtimeMappings, item.id).toHaveLength(item.upstreamCallables.length)
+      expect(new Set(item.runtimeMappings.map((mapping: { upstreamCallable: string }) => mapping.upstreamCallable)), item.id)
+        .toEqual(new Set(item.upstreamCallables))
+      expect(item.runtimeMappings.every((mapping: { status: string; providerId: unknown; operation: unknown; featureId: unknown; toolName: unknown; dataset: unknown; contractTier: unknown; fixture: unknown; liveProbe: unknown }) => (
+        implemented.has(mapping.status)
         && typeof mapping.providerId === 'string'
         && typeof mapping.operation === 'string'
+        && typeof mapping.featureId === 'string'
+        && typeof mapping.toolName === 'string'
+        && typeof mapping.dataset === 'string'
+        && typeof mapping.contractTier === 'string'
+        && typeof mapping.fixture === 'string'
+        && typeof mapping.liveProbe === 'string'
       )), item.id).toBe(true)
     }
-    expect(capability.capabilities.filter((entry: { status: string }) => entry.status === 'implemented-canonical')
-      .map((entry: { id: string }) => entry.id)).toEqual([
-      'capability-029', 'capability-030', 'capability-034', 'capability-054', 'capability-057',
-    ])
+    expect(capability.capabilities.filter((entry: { status: string }) => entry.status === 'implemented-optional-auth')
+      .map((entry: { id: string; auth: string }) => [entry.id, entry.auth])).toEqual([['capability-008', 'api-key']])
   })
 
   it('fails closed when the explicit runtime ledger drifts from upstream inventory', async () => {
@@ -294,7 +310,7 @@ describe('a-stock-data immutable snapshot', () => {
       .toThrow(/must inventory all 60 capabilities/u)
 
     const promoted = structuredClone(extractionSpec)
-    promoted.capabilityRuntimeLedger[0].status = 'implemented-canonical'
+    promoted.capabilityRuntimeLedger[0].status = 'implemented-experimental'
     expect(() => buildCapabilityManifest({ skillText, lock, sourceManifest, extraction, spec: promoted }))
       .toThrow(/runtime ledger status differs from its callable mappings for capability-001/u)
 

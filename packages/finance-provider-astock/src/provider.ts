@@ -97,6 +97,7 @@ const RUNNER_ENVIRONMENT_KEYS = [
   'SYSTEMROOT',
   'WINDIR',
 ] as const
+const OPTIONAL_AUTH_ENVIRONMENT_KEYS = ['IWENCAI_API_KEY'] as const
 const RESPONSE_STATUSES = new Set([
   'available', 'missing', 'not-applicable', 'no-data', 'unsupported', 'unauthorized',
   'insufficient-permission', 'rate-limited', 'provider-error',
@@ -623,8 +624,11 @@ function runnerEnvironment(
     const value = parent[key] ?? process.env[key]
     if (value !== undefined) environment[key] = value
   }
-  if (source === 'public-web' && parent.IWENCAI_API_KEY !== undefined) {
-    environment.IWENCAI_API_KEY = parent.IWENCAI_API_KEY
+  if (source === 'public-web') {
+    for (const key of OPTIONAL_AUTH_ENVIRONMENT_KEYS) {
+      const value = parent[key]
+      if (value !== undefined) environment[key] = value
+    }
   }
   return environment
 }

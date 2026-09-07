@@ -9,7 +9,7 @@ description: 查询与研究中国 A 股数据。覆盖沪深北股票、ETF、�
 
 ## 工作流
 
-1. **涉及证券时先规范化。** 先用 `finance_cn_instrument` 把六位代码、`sh600519`、`600519.SH` 或 canonical identifier 转为 canonical instrument。`000001`、`000300` 等歧义码要明确交易所与资产类型；前后缀冲突必须报错。纯宏观、全市场榜单和交易日历不要求虚构证券身份。
+1. **先规范化证券。** 涉及证券时先用 `finance_cn_instrument` 把六位代码、`sh600519`、`600519.SH` 或 canonical identifier 转为 canonical instrument。`000001`、`000300` 等歧义码要明确交易所与资产类型；前后缀冲突必须报错。纯宏观、全市场榜单和交易日历不要求虚构证券身份。
 2. **先查 catalog 再选择 feature。** `finance_data_catalog` 可按 `feature` 过滤，并返回 capability、callable、tool、dataset、source chain、auth、contract tier、PIT grade、限制和 live health。`implemented-*` 只表示实现已映射；实时可用性以 health/live probe 为准。
 3. **使用最窄的工具与闭合 enum。**
    - 身份、公司资料、上市状态、概念和申万行业：`finance_cn_instrument`。
@@ -37,4 +37,4 @@ description: 查询与研究中国 A 股数据。覆盖沪深北股票、ETF、�
 
 - PDF/附件只把 document ref、hash、标题、发布时间和来源作为证据；未读取正文时不得把 snippet 当正文。
 - 当前快照不能冒充历史 PIT 数据；未发布月份、缺失数值、空响应和过期 quote 不得填 0。
-- 不提供自动交易、账户、下单、个性化买卖建议、仓位建议或收益保证。价格、成交、资金流和热度也不能证明个体心理状态。
+- 不提供个性化投资建议，也不提供自动交易、账户、下单、仓位建议或收益保证。价格、成交、资金流和热度也不能证明个体心理状态。

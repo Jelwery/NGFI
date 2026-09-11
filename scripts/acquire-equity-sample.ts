@@ -131,6 +131,32 @@ if (mode === 'observe') {
       requests = ['000300.SH', '000906.SH', 'H00300.CSI', 'H00906.CSI'].map(ts_code => req('index_daily', { ts_code, start_date: '20090101', end_date: day }))
     } else if (group === 'industry-history') {
       requests = sampleRequests('index_member_all').map(request => ({ ...request, arguments: { ...request.arguments, is_new: 'N' } }))
+    } else if (group === 'index-weights-csi300' || group === 'index-weights-csi800') {
+      // Full 2016..D monthly constituent/weight history. index_weight returns
+      // month-end rows; partition by span so no call reaches the row cap:
+      // CSI300 (300/mo) uses yearly windows, CSI800 (800/mo) uses half-year windows.
+      const index_code = group === 'index-weights-csi300' ? '000300.SH' : '000906.SH'
+      const spans: Array<[string, string]> = []
+      const startYear = 2016
+      const endYmd = day
+      if (group === 'index-weights-csi300') {
+        for (let y = startYear; y <= Number(endYmd.slice(0, 4)); y++) {
+          const s = `${y}0101`
+          const e = y === Number(endYmd.slice(0, 4)) ? endYmd : `${y}1231`
+          spans.push([s, e])
+        }
+      } else {
+        for (let y = startYear; y <= Number(endYmd.slice(0, 4)); y++) {
+          for (const [ms, me] of [['0101', '0630'], ['0701', '1231']] as const) {
+            const s = `${y}${ms}`
+            let e = `${y}${me}`
+            if (s > endYmd) continue
+            if (e > endYmd) e = endYmd
+            spans.push([s, e])
+          }
+        }
+      }
+      requests = spans.map(([start_date, end_date]) => req('index_weight', { index_code, start_date, end_date }))
     } else if (/^(income|balancesheet|cashflow)-type-[45]$/.test(group ?? '')) {
       const [tool, , reportType] = group!.split('-')
       requests = sampleRequests(tool!).map(request => ({ ...request, arguments: { ...request.arguments, report_type: reportType! } }))

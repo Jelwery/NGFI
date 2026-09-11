@@ -58,11 +58,17 @@ def candidate(tmp_path):
         assets[path.name] = {"bytes": path.stat().st_size, "sha256": content_hash(path)}
     report = {"stage": "A2-sample", "contractHash": contract_hash, "sampleSize": 24, "assets": assets,
               "rawLineage": [{"request": request, "artifactHash": artifact["artifactHash"]}],
-              "inputArtifactHashes": [artifact["artifactHash"]], "gates": {"sampleRawPriceCoverage": "pass", "riskModel": "blocked"},
+              "inputArtifactHashes": [artifact["artifactHash"]],
+              "gates": {"sampleRawPriceCoverage": "pass", "riskModel": "blocked", "historicalIndexConstituentCoverage": "pass"},
               "riskModelProbe": {"status": "blocked", "maxCrossSectionSize": 20, "observedTradedDays": 2597,
                                  "feasibleFullRankDays": {"no_analyst_sentiment": 0}, "reason": "rank-deficient"},
               "tradingStatusConflicts": {"conflictRows": 18, "conflictsInEvaluationWindow": 0,
-                                         "earliestConflict": "2009-02-23", "latestConflict": "2012-07-06", "conflicts": []}}
+                                         "earliestConflict": "2009-02-23", "latestConflict": "2012-07-06", "conflicts": []},
+              "benchmarkConstituents": {"status": "pass", "indices": {
+                  "000300.SH": {"status": "pass", "monthEndSnapshots": 128, "coveredMonths": 128, "expectedMonths": 128,
+                                "missingMonths": [], "badSnapshots": []},
+                  "000906.SH": {"status": "pass", "monthEndSnapshots": 128, "coveredMonths": 128, "expectedMonths": 128,
+                                "missingMonths": [], "badSnapshots": []}}}}
     (target / "acceptance.json").write_text(json.dumps(report))
     return root, target, report
 
@@ -82,6 +88,9 @@ def test_a2_sample_integrity_does_not_mean_full_market_acceptance(candidate):
     assert gates["riskAcceptance"]["status"] == "blocked"
     assert report["riskModelProbe"]["maxCrossSectionSize"] == 20
     assert report["tradingStatusConflicts"]["conflictRows"] == 18
+    # historical index constituent/weight history is real 2016..D monthly coverage.
+    assert gates["historicalIndexConstituentCoverage"]["status"] == "pass"
+    assert report["benchmarkConstituents"]["status"] == "pass"
 
 
 def test_a2_requires_risk_and_conflict_diagnostics(candidate):
@@ -89,6 +98,14 @@ def test_a2_requires_risk_and_conflict_diagnostics(candidate):
     report.pop("riskModelProbe")
     (target / "acceptance.json").write_text(json.dumps(report))
     with pytest.raises(ValueError, match="riskModelProbe"):
+        audit_a2(root, target, CONTRACT, REPO)
+
+
+def test_a2_requires_benchmark_constituent_diagnostic(candidate):
+    root, target, report = candidate
+    report.pop("benchmarkConstituents")
+    (target / "acceptance.json").write_text(json.dumps(report))
+    with pytest.raises(ValueError, match="benchmarkConstituents"):
         audit_a2(root, target, CONTRACT, REPO)
 
 

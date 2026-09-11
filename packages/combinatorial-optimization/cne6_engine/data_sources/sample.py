@@ -200,7 +200,8 @@ def build_sample(root: Path, contract_path: Path, output: Path):
         raise ValueError("sample identity/quota drift")
     all_artifacts = []
     plans = (["a2-bootstrap-v1"] + [f"a2-sample-{group.replace('_', '-')}-v1" for group in GROUPS]
-             + ["a2-repair-balance-early-v1", "a2-repair-balance-late-v1", "a2-repair-industry-history-v1", "a2-repair-benchmarks-v1"]
+             + ["a2-repair-balance-early-v1", "a2-repair-balance-late-v1", "a2-repair-industry-history-v1", "a2-repair-benchmarks-v1",
+                "a2-repair-index-weights-csi300-v1", "a2-repair-index-weights-csi800-v1"]
              + [f"a2-repair-{tool}-type-{report_type}-v1" for tool in ("income", "balancesheet", "cashflow") for report_type in (4, 5)])
     for plan_id in plans:
         plan = strict_json((root / "plans" / f"{plan_id}.json").read_text())
@@ -309,14 +310,68 @@ def build_sample(root: Path, contract_path: Path, output: Path):
                              "reason": "Effective membership date is not historical publication/vintage evidence."})
     weights = [a for a in all_artifacts if a["request"]["tool"] == "index_weight"]
     benchmarks = []
+    index_month_ends: dict[str, dict[str, dict]] = {}
     for artifact in weights:
         by_date = {}
         for row in artifact["rows"]:
             by_date.setdefault(row["trade_date"], []).append(row)
         for day, values in by_date.items():
-            benchmarks.append({"index": artifact["request"]["arguments"]["index_code"], "date": day, "names": len(values),
+            index_code = artifact["request"]["arguments"]["index_code"]
+            benchmarks.append({"index": index_code, "date": day, "names": len(values),
                                "weightPercentSum": sum(row["weight"] for row in values), "sourceHash": artifact["rawHash"],
                                "qualityFlag": "unverified", "reason": "Historical weight date lacks original publication time and daily rebalance lineage."})
+            bucket = index_month_ends.setdefault(index_code, {})
+            snapshot = {"names": len({row["con_code"] for row in values}), "rows": len(values),
+                        "weightSum": sum(row["weight"] for row in values)}
+            if day in bucket:
+                # The same month-end can appear in both the bootstrap probe and the
+                # dedicated history partitions; accept only if identical, never
+                # silently pick one over a differing snapshot.
+                if bucket[day] != snapshot:
+                    raise ValueError("conflicting index_weight month-end across partitions")
+                continue
+            bucket[day] = snapshot
+    # Historical constituent/weight coverage: every calendar month in the
+    # evaluation window must resolve to exactly one month-end snapshot with the
+    # expected constituent count and a ~100% weight sum. This is real 2016..D
+    # monthly history, not one dated snapshot; daily rebalance lineage and
+    # original publication time are still not proven, so quality stays unverified.
+    expected_counts = {"000300.SH": 300, "000906.SH": 800}
+    evaluation_start = contract["history"]["evaluationStart"]
+    # Require month-end coverage only for fully-completed calendar months in the
+    # evaluation window. The month containing D is incomplete, so its month-end
+    # constituent snapshot is not yet published and must not be demanded.
+    decision_month = contract["decisionDate"].replace("-", "")[:6]
+    expected_months = sorted({d[:6] for d in sessions["SSE"]
+                              if d >= evaluation_start.replace("-", "") and d[:6] < decision_month})
+    index_constituents = {}
+    constituent_history_ok = bool(index_month_ends) and set(index_month_ends) == set(expected_counts)
+    for index_code, expected in expected_counts.items():
+        buckets = index_month_ends.get(index_code, {})
+        months = {day[:6]: day for day in sorted(buckets)}
+        if len(months) != len(buckets):
+            raise ValueError("multiple index_weight month-ends within one month")
+        missing_months = [month for month in expected_months if month not in months]
+        bad_snapshots = sorted(day for day, info in buckets.items()
+                               if info["names"] != expected or info["rows"] != expected or abs(info["weightSum"] - 100.0) > 1.0)
+        index_ok = not missing_months and not bad_snapshots and bool(buckets)
+        constituent_history_ok &= index_ok
+        index_constituents[index_code] = {
+            "expectedConstituents": expected, "monthEndSnapshots": len(buckets),
+            "coveredMonths": len([m for m in expected_months if m in months]), "expectedMonths": len(expected_months),
+            "earliest": min(buckets) if buckets else None, "latest": max(buckets) if buckets else None,
+            "missingMonths": missing_months, "badSnapshots": bad_snapshots,
+            "status": "pass" if index_ok else "blocked",
+        }
+    benchmark_constituents = {
+        "scope": "CSI300 (000300.SH) and CSI800 (000906.SH) evaluation-window monthly history",
+        "evaluationStart": evaluation_start, "decisionDate": contract["decisionDate"],
+        "indices": index_constituents, "status": "pass" if constituent_history_ok else "blocked",
+        "qualityFlag": "unverified",
+        "reason": ("Full 2016..D month-end constituents and weights with expected counts and ~100% weight sums. "
+                   "Daily rebalance lineage and original index-methodology publication time remain unverified; "
+                   "this covers historical constituent/weight universe, not intra-month or original-publication provenance."),
+    }
     benchmark_series = []
     for artifact in all_artifacts:
         if artifact["request"]["tool"] != "index_daily":
@@ -382,6 +437,7 @@ def build_sample(root: Path, contract_path: Path, output: Path):
         "securities": summaries, "benchmarkWeights": benchmarks, "exclusions": exclusions,
         "reasonCounts": dict(reason_counts), "stratumEvidence": identity_evidence,
         "tradingStatusConflicts": trading_status_diagnostic, "riskModelProbe": risk_model,
+        "benchmarkConstituents": benchmark_constituents,
         "rawLineage": lineage,
         "fieldSemantics": {"volume_shares": "TuShare vol lots * 100", "amount_cny": "TuShare amount thousands CNY * 1000",
                            "shares_and_market_cap": "TuShare daily_basic ten-thousands * 10000", "turnover_rate": "percent / 100",
@@ -394,6 +450,7 @@ def build_sample(root: Path, contract_path: Path, output: Path):
                   "tradingStatusConsistency": "blocked" if reason_counts["trade-versus-full-suspension-conflict"] else "pass",
                   "corporateActionSettlementDates": "pass" if len(dated_actions) == len(evaluation_actions) and evaluation_actions and not unscoped_actions else "blocked",
                   "fullMarketHistoricalMaster": "blocked", "benchmarkPriceTotalReturnContinuity": "pass", "benchmarkOriginalPublication": "blocked",
+                  "historicalIndexConstituentCoverage": benchmark_constituents["status"],
                   "riskModel": risk_model["status"], "twentyDayIncremental": "not-run"},
         "status": "blocked", "promotionAllowed": False,
         "next": "Resolve per-security gaps, BSE transfer/listing identities, source vintages and independent gold evidence before expanding or promoting.",

@@ -167,6 +167,56 @@ class OptimizerTest(unittest.TestCase):
         self.assertEqual(result["status"], "rejected")
         self.assertIn("coverage", result["rejectionReasons"][0])
 
+    def test_effective_dated_lot_size_rounds_trades_and_reports_oracle(self):
+        # A small, tightly participation-capped problem so the lot grid is
+        # enumerable. A 200-share lot forces asset0 trade increments to multiples
+        # of 200; the independent oracle confirms a feasible plan exists.
+        payload = example_input()
+        payload["assets"][0]["lotSize"] = 200
+        for asset in payload["assets"]:
+            asset["advNotional"] = 100000  # 0.1 participation -> <=1000 shares traded
+        result = optimize_portfolio(seal(payload))
+        self.assertEqual(result["status"], "ok", result["rejectionReasons"])
+        self.assertEqual(result["repaired"]["quantities"][AK] % 200, 0)
+        self.assertEqual(result["repaired"]["lotSizes"][AK], 200)
+        self.assertIn("lotOracle", result)
+        self.assertEqual(result["lotOracle"]["kind"], "brute-force-enumeration")
+        self.assertGreaterEqual(result["lotOracle"]["feasibleCount"], 1)
+        self.assertEqual(result["repaired"]["repairMethod"], "deterministic-effective-lot-coordinate-repair")
+
+    def test_lot_size_is_fail_closed(self):
+        payload = example_input()
+        payload["assets"][0]["lotSize"] = 0
+        self.assertIn("lotSize", " ".join(optimize_portfolio(seal(payload))["rejectionReasons"]))
+        payload["assets"][0]["lotSize"] = 100.0
+        self.assertIn("lotSize", " ".join(optimize_portfolio(seal(payload))["rejectionReasons"]))
+
+    def test_large_participation_grid_is_not_falsely_declared_infeasible(self):
+        # The default example allows up to 1000 lots per asset: too large to
+        # enumerate. A discrete failure must NOT be reported as proven integer
+        # infeasibility; the oracle is simply absent.
+        payload = example_input()
+        payload["assets"][1]["score"] = 0.5
+        payload["mandate"].update(cashMin=0.01, cashMax=0.01)
+        result = optimize_portfolio(seal(payload))
+        self.assertEqual(result["status"], "rejected")
+        self.assertNotIn("lotOracle", result)
+        self.assertIn("too large to enumerate", result["rejectionReasons"][0])
+
+    def test_oracle_proves_integer_infeasibility_on_small_grid(self):
+        # Small participation-capped grid where continuous is feasible but no
+        # lot-multiple plan hits the exact cash target once fees are charged.
+        payload = example_input()
+        payload["assets"][1]["score"] = 0.5
+        for asset in payload["assets"]:
+            asset["advNotional"] = 30000  # <= 300 shares (3 lots) traded per asset
+        payload["mandate"].update(cashMin=0.95, cashMax=0.95)
+        result = optimize_portfolio(seal(payload))
+        self.assertEqual(result["status"], "rejected")
+        self.assertIn("lotOracle", result)
+        self.assertEqual(result["lotOracle"]["feasibleCount"], 0)
+        self.assertIn("integer-infeasible (enumerated)", result["rejectionReasons"][0])
+
     def test_domain_freshness_defaults_to_global_max_age(self):
         payload = example_input()
         result = optimize_portfolio(payload)

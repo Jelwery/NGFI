@@ -167,6 +167,48 @@ class OptimizerTest(unittest.TestCase):
         self.assertEqual(result["status"], "rejected")
         self.assertIn("coverage", result["rejectionReasons"][0])
 
+    def test_domain_freshness_defaults_to_global_max_age(self):
+        payload = example_input()
+        result = optimize_portfolio(payload)
+        self.assertEqual(result["status"], "ok", result["rejectionReasons"])
+        # Unspecified per-domain windows fall back to the global maxAgeDays (5).
+        self.assertEqual(result["freshnessPolicy"]["maxAgeDays"], 5)
+        self.assertEqual(set(result["freshnessPolicy"]["maxAgeDaysByDomain"]),
+                         {"price", "tradingStatus", "risk", "research", "holdings", "benchmark"})
+        self.assertTrue(all(v == 5 for v in result["freshnessPolicy"]["maxAgeDaysByDomain"].values()))
+
+    def test_per_domain_freshness_separates_annual_research_from_daily_price(self):
+        # A research score 60 days old with a short global/price window must not be
+        # forced stale, while prices stay on a tight session-timed window.
+        payload = example_input()
+        payload["asOf"] = "2026-03-31T09:30:00+08:00"
+        for asset in payload["assets"]:
+            asset["scoreAvailableAt"] = "2026-01-31T09:00:00+08:00"  # ~59 days old
+        payload["mandate"]["qualityPolicy"]["maxAgeDaysByDomain"] = {"research": 120}
+        # daily domains still reference the near-asOf timestamps
+        for label in ("priceAvailableAt", "advAvailableAt", "statusAvailableAt"):
+            for asset in payload["assets"]:
+                asset[label] = "2026-03-31T09:00:00+08:00"
+        payload["cashAvailableAt"] = payload["holdingsAvailableAt"] = "2026-03-31T09:00:00+08:00"
+        payload["riskSnapshot"]["asOf"] = "2026-03-30"
+        payload["riskSnapshot"]["availableAt"] = "2026-03-31T08:00:00+08:00"
+        payload["benchmark"]["availableAt"] = "2026-03-31T08:00:00+08:00"
+        result = optimize_portfolio(seal(payload))
+        self.assertEqual(result["status"], "ok", result["rejectionReasons"])
+        self.assertEqual(result["freshnessPolicy"]["maxAgeDaysByDomain"]["research"], 120)
+        # Tightening research back to the 5-day global window rejects the stale score.
+        payload["mandate"]["qualityPolicy"]["maxAgeDaysByDomain"] = {"research": 5}
+        rejected = optimize_portfolio(seal(payload))
+        self.assertEqual(rejected["status"], "rejected")
+        self.assertIn("scoreAvailableAt", " ".join(rejected["rejectionReasons"]))
+
+    def test_per_domain_freshness_rejects_unknown_domain_and_bad_age(self):
+        payload = example_input()
+        payload["mandate"]["qualityPolicy"]["maxAgeDaysByDomain"] = {"unknownDomain": 10}
+        self.assertIn("maxAgeDaysByDomain", " ".join(optimize_portfolio(seal(payload))["rejectionReasons"]))
+        payload["mandate"]["qualityPolicy"]["maxAgeDaysByDomain"] = {"price": 500}
+        self.assertIn("maxAgeDaysByDomain.price", " ".join(optimize_portfolio(seal(payload))["rejectionReasons"]))
+
 
 if __name__ == "__main__":
     unittest.main()

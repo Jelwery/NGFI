@@ -114,8 +114,19 @@ def _prepare(value: Any) -> dict:
     _number(mandate["riskAversion"], "riskAversion", 0)
     _number(mandate["turnoverPenalty"], "turnoverPenalty", 0)
     tolerance = _number(mandate["tolerance"], "tolerance", 1e-10, 1e-4)
-    policy = _object(mandate["qualityPolicy"], "maxAgeDays minCoverage maxConditionNumber maxAsymmetry maxReconciliationError allowedProxyFlags allowWarnings", label="qualityPolicy")
+    policy = _object(mandate["qualityPolicy"], "maxAgeDays minCoverage maxConditionNumber maxAsymmetry maxReconciliationError allowedProxyFlags allowWarnings", "maxAgeDaysByDomain", label="qualityPolicy")
     age = _number(policy["maxAgeDays"], "maxAgeDays", 0, 366)
+    # Domain-specific freshness: prices/trading status are timed to the trade
+    # session, risk to the model publication date, research to the score validity,
+    # holdings/cash to the account snapshot, benchmark to its own publication. A
+    # single window must not force an annual report and a daily bar to share one
+    # threshold. Unspecified domains fall back to the global maxAgeDays.
+    DOMAINS = ("price", "tradingStatus", "risk", "research", "holdings", "benchmark")
+    domain_ages = {domain: age for domain in DOMAINS}
+    if "maxAgeDaysByDomain" in policy:
+        by_domain = _object(policy["maxAgeDaysByDomain"], "", " ".join(DOMAINS), "maxAgeDaysByDomain")
+        for domain, value in by_domain.items():
+            domain_ages[domain] = _number(value, f"maxAgeDaysByDomain.{domain}", 0, 366)
     _number(policy["minCoverage"], "minCoverage", 0, 1)
     _number(policy["maxConditionNumber"], "maxConditionNumber", 1)
     _number(policy["maxAsymmetry"], "maxAsymmetry", 0, 1e-6)
@@ -125,8 +136,8 @@ def _prepare(value: Any) -> dict:
     cash = _number(data["cash"], "cash", 0)
     if money(cash) != cash:
         raise ValueError("cash must have cent precision")
-    _pit(data["cashAvailableAt"], as_of, age, "cashAvailableAt")
-    _pit(data["holdingsAvailableAt"], as_of, age, "holdingsAvailableAt")
+    _pit(data["cashAvailableAt"], as_of, domain_ages["holdings"], "cashAvailableAt")
+    _pit(data["holdingsAvailableAt"], as_of, domain_ages["holdings"], "holdingsAvailableAt")
     rows = data["assets"]
     if not isinstance(rows, list) or not rows:
         raise ValueError("assets must be a nonempty list")
@@ -138,8 +149,9 @@ def _prepare(value: Any) -> dict:
             raise ValueError("assets must be A-share equities")
         _number(row["score"], "score")
         _strings(row["evidenceRefs"], "evidenceRefs", True)
-        for label in ("scoreAvailableAt", "priceAvailableAt", "advAvailableAt", "statusAvailableAt"):
-            _pit(row[label], as_of, age, label)
+        for label, domain in (("scoreAvailableAt", "research"), ("priceAvailableAt", "price"),
+                              ("advAvailableAt", "price"), ("statusAvailableAt", "tradingStatus")):
+            _pit(row[label], as_of, domain_ages[domain], label)
         for label in ("price", "previousClose", "advNotional"):
             if _number(row[label], label, 0) == 0:
                 raise ValueError(f"{label} must be positive")
@@ -177,12 +189,12 @@ def _prepare(value: Any) -> dict:
     if snapshot["schemaVersion"] != "1" or snapshot["model"] != "CNE6" or snapshot["currency"] != "CNY" or snapshot["covariancePeriod"] != "daily":
         raise ValueError("riskSnapshot must be schema 1, daily CNE6 CNY")
     _text(snapshot["modelVersion"], "modelVersion")
-    _pit(snapshot["availableAt"], as_of, age, "riskSnapshot.availableAt")
+    _pit(snapshot["availableAt"], as_of, domain_ages["risk"], "riskSnapshot.availableAt")
     # The existing CNE6 producer has a date-valued asOf; availability is separate.
     model_time = snapshot["asOf"]
     if isinstance(model_time, str) and len(model_time) == 10:
         model_time += "T00:00:00+08:00"
-    _pit(model_time, as_of, age, "riskSnapshot.asOf")
+    _pit(model_time, as_of, domain_ages["risk"], "riskSnapshot.asOf")
     if "inputHash" in snapshot:
         require_hash(snapshot["inputHash"], "riskSnapshot.inputHash")
     quality = _object(snapshot["quality"], "status symmetric positiveSemidefinite maxAsymmetry minEigenvalue maxEigenvalue conditionNumber stockReconciliationMaxError issues", label="riskSnapshot.quality")
@@ -272,7 +284,7 @@ def _prepare(value: Any) -> dict:
     benchmark_instrument = instrument_from_contract(benchmark["instrument"])
     if benchmark_instrument.key not in ("CN:SSE:000300:index", "CN:SSE:000906:index"):
         raise ValueError("benchmark must be CSI300 or CSI800")
-    _pit(benchmark["availableAt"], as_of, age, "benchmark.availableAt")
+    _pit(benchmark["availableAt"], as_of, domain_ages["benchmark"], "benchmark.availableAt")
     weights = benchmark["weights"]
     if not isinstance(weights, dict) or set(weights) - set(keys):
         raise ValueError("benchmark weights must use asset canonical keys")
@@ -331,7 +343,7 @@ def _prepare(value: Any) -> dict:
     return dict(data=data, mandate=mandate, assets=assets, keys=keys, alpha=alpha, x=x, s=s, f=factor_cov,
                 factors=factors, b=b, lower=lower, upper=upper, bands=bands, prices=prices,
                 quantities=quantities, current=prices * quantities / nav, nav=nav, cash=cash,
-                cost=cost, bars=trade_bars, can_buy=can_buy, can_sell=can_sell,
+                cost=cost, bars=trade_bars, can_buy=can_buy, can_sell=can_sell, domain_ages=domain_ages,
                 tolerance=tolerance, coverage={"assetCount": n, "coveredCount": n, "ratio": coverage, "missingKeys": []})
 
 
@@ -462,7 +474,7 @@ def optimize_portfolio(input: dict) -> dict:
     """Validate, solve the continuous QP, repair board lots and recheck every hard constraint."""
     result = {"schemaVersion": SCHEMA_VERSION, "status": "rejected", "dryRun": True,
               "operation": "portfolio-optimize", "engineVersion": ENGINE_VERSION,
-              "relaxations": [], "rejectionReasons": [], "coverage": None,
+              "relaxations": [], "rejectionReasons": [], "coverage": None, "freshnessPolicy": None,
               "solver": {"name": "OSQP", "cvxpyVersion": cp.__version__, "version": osqp.__version__,
                          "status": "not-run", "continuousOnly": True, "integerOptimal": False,
                          "duals": None}, "continuous": None, "repaired": None,
@@ -470,6 +482,8 @@ def optimize_portfolio(input: dict) -> dict:
     try:
         context = _prepare(input)
         result["coverage"] = context["coverage"]
+        result["freshnessPolicy"] = {"maxAgeDays": context["mandate"]["qualityPolicy"]["maxAgeDays"],
+                                     "maxAgeDaysByDomain": context["domain_ages"]}
         result["hashes"] = {"input": input["inputHash"], "riskSnapshot": stable_hash(input["riskSnapshot"]),
                             "mandate": stable_hash(input["mandate"]), "costModel": context["cost"].hash,
                             "codeVersion": stable_hash({"engine": ENGINE_VERSION, "cvxpy": cp.__version__, "osqp": osqp.__version__})}

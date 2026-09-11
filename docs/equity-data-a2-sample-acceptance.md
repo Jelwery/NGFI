@@ -108,6 +108,8 @@ node --env-file=.runtime/secrets/tushare.env --import tsx scripts/acquire-equity
 node --env-file=.runtime/secrets/tushare.env --import tsx scripts/acquire-equity-sample.ts repair balance-late
 node --env-file=.runtime/secrets/tushare.env --import tsx scripts/acquire-equity-sample.ts repair industry-history
 node --env-file=.runtime/secrets/tushare.env --import tsx scripts/acquire-equity-sample.ts repair benchmarks
+node --env-file=.runtime/secrets/tushare.env --import tsx scripts/acquire-equity-sample.ts repair index-weights-csi300
+node --env-file=.runtime/secrets/tushare.env --import tsx scripts/acquire-equity-sample.ts repair index-weights-csi800
 uv run --project packages/combinatorial-optimization --offline --no-sync --no-env-file --no-config python -m cne6_engine.data_sources.cli sample --output .runtime/equity-data/a2/new-replay
 node scripts/freeze-equity-baseline.mjs equity-a2-sample --check
 ```
@@ -138,23 +140,33 @@ node scripts/freeze-equity-baseline.mjs equity-a2-sample --check
 - **20 交易日增量真实观察仍为 1/20**：`observations/` 仅 `2026-09-10` 一天真实收盘后采集证据；本轮未新增真实交易日（不可在单会话伪造时间经过）。`incrementalPublicationStability` 保持 blocked，`acceptedPublicationDays=0`。
 - 本轮新增/更新单测：`test_data_sample.py` 增 6 项（点时行业区间解析、重叠判 None、rank-deficient 判定、满秩才 pass、非成交/空窗忽略），`test_a2_gate.py` 增 2 项（riskModel/riskModelFeasibility/riskAcceptance 门禁与诊断透出、缺诊断即拒绝）。定向套件 32 项通过。
 
+## 2026-09-11 后续执行（第二轮）：清零可完成门禁 historicalIndexConstituentCoverage
+
+按“能真实完成的尽量完成”，本轮用仓库数据能力实测哪些 blocked 门禁可诚实清零。样本产物固定为 `candidate-v8`，`replay-v8` 逐字节复算一致。
+
+- **能力探测结论**：TuShare `trade_cal(exchange=BSE)` 仍返回 0 行（北交所日历无法从该源获得），`stock_st`/`hs_const` 未上架 → 这些门禁无法在本会话诚实清零，保持 blocked。而 `index_weight` **可返回 2016..D 全部月末成分/权重**（CSI300 每月 300 只、CSI800 每月 800 只，权重和≈100%）。
+- **historicalIndexConstituentCoverage → pass（新清零）**：新增 `repair index-weights-csi300`/`index-weights-csi800` 采集计划，按年/半年分区抓取避免触及行数上限；CSI300 采到 38,400 行 / 128 个月末，CSI800 采到 102,400 行 / 128 个月末，范围 2016-01-29..2026-08-31。sample 在离线侧校验：评估窗内每个**已完整结束**的自然月恰好一个月末快照、成分数与预期一致、权重和在 100±1%（含 D 当月未完成则不要求）。结论写入 `benchmarkConstituents`，门禁 `historicalIndexConstituentCoverage=pass`。
+  - 仍保留 `benchmarkOriginalPublication=blocked`：这是历史**成分/权重覆盖**通过，不代表逐日调样血缘与指数方法学原件发布时点已核验，二者是不同门禁。
+- 其余 blocked/not-run 门禁维持不变（原因见下表）。审计仍恒 `status=blocked`、`promotionAllowed=false`、`readyForA3=false`——单条覆盖门禁通过不改变 A2 整体未通过。
+- 本轮新增/更新单测：`test_data_sample.py` 沿用行业/风险探针用例，`test_a2_gate.py` 增 1 项（缺 `benchmarkConstituents` 诊断即拒绝）并断言 `historicalIndexConstituentCoverage=pass`；定向 CNE6 154 项通过。
+
 ## 剩余门禁与精确原因（供后续会话续接）
 
-样本工程域已 pass 的门禁：`hashIntegrity`、`SSE_SZSE_calendar_continuity`、`sampleRawPriceCoverage`、`corporateActionSettlementDates`、`benchmarkPriceTotalReturnContinuity`、`artifactIntegrity`。以下为仍未清零项，均无法在本会话诚实变 pass：
+样本工程域已 pass 的门禁：`hashIntegrity`、`SSE_SZSE_calendar_continuity`、`sampleRawPriceCoverage`、`corporateActionSettlementDates`、`benchmarkPriceTotalReturnContinuity`、`artifactIntegrity`、**`historicalIndexConstituentCoverage`（本轮新增）**。以下为仍未清零项：`BSE_identity_calendar`、`tradingStatusConsistency`、`incrementalPublicationStability` 已确认无法在本会话诚实变 pass（外部授权/来源/时间限制）；其余需全市场数据到位后才可评。
 
 | 门禁 | 状态 | 精确原因 | 解除所需（下一步） |
 |---|---|---|---|
-| `BSE_identity_calendar` | blocked | 北交所接口日历返回空；只标 provider-convention-proxy（4,705 证券日）；官方规则正文直接下载 HTTP 403，未绕过 | 授权/官方来源核验北交所成立时间、新三板/精选层/转板/换码与交易日规则 |
-| `originalFinancialVintages` | blocked | 财报保留 report_type 1/4/5，但精确首次可得/原件版本未逐条核对；`source_available_at=null` | 采购/授权原始季报原件与披露时间戳，确定性重构 TTM/MRQ |
-| `industryPublicationTime` | blocked | SW 成员有 in/out 日期但不等于首次披露时点；当前工作簿不能证明历史 vintage | 授权行业分类 vintage/首次可得时间，显式映射历史taxonomy |
-| `tradingStatusConsistency` | blocked | 18 条同日“成交 vs 全天停牌”源冲突（2009–2012，评估窗前）；已精确分类 | 与交易所官方停牌公告逐条对账 |
+| `BSE_identity_calendar` | blocked（本会话不可完成） | 已实测 `trade_cal(exchange=BSE)` 返回 0 行；只标 provider-convention-proxy（4,705 证券日）；官方规则正文直接下载 HTTP 403，未绕过 | 授权/官方来源核验北交所成立时间、新三板/精选层/转板/换码与交易日规则 |
+| `originalFinancialVintages` | blocked | 财报保留 report_type 1/4/5，但精确首次可得/原件版本未逐条核对；`source_available_at=null`。已探测 `disclosure_date` 可提供 pre_date/actual_date，可作后续接入点 | 采购/授权原始季报原件与披露时间戳（或接入 disclosure_date 后逐条对账），确定性重构 TTM/MRQ |
+| `industryPublicationTime` | blocked | SW 成员有 in/out 日期但不等于首次披露时点；`index_classify` 仅给当前分类工作簿，不能证明历史 vintage | 授权行业分类 vintage/首次可得时间，显式映射历史taxonomy |
+| `tradingStatusConsistency` | blocked（本会话不可完成） | 18 条同日“成交 vs 全天停牌”源冲突（2009–2012，评估窗前）；已精确分类 | 与交易所官方停牌公告逐条对账 |
 | `fullMarketHistoricalMaster` | blocked | 24只样本+D日截面不能代表全市场逐历史时点集合 | 授权有效期化全市场证券主表，逐时点解释纳入/排除 |
-| `benchmarkOriginalPublication` | blocked | 指数返回最新文件而非历史 as-of vintage；缺原件发布时间与逐日调样血缘 | 授权 CSI300/800 历史成分/权重/价格与全收益，含方法学 |
-| `historicalIndexConstituentCoverage` | blocked | 仅一份 2026-08-31 权重快照，不是 2016..D 历史成分/权重 | 同上，构建历史成分/权重后再推全市场 |
+| `benchmarkOriginalPublication` | blocked | 已获历史月末成分/权重覆盖，但缺原件发布时间与逐日调样血缘（与覆盖门禁分列） | 授权 CSI300/800 指数方法学与逐日调样原件发布时点 |
+| `historicalIndexConstituentCoverage` | ✅ pass（本轮清零） | CSI300/800 2016-01..D 每个已完成月均有唯一月末快照，成分数与权重和达标（128/128 月，0 缺失/0 异常） | 已完成；后续与逐日调样血缘一起做 benchmarkOriginalPublication |
 | `riskModelFeasibility`（样本） | blocked | 24只样本截面 N≤K，2597/2597 评估日 rank-deficient，无法识别 CNE6 因子 | 点时行业 + 点时流通股本 + 全市场宽度 |
 | `riskAcceptance`（全市场） | blocked | 无全市场 42-descriptor/风险覆盖与协方差校准；样本域也无法估计协方差 | A2 全市场数据通过后运行全量风险验收（对称/PSD/重构/修复幅度阈值见契约） |
 | `fullMarketCoverage` | blocked | 未做全市场分区构建与分层覆盖 | 断点续传按日/证券块构建，只重试失败分区 |
-| `incrementalPublicationStability` | blocked | 真实收盘观察 1/20；不可伪造时间经过 | 实际每日运行 `observe`，累计 20 个真实交易日 |
+| `incrementalPublicationStability` | blocked（本会话不可完成） | 真实收盘观察 1/20；不可伪造时间经过 | 实际每日运行 `observe`，累计 20 个真实交易日 |
 | `twentyDayIncremental`（sample 报告位） | not-run | 同上，属持续运行验收 | 同上 |
 
 

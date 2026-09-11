@@ -6,6 +6,7 @@ import type {
   HoldingsImportFormat,
   HoldingsImportIssue,
   HoldingsImportResult,
+  PortfolioAccountState,
 } from './contracts.js'
 import { holdingId, holdingKey, portfolioHash } from './identity.js'
 
@@ -13,12 +14,13 @@ export interface HoldingsImportContext {
   readonly portfolioId: string
   readonly asOf: string
   readonly baseCurrency: string
+  readonly accountState?: PortfolioAccountState
 }
 
 const CURRENCY_RE = /^[A-Z]{3}$/u
-const JSON_POSITION_KEYS = new Set(['instrument', 'quantity', 'marketValue', 'currency', 'account', 'name'])
+const JSON_POSITION_KEYS = new Set(['instrument', 'quantity', 'marketValue', 'currency', 'account', 'name', 'sellableQuantity'])
 const INSTRUMENT_KEYS = new Set(['market', 'exchange', 'symbol', 'assetType'])
-const CSV_COLUMNS = ['market', 'exchange', 'symbol', 'assetType', 'quantity', 'marketValue', 'currency', 'account', 'name'] as const
+const CSV_COLUMNS = ['market', 'exchange', 'symbol', 'assetType', 'quantity', 'marketValue', 'currency', 'account', 'name', 'sellableQuantity'] as const
 const CSV_REQUIRED = new Set(['market', 'exchange', 'symbol', 'assetType', 'quantity', 'marketValue', 'currency'])
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -36,6 +38,23 @@ function issue(
   return { code, message, ...(row === undefined ? {} : { row }), ...(field === undefined ? {} : { field }) }
 }
 
+function normalizeAccountState(state: PortfolioAccountState | undefined): PortfolioAccountState | undefined {
+  if (state === undefined) return undefined
+  const round = (value: number) => Math.round(value * 100) / 100
+  if (typeof state !== 'object' || state === null || Array.isArray(state)) throw new TypeError('accountState must be an object')
+  const keys = Object.keys(state)
+  const allowed = new Set(['cash', 'cashAvailableAt', 'valuationAt'])
+  for (const key of keys) if (!allowed.has(key)) throw new TypeError(`unsupported accountState field: ${key}`)
+  if (!Number.isFinite(state.cash) || state.cash < 0 || round(state.cash) !== state.cash) {
+    throw new TypeError('accountState.cash must be a non-negative cent-precision number')
+  }
+  for (const field of ['cashAvailableAt', 'valuationAt'] as const) {
+    const value = state[field]
+    if (typeof value !== 'string' || !Number.isFinite(Date.parse(value))) throw new TypeError(`accountState.${field} must be an ISO timestamp`)
+  }
+  return { cash: state.cash, cashAvailableAt: state.cashAvailableAt, valuationAt: state.valuationAt }
+}
+
 function normalizeContext(context: HoldingsImportContext): HoldingsImportContext {
   const portfolioId = context.portfolioId.trim()
   const baseCurrency = context.baseCurrency.trim().toUpperCase()
@@ -47,7 +66,8 @@ function normalizeContext(context: HoldingsImportContext): HoldingsImportContext
     throw new TypeError('asOf must be an ISO date or timestamp')
   }
   if (!CURRENCY_RE.test(baseCurrency)) throw new TypeError('baseCurrency must be a three-letter ISO currency')
-  return { portfolioId, asOf: context.asOf, baseCurrency }
+  const accountState = normalizeAccountState(context.accountState)
+  return { portfolioId, asOf: context.asOf, baseCurrency, ...(accountState === undefined ? {} : { accountState }) }
 }
 
 function textField(value: unknown, row: number, field: string, errors: HoldingsImportIssue[]): string | null {
@@ -101,6 +121,17 @@ function normalizePosition(
   }
   const account = value.account === undefined ? 'default' : textField(value.account, row, 'account', errors)
   const name = value.name === undefined ? undefined : textField(value.name, row, 'name', errors) ?? undefined
+  let sellableQuantity: number | undefined
+  if (value.sellableQuantity !== undefined) {
+    const parsed = typeof value.sellableQuantity === 'number'
+      ? value.sellableQuantity
+      : (typeof value.sellableQuantity === 'string' && value.sellableQuantity.trim() !== '' ? Number(value.sellableQuantity) : Number.NaN)
+    if (!Number.isFinite(parsed) || parsed < 0 || (quantity !== null && parsed > quantity)) {
+      errors.push(issue('invalid-number', 'sellableQuantity must be between 0 and quantity', row, 'sellableQuantity'))
+    } else {
+      sellableQuantity = parsed
+    }
+  }
   if ([market, exchange, symbol, assetType, quantity, marketValue, currency, account].some(item => item === null)) return null
   const instrument: InstrumentId = {
     market: market!.toUpperCase() as Market,
@@ -117,6 +148,7 @@ function normalizePosition(
   const input: HoldingPositionInput = {
     instrument, quantity: quantity!, marketValue: marketValue!, currency: currency!, account: account!,
     ...(name === undefined ? {} : { name }),
+    ...(sellableQuantity === undefined ? {} : { sellableQuantity }),
   }
   return { ...input, account: account!, id: holdingId(portfolioId, input) }
 }
@@ -230,6 +262,7 @@ export function importHoldingsCsv(text: string, context: HoldingsImportContext):
       quantity: flat.quantity, marketValue: flat.marketValue, currency: flat.currency,
       ...(flat.account === undefined || flat.account === '' ? {} : { account: flat.account }),
       ...(flat.name === undefined || flat.name === '' ? {} : { name: flat.name }),
+      ...(flat.sellableQuantity === undefined || flat.sellableQuantity === '' ? {} : { sellableQuantity: flat.sellableQuantity }),
     })
   }
   return finalize('csv', context, text, values, errors)

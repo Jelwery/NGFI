@@ -94,11 +94,24 @@ function confirmedInput(options: PortfolioToolOptions, args: Record<string, unkn
   const asOf = Date.parse(String(input.asOf))
   const holdingTime = Date.parse(snapshot.asOf)
   if (!Number.isFinite(asOf) || !Number.isFinite(holdingTime) || holdingTime > asOf) throw new TypeError('holdings as-of is invalid or later than optimization')
+  // When the confirmed snapshot carries an account state, cash, its availability
+  // and per-position sellable quantities are confirmed together with quantities
+  // as one unit. The optimizer input must not silently supply different values.
+  const accountState = snapshot.accountState
+  const sellableByKey = new Map<string, number>()
   const quantities = new Map<string, number>()
   for (const position of snapshot.positions) {
     const id = position.instrument
     const key = `${id.market}:${id.exchange}:${id.symbol}:${id.assetType}`
     quantities.set(key, (quantities.get(key) ?? 0) + position.quantity)
+    if (accountState !== undefined) {
+      if (position.sellableQuantity === undefined) throw new TypeError(`confirmed account state requires sellableQuantity for ${key}`)
+      sellableByKey.set(key, (sellableByKey.get(key) ?? 0) + position.sellableQuantity)
+    }
+  }
+  if (accountState !== undefined) {
+    if (input.cash !== accountState.cash) throw new TypeError('optimization cash differs from confirmed account state')
+    if (input.cashAvailableAt !== accountState.cashAvailableAt) throw new TypeError('optimization cashAvailableAt differs from confirmed account state')
   }
   if (!Array.isArray(input.assets)) throw new TypeError('assets must be an array')
   for (const value of input.assets) {
@@ -106,6 +119,7 @@ function confirmedInput(options: PortfolioToolOptions, args: Record<string, unkn
     const id = object(asset.instrument, 'instrument')
     const key = `${id.market}:${id.exchange}:${id.symbol}:${id.assetType}`
     if (asset.quantity !== (quantities.get(key) ?? 0)) throw new TypeError(`asset quantity differs from confirmed holdings: ${key}`)
+    if (accountState !== undefined && asset.sellableQuantity !== (sellableByKey.get(key) ?? 0)) throw new TypeError(`asset sellableQuantity differs from confirmed account state: ${key}`)
     quantities.delete(key)
   }
   if (quantities.size) throw new TypeError('optimization input omits confirmed holdings')
@@ -224,7 +238,7 @@ export function createPortfolioTools(options: PortfolioToolOptions): ToolDefinit
     optimizationTool(options, 'finance_rebalance_plan'),
     defineTool({
       name: 'finance_holdings',
-      description: 'Import, stage, inspect, explicitly confirm, or discard holdings in a bounded runtime book. Invalid/empty imports are returned as invalid and never staged; writes require exact revision and confirmation hash.',
+      description: 'Import, stage, inspect, explicitly confirm, or discard holdings in a bounded runtime book. Invalid/empty imports are returned as invalid and never staged; writes require exact revision and confirmation hash. An optional account_state confirms cash and per-position sellable quantities together with quantities as one unit.',
       parameters: {
         action: { type: 'string', enum: ['inspect', 'stage-json', 'stage-csv', 'confirm', 'discard'], required: true },
         workspace_id: { type: 'string', required: true },
@@ -233,6 +247,7 @@ export function createPortfolioTools(options: PortfolioToolOptions): ToolDefinit
         as_of: { type: 'string' },
         base_currency: { type: 'string' },
         content: { type: 'string' },
+        account_state: { type: 'object', additionalProperties: true },
         expected_snapshot_hash: { type: 'string' },
       },
       output: JSON_OUTPUT,
@@ -248,6 +263,7 @@ export function createPortfolioTools(options: PortfolioToolOptions): ToolDefinit
             const context: HoldingsImportContext = {
               portfolioId: requireRuntimeId(args.portfolio_id, 'portfolio_id'),
               asOf: requiredText(args.as_of, 'as_of'), baseCurrency: requiredText(args.base_currency, 'base_currency'),
+              ...(args.account_state === undefined ? {} : { accountState: object(args.account_state, 'account_state') as never }),
             }
             event = {
               action: 'stage', format: args.action === 'stage-json' ? 'json' : 'csv',

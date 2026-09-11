@@ -58,7 +58,11 @@ def candidate(tmp_path):
         assets[path.name] = {"bytes": path.stat().st_size, "sha256": content_hash(path)}
     report = {"stage": "A2-sample", "contractHash": contract_hash, "sampleSize": 24, "assets": assets,
               "rawLineage": [{"request": request, "artifactHash": artifact["artifactHash"]}],
-              "inputArtifactHashes": [artifact["artifactHash"]], "gates": {"sampleRawPriceCoverage": "pass"}}
+              "inputArtifactHashes": [artifact["artifactHash"]], "gates": {"sampleRawPriceCoverage": "pass", "riskModel": "blocked"},
+              "riskModelProbe": {"status": "blocked", "maxCrossSectionSize": 20, "observedTradedDays": 2597,
+                                 "feasibleFullRankDays": {"no_analyst_sentiment": 0}, "reason": "rank-deficient"},
+              "tradingStatusConflicts": {"conflictRows": 18, "conflictsInEvaluationWindow": 0,
+                                         "earliestConflict": "2009-02-23", "latestConflict": "2012-07-06", "conflicts": []}}
     (target / "acceptance.json").write_text(json.dumps(report))
     return root, target, report
 
@@ -72,6 +76,20 @@ def test_a2_sample_integrity_does_not_mean_full_market_acceptance(candidate):
     assert gates["artifactIntegrity"]["rawArtifacts"] == 1
     assert gates["fullMarketCoverage"]["status"] == "blocked"
     assert gates["incrementalPublicationStability"]["acceptedPublicationDays"] == 0
+    # risk-model feasibility surfaces the rank-deficient sample and never promotes.
+    assert gates["riskModel"]["status"] == "blocked"
+    assert gates["riskModelFeasibility"]["status"] == "blocked"
+    assert gates["riskAcceptance"]["status"] == "blocked"
+    assert report["riskModelProbe"]["maxCrossSectionSize"] == 20
+    assert report["tradingStatusConflicts"]["conflictRows"] == 18
+
+
+def test_a2_requires_risk_and_conflict_diagnostics(candidate):
+    root, target, report = candidate
+    report.pop("riskModelProbe")
+    (target / "acceptance.json").write_text(json.dumps(report))
+    with pytest.raises(ValueError, match="riskModelProbe"):
+        audit_a2(root, target, CONTRACT, REPO)
 
 
 @pytest.mark.parametrize("change", ["tampered", "symlink", "wrong-contract", "empty-manifest"])

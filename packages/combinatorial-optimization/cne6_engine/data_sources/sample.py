@@ -8,6 +8,7 @@ from pathlib import Path
 
 import polars as pl
 
+from cne6_engine.algorithm.registry import level1_names
 from cne6_engine.data_sources.acceptance import content_hash, strict_json
 from ngfi_quant.hashing import stable_hash
 
@@ -114,6 +115,77 @@ def normalize_day(code, day, bar, cap, factor, limit, suspensions, names, fetche
             flags.append("missing-authoritative-price-limits")
     record["reasons"] = flags
     return record
+
+
+def _pit_industry_lookup(industry_rows):
+    """Point-in-time SW-L1 membership per code: keep intervals, resolve by date.
+
+    Returns ``lookup(code, ymd) -> industry_name or None``. Overlapping or
+    undated memberships resolve to None so the caller counts them as missing,
+    never silently backfilling today's classification onto history.
+    """
+    memberships: dict[str, list[dict]] = {}
+    for row in industry_rows:
+        memberships.setdefault(row["security_id"], []).append(row)
+
+    def lookup(code: str, ymd: str):
+        found = None
+        for row in memberships.get(code, ()):
+            start = row.get("in_date")
+            end = row.get("out_date")
+            if isinstance(start, str) and start <= ymd and (end is None or ymd < end):
+                if found is not None and found != row.get("industry_name"):
+                    return None
+                found = row.get("industry_name")
+        return found
+
+    return lookup
+
+
+def risk_model_probe(rows, industry_rows, evaluation_start, end):
+    """Deterministically test whether the sample can support a CNE6 factor model.
+
+    CNE6 daily WLS needs a full-rank cross-section: N tradable stocks must exceed
+    K = 1 country + industry dummies + style factors. This is a structural
+    feasibility measurement on the real sample, not an estimated risk model.
+    """
+    lookup = _pit_industry_lookup(industry_rows)
+    all_styles = len(level1_names())
+    style_counts = {"cne6_full": all_styles, "no_analyst_sentiment": all_styles - 1, "value_quality_only": 2}
+    per_day: dict[str, list[str]] = {}
+    for row in rows:
+        if row["trading_status"] == "observed-traded" and row["date"] >= evaluation_start:
+            per_day.setdefault(row["date"], []).append(row["security_id"])
+    days = sorted(per_day)
+    feasible = {name: 0 for name in style_counts}
+    max_margin = {name: None for name in style_counts}
+    max_cross_section = 0
+    for day in days:
+        codes = per_day[day]
+        ymd = day.replace("-", "")
+        industries = {ind for ind in (lookup(code, ymd) for code in codes) if ind}
+        n = len(codes)
+        max_cross_section = max(max_cross_section, n)
+        for name, styles in style_counts.items():
+            k = 1 + len(industries) + styles
+            margin = n - k
+            if margin > 0:
+                feasible[name] += 1
+            best = max_margin[name]
+            max_margin[name] = margin if best is None else max(best, margin)
+    total = len(days)
+    feasible_full = feasible["no_analyst_sentiment"]
+    return {
+        "scope": "24-security-sample", "styleFactorCount": style_counts, "canonicalStyleNames": level1_names(),
+        "evaluationWindow": {"start": evaluation_start, "end": end.isoformat()},
+        "observedTradedDays": total, "maxCrossSectionSize": max_cross_section,
+        "feasibleFullRankDays": feasible, "maxRankMarginByStyleSet": max_margin,
+        "status": "pass" if total and feasible_full == total else "blocked",
+        "reason": ("Sample cross-section is rank-deficient (N<=K) on "
+                   f"{total - feasible_full}/{total} evaluation-window days for a country+industry+8-style model; "
+                   "24 securities cannot identify CNE6 factor returns. Point-in-time industry, PIT float shares "
+                   "and full-market breadth are required before a covariance can be accepted."),
+    }
 
 
 def build_sample(root: Path, contract_path: Path, output: Path):
@@ -274,6 +346,21 @@ def build_sample(root: Path, contract_path: Path, output: Path):
     identity_evidence = [{"securityId": s["securityId"], "longSuspensionSessions": s["longestSourceSuspensionSessions"],
                           "delisted": s["delistingDate"] is not None} for s in summaries]
     reason_counts = Counter(reason for row in rows for reason in row["reasons"])
+    conflict_rows = sorted(({"securityId": row["security_id"], "date": row["date"]}
+                            for row in rows if "trade-versus-full-suspension-conflict" in row["reasons"]),
+                           key=lambda item: (item["securityId"], item["date"]))
+    conflicts_in_evaluation = [item for item in conflict_rows if item["date"] >= contract["history"]["evaluationStart"]]
+    conflict_dates = sorted(item["date"] for item in conflict_rows)
+    trading_status_diagnostic = {
+        "conflictRows": len(conflict_rows), "conflictsInEvaluationWindow": len(conflicts_in_evaluation),
+        "conflicts": conflict_rows, "earliestConflict": conflict_dates[0] if conflict_dates else None,
+        "latestConflict": conflict_dates[-1] if conflict_dates else None,
+        "classification": ("Each conflict is a same-day source disagreement: suspend_d reports a full-day suspension "
+                           "(suspend_type=S, empty timing) while daily returns a traded bar. All fall before the "
+                           "2016 evaluation window but remain in warm-up and block trading-status consistency until "
+                           "reconciled against official exchange suspension notices."),
+    }
+    risk_model = risk_model_probe(rows, industry, contract["history"]["evaluationStart"], end)
     lineage = [{"requestHash": artifact["requestHash"], "rawHash": artifact["rawHash"], "fetchedAt": artifact["fetchedAt"],
                 "artifactHash": artifact["artifactHash"], "request": artifact["request"]} for artifact in all_artifacts]
     report = {
@@ -294,6 +381,7 @@ def build_sample(root: Path, contract_path: Path, output: Path):
 
         "securities": summaries, "benchmarkWeights": benchmarks, "exclusions": exclusions,
         "reasonCounts": dict(reason_counts), "stratumEvidence": identity_evidence,
+        "tradingStatusConflicts": trading_status_diagnostic, "riskModelProbe": risk_model,
         "rawLineage": lineage,
         "fieldSemantics": {"volume_shares": "TuShare vol lots * 100", "amount_cny": "TuShare amount thousands CNY * 1000",
                            "shares_and_market_cap": "TuShare daily_basic ten-thousands * 10000", "turnover_rate": "percent / 100",
@@ -306,7 +394,7 @@ def build_sample(root: Path, contract_path: Path, output: Path):
                   "tradingStatusConsistency": "blocked" if reason_counts["trade-versus-full-suspension-conflict"] else "pass",
                   "corporateActionSettlementDates": "pass" if len(dated_actions) == len(evaluation_actions) and evaluation_actions and not unscoped_actions else "blocked",
                   "fullMarketHistoricalMaster": "blocked", "benchmarkPriceTotalReturnContinuity": "pass", "benchmarkOriginalPublication": "blocked",
-                  "riskModel": "not-run", "twentyDayIncremental": "not-run"},
+                  "riskModel": risk_model["status"], "twentyDayIncremental": "not-run"},
         "status": "blocked", "promotionAllowed": False,
         "next": "Resolve per-security gaps, BSE transfer/listing identities, source vintages and independent gold evidence before expanding or promoting.",
     }

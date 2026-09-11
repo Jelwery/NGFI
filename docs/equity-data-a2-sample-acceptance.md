@@ -5,9 +5,10 @@
 ## 当前结论
 
 - **已构建真实候选数据**：三交易所当前及退市证券主表、沪深历史日历、24只分层样本历史行情/股本/复权/名称/停牌/涨跌停/公司行动/财报版本/行业，以及CSI300/CSI800价格与全收益序列。
-- **已完成样本工程验证与部分数据核验**：484个原始请求分区保留hash和schema身份，5个Parquet文件可完全离线复算，两个独立重建目录的数据hash一致。
-- **A2 整体未通过**：原始版本时点、北交所身份/日历独立证据和18个早期停牌冲突仍为blocked；全市场分区验收、风险模型和20个真实交易日增量未执行。评估窗内115条已实施事件具备所需结算日期；18条历史缺pay_date记录均在2016年前，部分为纯送转，单列而不误作评估窗阻断。没有切换CURRENT、没有宣布策略准入、没有跳到A3。
-- 本轮完整 `pnpm check` 的最终退出码及源码版本以 `.runtime/equity-baselines/equity-a2-sample-*/manifest.json` 为准；仅 `checks.status=pass` 的manifest代表工程通过。
+- **已完成样本工程验证与部分数据核验**：484个原始请求分区保留hash和schema身份，5个Parquet文件可完全离线复算，两个独立重建目录（candidate-v7 / replay-v7）的数据hash逐字节一致。
+- **A2 整体未通过**：原始版本时点、北交所身份/日历独立证据、18个早期停牌冲突、风险模型可行性仍为blocked；全市场分区验收和20个真实交易日增量未执行。评估窗内115条已实施事件具备所需结算日期；18条历史缺pay_date记录均在2016年前，部分为纯送转，单列而不误作评估窗阻断。没有切换CURRENT、没有宣布策略准入、没有跳到A3。
+- **本轮新增两项真实门禁判定**：`riskModel` 与 `tradingStatusConsistency` 不再是 `not-run`/仅计数，而是由确定性代码在真实样本上判定并给出精确原因（见下方“剩余门禁与精确原因”）。风险模型对全市场的 `riskAcceptance` 仍 blocked。
+- 本轮完整 `pnpm check` 的最终退出码及源码版本以 `.runtime/equity-baselines/equity-a2-*/manifest.json` 为准；仅 `checks.status=pass` 的manifest代表工程通过。
 
 ## 构建规模与布局
 
@@ -17,7 +18,7 @@
 - `requests/<requestHash>.json`：保留原始TuShare解析响应、实际fetchedAt、请求、工具schema hash、内容hash和artifact hash；成功响应原样留存，空集不改成数据通过。
 - `runs/`：每批起止时间、成功/缓存/失败及停止原因；失败即停止当前批次，重放只读取已校验缓存，无凭据也不联网。
 - `selection.json`：初版候选保留；`selection-v2.json`：在样本历史取数之前排除评估窗外已退市证券，并用D日成交额替代小市值流动性近似；仍标candidate/unverified，不按事后收益重选。
-- `candidate-v6/`：当前样本候选；`replay-v6/`：独立离线重建。更早candidate-v1/v2/v3保留，不覆盖。
+- `candidate-v6/`：上一轮样本候选；`candidate-v7/`：本轮当前样本候选（含 `riskModelProbe`/`tradingStatusConflicts` 诊断）；`replay-v7/`：独立离线重建，逐字节一致。更早candidate-v1/v2/v3保留，不覆盖。
 - `gold/`：原始年报、公告元数据、原件核对及指数身份资料；没有上传第三方。
 
 | 内容 | 实际数量 / 范围 |
@@ -72,7 +73,7 @@
 - 四条基准序列交易日连续、身份经index_basic确认；历史指数成分调样/权重发布时间、单独源核验未完成，不能宣称完整基准复制验收。
 - CNE6 snapshot、42 descriptor实数据覆盖、协方差专项和全市场20日增量均未借样本门禁宣布通过；optimizer仍不消费这些未批准候选。
 
-机器可读结果为 `candidate-v6/acceptance.json`，包含每证券/年份覆盖、状态计数、最长停牌段、源行业标签、异常、分母及全部rawLineage。未来全市场还要增加完整行业/市值/流动性分桶和独立证券主表对照，不能用当前24只概括全市场。
+机器可读结果为 `candidate-v7/acceptance.json`，包含每证券/年份覆盖、状态计数、最长停牌段、源行业标签、异常、分母、全部rawLineage，以及本轮新增的 `riskModelProbe`（逐评估日满秩可行性）与 `tradingStatusConflicts`（18条同日冲突明细与分类）。未来全市场还要增加完整行业/市值/流动性分桶和独立证券主表对照，不能用当前24只概括全市场。
 
 ## 独立金标准
 
@@ -91,7 +92,7 @@ e4d1cff0461c0ef24d26551ca68e31ad323a1b3eadd8a3c03f00feada364de22
 - 新增TS采集测试13项、Python样本测试11项；初次验证真实复现反向窗口未拒绝、缓存联网、冲突状态错误3项，修复业务逻辑后断言保持不变。
 - 定向TS：111项通过（采集13 + TuShare58 + A股provider40）；Python样本/acceptance/publication：53项通过。
 - canonical公告fixture补充分类null场景，真实网络验证也通过；没有放松其他源schema边界。
-- 对candidate-v6与replay-v6比较：除生成时间外报告一致，5个Parquet hash完全相同；采集daily组全缓存重放 `requestStarts=0`，无需凭据。
+- 对candidate-v7与replay-v7比较：除生成时间外报告一致，5个Parquet hash完全相同；采集daily组全缓存重放 `requestStarts=0`，无需凭据。
 - Node/Python对原始分区hash核对一致；源码与已取得候选/原件扫描未发现凭据。秘密文件0600，仓库gitignore生效。
 - 本轮不新增顶层package、不新增Agent公开工具、不改optimizer、不下单；旧A0/A1版本与所有失败/旧候选均保留。
 
@@ -117,7 +118,7 @@ node scripts/freeze-equity-baseline.mjs equity-a2-sample --check
 
 本轮未完成A2全部验收，不能固定为“A2完成版”。新增 `cne6_engine.data_sources.cli a2-audit` 对现有样本文件、原始采集血缘与当天观测做真实完整性复核，并输出 `DataAcceptanceRun`；当前只支持审核既有sample证据，不能接受调用方填写pass就升级为全市场验收。
 
-- `a2-audit --candidate .runtime/equity-data/a2/candidate-v6 --output .runtime/equity-data/a2/新文件.json`：未通过时退出码2，`readyForA3=false`、`promotionAllowed=false`，不修改CURRENT。
+- `a2-audit --candidate .runtime/equity-data/a2/candidate-v7 --output .runtime/equity-data/a2/新文件.json`：未通过时退出码2，`readyForA3=false`、`promotionAllowed=false`，不修改CURRENT。
 - `node --env-file=.runtime/secrets/tushare.env --import tsx scripts/acquire-equity-sample.ts observe`：仅实际上海日期17:00后运行，禁止指定过去日期，独立目录保存实际采集证据；重复日期拒绝覆盖。历史D不改变，观测日期另行记录。
 - 已实际记录2026-09-10收盘后观测：daily/daily_basic各5549行，suspend_d 12行；行情源观测日为1，**正式已验收发布观察仍为0/20**。没有安装或声称已启动无人值守调度；后续需实际每日运行或经批准配置持续运行服务。
 - 原始观测结果位于 `observations/2026-09-10/observation.json`，总审计位于 `a2-audit-final-20260910.json`。总审计不把同日重复、历史补拉、无采集引用或仅declared pass当作有效观察。
@@ -126,6 +127,36 @@ node scripts/freeze-equity-baseline.mjs equity-a2-sample --check
 - 核对代码仍发现A2风险前置缺口：历史回归因子集合来自终点活跃风格，财报契约只支持单报告期一行，实际历史多版本未接入CNE6风险生成；不以测试通过代替这些工作完成。
 - 本轮新增15项A2审计测试，覆盖空资产、篡改、symlink、引用缺失、日期倒灌/跨日/过早运行、重复会话及sample不晋级。首次复现2项证据门禁缺陷后修复并全部通过；真实进程输出隔离回归2项通过。
 - GitHub CLI未认证，无法执行push/PR；用户可在当前会话运行 `! gh auth login`。未创建PR，未提交声称A2完成的commit或标签。
+
+## 2026-09-11 后续执行：真实判定 riskModel 与 tradingStatusConsistency
+
+本轮把两条原为 `not-run`/仅计数的门禁改为确定性代码在真实样本上判定，并把结论写入 sample 报告与 `a2-audit`。样本重建产物固定为 `candidate-v7`，`replay-v7` 逐字节复算一致。风险模型对全市场 `riskAcceptance` 仍 blocked。
+
+- **riskModel（样本可行性）= blocked**：新增 `risk_model_probe` 用点时行业成员区间（`_pit_industry_lookup`，重叠/无区间判 None，不回填当前分类）逐评估日测 CNE6 截面是否满秩。因子数 `K = 1(country) + 行业哑元 + 风格数`。真实结果：24只样本评估窗内 **2597 个正常成交日全部 rank-deficient（N≤K）**——去掉分析师情绪后 8 风格模型 0 天可行、9 风格模型 0 天可行、仅“价值+质量”2 风格才有 1170 天可行；单日最大截面仅 20 只。结论：**24只样本在数学上无法识别 CNE6 因子收益**，需要点时行业、点时流通股本与全市场宽度后才能估计并验收协方差。`riskAcceptance`（全市场）随之 blocked，不是“未跑”。
+- **tradingStatusConsistency = blocked（原因已精确分类，不放松）**：18 条冲突全部是同日源冲突——`suspend_d` 返回全天停牌（`suspend_type=S`、`suspend_timing` 空）而 `daily` 同日返回成交bar。日期范围 **2009-02-23 至 2012-07-06，全部落在 2016 评估窗之前（评估窗内冲突=0）**，但仍处 warm-up，需与交易所官方停牌公告逐条对账后才能消除，未与真实公告核对前保持 blocked。冲突明细（securityId+date）与分类写入 `candidate-v7/acceptance.json` 的 `tradingStatusConflicts`。
+- `a2-audit` 现要求 sample 报告必须携带 `riskModelProbe` 与 `tradingStatusConflicts` 诊断，缺失即拒绝；新增门禁 `riskModelFeasibility`（样本域）与保留的 `riskAcceptance`（全市场域）分列，审计恒 `status=blocked`、`promotionAllowed=false`、`readyForA3=false`。
+- **20 交易日增量真实观察仍为 1/20**：`observations/` 仅 `2026-09-10` 一天真实收盘后采集证据；本轮未新增真实交易日（不可在单会话伪造时间经过）。`incrementalPublicationStability` 保持 blocked，`acceptedPublicationDays=0`。
+- 本轮新增/更新单测：`test_data_sample.py` 增 6 项（点时行业区间解析、重叠判 None、rank-deficient 判定、满秩才 pass、非成交/空窗忽略），`test_a2_gate.py` 增 2 项（riskModel/riskModelFeasibility/riskAcceptance 门禁与诊断透出、缺诊断即拒绝）。定向套件 32 项通过。
+
+## 剩余门禁与精确原因（供后续会话续接）
+
+样本工程域已 pass 的门禁：`hashIntegrity`、`SSE_SZSE_calendar_continuity`、`sampleRawPriceCoverage`、`corporateActionSettlementDates`、`benchmarkPriceTotalReturnContinuity`、`artifactIntegrity`。以下为仍未清零项，均无法在本会话诚实变 pass：
+
+| 门禁 | 状态 | 精确原因 | 解除所需（下一步） |
+|---|---|---|---|
+| `BSE_identity_calendar` | blocked | 北交所接口日历返回空；只标 provider-convention-proxy（4,705 证券日）；官方规则正文直接下载 HTTP 403，未绕过 | 授权/官方来源核验北交所成立时间、新三板/精选层/转板/换码与交易日规则 |
+| `originalFinancialVintages` | blocked | 财报保留 report_type 1/4/5，但精确首次可得/原件版本未逐条核对；`source_available_at=null` | 采购/授权原始季报原件与披露时间戳，确定性重构 TTM/MRQ |
+| `industryPublicationTime` | blocked | SW 成员有 in/out 日期但不等于首次披露时点；当前工作簿不能证明历史 vintage | 授权行业分类 vintage/首次可得时间，显式映射历史taxonomy |
+| `tradingStatusConsistency` | blocked | 18 条同日“成交 vs 全天停牌”源冲突（2009–2012，评估窗前）；已精确分类 | 与交易所官方停牌公告逐条对账 |
+| `fullMarketHistoricalMaster` | blocked | 24只样本+D日截面不能代表全市场逐历史时点集合 | 授权有效期化全市场证券主表，逐时点解释纳入/排除 |
+| `benchmarkOriginalPublication` | blocked | 指数返回最新文件而非历史 as-of vintage；缺原件发布时间与逐日调样血缘 | 授权 CSI300/800 历史成分/权重/价格与全收益，含方法学 |
+| `historicalIndexConstituentCoverage` | blocked | 仅一份 2026-08-31 权重快照，不是 2016..D 历史成分/权重 | 同上，构建历史成分/权重后再推全市场 |
+| `riskModelFeasibility`（样本） | blocked | 24只样本截面 N≤K，2597/2597 评估日 rank-deficient，无法识别 CNE6 因子 | 点时行业 + 点时流通股本 + 全市场宽度 |
+| `riskAcceptance`（全市场） | blocked | 无全市场 42-descriptor/风险覆盖与协方差校准；样本域也无法估计协方差 | A2 全市场数据通过后运行全量风险验收（对称/PSD/重构/修复幅度阈值见契约） |
+| `fullMarketCoverage` | blocked | 未做全市场分区构建与分层覆盖 | 断点续传按日/证券块构建，只重试失败分区 |
+| `incrementalPublicationStability` | blocked | 真实收盘观察 1/20；不可伪造时间经过 | 实际每日运行 `observe`，累计 20 个真实交易日 |
+| `twentyDayIncremental`（sample 报告位） | not-run | 同上，属持续运行验收 | 同上 |
+
 
 ## 下一工作包
 

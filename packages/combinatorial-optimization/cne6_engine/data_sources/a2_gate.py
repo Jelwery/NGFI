@@ -125,6 +125,10 @@ def audit_a2(root: Path, candidate: Path, contract_path: Path, repo_root: Path) 
             observations.append(observation)
             observation_refs.append({"tradeDate": observation.get("tradeDate"), "sha256": content_hash(path)})
     observation_summary = live_observation_days(observations, contract_hash)
+    risk_probe = source_report.get("riskModelProbe")
+    conflicts = source_report.get("tradingStatusConflicts")
+    if not isinstance(risk_probe, dict) or not isinstance(conflicts, dict):
+        raise ValueError("sample report must carry riskModelProbe and tradingStatusConflicts diagnostics")
     gates = [{"id": key, "status": value, "scope": "sample-reported", "evidenceHash": content_hash(report_path)}
              for key, value in source_report["gates"].items()]
     gates.extend([
@@ -133,8 +137,12 @@ def audit_a2(root: Path, candidate: Path, contract_path: Path, repo_root: Path) 
          "reason": "One dated CSI300/800 weight snapshot is not the 2016..D historical constituent/weight universe."},
         {"id": "fullMarketCoverage", "status": "blocked", "scope": "full-market",
          "reason": "24-security sample and D-day cross-section cannot establish full historical market coverage."},
+        {"id": "riskModelFeasibility", "status": risk_probe["status"], "scope": "24-security-sample",
+         "maxCrossSectionSize": risk_probe.get("maxCrossSectionSize"),
+         "feasibleFullRankDays": risk_probe.get("feasibleFullRankDays"),
+         "observedTradedDays": risk_probe.get("observedTradedDays"), "reason": risk_probe.get("reason")},
         {"id": "riskAcceptance", "status": "blocked", "scope": "full-market",
-         "reason": "No accepted full-market 42-descriptor/risk coverage and covariance calibration artifacts; historical factor dictionary still needs correction."},
+         "reason": "No accepted full-market 42-descriptor/risk coverage and covariance calibration; the sample cross-section is rank-deficient (N<=K), so no covariance can be estimated or accepted at sample scope either."},
         {"id": "incrementalPublicationStability", "status": "blocked", "requiredTradingDays": contract["thresholds"]["incrementalTradingDays"],
          "acceptedPublicationDays": 0, "reason": "No accepted publication observation chain. Do not count historical downloads or same-day repeats as elapsed sessions."},
     ])
@@ -144,6 +152,7 @@ def audit_a2(root: Path, candidate: Path, contract_path: Path, repo_root: Path) 
             "scope": {"requested": "SSE/SZSE/BSE-full-market", "observed": "24-security-sample-and-D-cross-section"},
             "sampleReportHash": content_hash(report_path), "sampleSize": source_report["sampleSize"],
             "gates": gates, "sourceObservation": observation_summary, "observationRefs": observation_refs,
+            "riskModelProbe": risk_probe, "tradingStatusConflicts": conflicts,
             "promotionAllowed": False, "readyForA3": False,
             "limitations": ["This gate verifies existing sample artifacts; it does not certify external source truth from a declared pass flag.",
                             "No formal publication or CURRENT change is performed."]}

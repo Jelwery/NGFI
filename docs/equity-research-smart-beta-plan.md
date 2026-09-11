@@ -1,7 +1,7 @@
 # NGFI 下一阶段计划：真实数据验收、优化器升级与权益研究驱动的 Smart Beta
 
-- 日期：2026-09-10
-- 状态：A0/A1 已固定工程验收版本；A2 已使用仓库工具与 TuShare 构建24只真实样本、历史财报及基准，整体数据门禁仍 blocked，A3/B 未启动。执行记录见 [A0/A1 验收记录](equity-data-a0-a1-acceptance.md) 与 [A2 样本验收记录](equity-data-a2-sample-acceptance.md)。
+- 日期：2026-09-10（2026-09-11 更新 A2 门禁判定状态）
+- 状态：A0/A1 已固定工程验收版本；A2 已使用仓库工具与 TuShare 构建24只真实样本、历史财报及基准，`riskModel`/`tradingStatusConsistency` 已由确定性代码在真实样本上判定为 blocked（原因已精确记录），整体数据门禁仍 blocked，A3/B 未启动。执行记录见 [A0/A1 验收记录](equity-data-a0-a1-acceptance.md) 与 [A2 样本验收记录](equity-data-a2-sample-acceptance.md)（含“剩余门禁与精确原因”表）。
 - 范围：先完成上一轮的真实全市场数据验收与组合优化闭环，再验证主观权益研究如何形成可复算信号，最后引入受治理的策略记忆与进化。
 - 产品边界：日频 A 股、人民币、只做多与现金、研究及 dry-run；不接券商、不下单、不做单票时序方向预测。
 - 参照：[One Page](https://my.feishu.cn/wiki/NlRTws9nUigOQskezRMciQknnqd)，此前读取版本 revision 790。本文不修改飞书原文。

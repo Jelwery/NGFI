@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, is_dataclass
 import json
+import os
 import sys
 from typing import Any
 
@@ -90,9 +91,17 @@ def _promotion(value: dict[str, Any]) -> dict[str, Any]:
 
 
 def main() -> None:
-    if len(sys.argv) != 2 or sys.argv[1] not in {"research-backtest", "promotion"}:
-        raise ValueError("operation must be research-backtest or promotion")
+    if len(sys.argv) != 2 or sys.argv[1] not in {"research-backtest", "promotion", "experiment"}:
+        raise ValueError("operation must be research-backtest, promotion or experiment")
     value = json.load(sys.stdin)
+    if sys.argv[1] == "experiment":
+        from .experiment_store import dispatch_research
+        root = os.environ.get("NGFI_QUANT_STORE")
+        if not root:
+            raise ValueError("NGFI_QUANT_STORE must be configured by the trusted runtime")
+        json.dump(dispatch_research(root, value), sys.stdout, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
+        sys.stdout.write("\n")
+        return
     result = run_research_backtest(_backtest_request(value)) if sys.argv[1] == "research-backtest" else _promotion(value)
     json.dump(_json_value(result), sys.stdout, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
     sys.stdout.write("\n")

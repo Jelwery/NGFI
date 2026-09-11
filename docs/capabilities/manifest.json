@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-07",
+  "generatedAt": "2026-09-10",
   "capabilities": [
     {
       "id": "runtime.adversarial-session-adapter",
@@ -45,7 +45,7 @@
       "goldenFixtures": ["evals/strategy-contracts/accumulation-breakout-v1.json", "evals/agent-governance/trajectories.json"],
       "upstream": [{"project": "a-share-accumulation-breakout adaptation", "commit": "c6a7d8d7397dfe6c02c97da8da83dea7c4ae6453", "path": "research/portfolio_accounting.py; walkforward.py; research/cscv.py; promotion_v2.py"}],
       "safetyBoundaries": ["train selection and test evaluation remain separated", "dataset, strategy, config, execution, cost and benchmark hashes are retained", "only research-tier evidence can support promotion"],
-      "knownLimitations": ["factor research remains a Python-only kernel", "promotion is evidence-only and cannot mutate strategy state"]
+      "knownLimitations": ["fixed-holding signal backtests are distinct from the native target-weight research pipeline", "promotion is evidence-only and cannot mutate strategy state"]
     },
     {
       "id": "quant.factor-research",
@@ -60,7 +60,22 @@
       "goldenFixtures": ["packages/quant-research/tests/test_factors.py"],
       "upstream": [{"project": "Panda QuantFlow independent rewrite", "commit": "688b90e74a738b84567efe622a2d9c1e5ce10e00", "path": "src/panda_plugins/internal factor nodes"}],
       "safetyBoundaries": ["future returns are shifted and train/test boundaries are validated", "missing, constant and duplicate-key inputs fail explicitly", "lineage and sample coverage accompany results"],
-      "knownLimitations": ["no dynamic formulas or ML models", "not Agent-exposed yet"]
+      "knownLimitations": ["legacy scalar factor helpers; declarative graphs and rolling models belong to quant.native-research-pipeline", "these standalone helpers are not directly Agent-exposed"]
+    },
+    {
+      "id": "quant.native-research-pipeline",
+      "category": "quant",
+      "ownerPackage": "packages/quant-research",
+      "publicExports": ["ResearchDataset", "ResearchSpec", "compute_factors", "rolling_predict", "optimize_weights", "replay_targets", "run_experiment", "ExperimentStore"],
+      "status": "agent-exposed",
+      "tools": ["finance_quant_research"],
+      "skills": [],
+      "presets": ["strategy-research"],
+      "contractTests": ["packages/quant-research/tests/test_research_contracts.py", "packages/quant-research/tests/test_research_factors.py", "packages/quant-research/tests/test_research_models.py", "packages/quant-research/tests/test_research_optimizer.py", "packages/quant-research/tests/test_target_backtest.py", "packages/quant-research/tests/test_experiment.py", "packages/quant-research/tests/test_experiment_store.py", "tests/quant-workflow-integration.test.ts", "tests/composition.test.ts"],
+      "goldenFixtures": ["packages/quant-research/tests/test_research_factors.py", "packages/quant-research/tests/test_target_backtest.py", "packages/quant-research/tests/test_experiment.py"],
+      "upstream": [{"project": "NGFI native implementation", "commit": "workspace:ngfi-quant-research@0.1.0", "path": "packages/quant-research/ngfi_quant"}],
+      "safetyBoundaries": ["versioned JSON factor graphs with fixed operators; no dynamic code or external quant runtime", "PIT feature visibility, calendar-aligned labels, purged rolling fits and train-only preprocessing", "infeasible optimization and unavailable configured CNE6 risk fail closed", "decision-time order quantities, next-open execution and actual holdings feed the next optimization", "content-addressed workspace artifacts, bounded subprocess and no live orders or automatic promotion"],
+      "knownLimitations": ["single-host daily long-only research with operator-imported dense historical panels", "corporate-action accounting is not supported; raw-price continuity is required", "data provenance and historical membership are caller attestations, not independently verified market truth", "Ridge and sklearn histogram gradient boosting only; no automated hyperparameter search", "synthetic integration evidence is not live-market or investment-performance validation"]
     },
     {
       "id": "strategy.contracts-registry-and-smoke",

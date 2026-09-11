@@ -4,7 +4,10 @@ from .contracts import (
     AShareBar, AShareCostModel, BacktestMetadata, BacktestRequest, BacktestResult, CandidateSignal,
     EquityPoint, Instrument, PortfolioConfig, Rejection, Trade,
 )
-from .execution import affordable_board_lot, execution_block, execution_price, is_price_limited, next_trading_day, transaction_cost
+from .execution import (
+    affordable_board_lot, execution_block, execution_price, is_price_limited,
+    next_trading_day, price_limit, transaction_cost,
+)
 from .hashing import canonical_json, stable_hash
 from .portfolio import compare_candidate_to_benchmark, run_research_backtest
 from .promotion import PromotionThresholds, decide_promotion
@@ -18,5 +21,12 @@ from .factors import (
     compute_forward_returns, correlation_matrix, factor_coverage, factor_turnover, fit_factor_weights, grouped_returns,
     handle_missing, information_coefficient, make_lineage, neutralize, split_factor_table, standardize, winsorize,
 )
+from .experiment import run_experiment
+from .experiment_store import ExperimentStore
+from .research_contracts import ResearchDataset, ResearchSpec
+from .research_factors import compute_factors
+from .research_models import rolling_predict
+from .research_optimizer import optimize_weights
+from .target_backtest import replay_targets
 
 __all__ = [name for name in globals() if not name.startswith("_")]

@@ -5,7 +5,7 @@ import unittest
 
 from ngfi_quant import (
     AShareBar, AShareCostModel, Instrument, affordable_board_lot, execution_block,
-    next_trading_day, transaction_cost,
+    execution_price, next_trading_day, price_limit, transaction_cost,
 )
 
 
@@ -34,6 +34,14 @@ class ExecutionTest(unittest.TestCase):
         cost = AShareCostModel(commission_rate=0.0003, minimum_commission=5, stamp_duty_rate=0.0005, transfer_fee_rate=0.00001)
         self.assertEqual(affordable_board_lot(10_010, 10, 100, cost), 1000)
         self.assertEqual(affordable_board_lot(999, 10, 100, cost), 0)
+        zero_cost = AShareCostModel(
+            commission_rate=0,
+            minimum_commission=0,
+            stamp_duty_rate=0,
+            transfer_fee_rate=0,
+            slippage_rate=0,
+        )
+        self.assertEqual(affordable_board_lot(1038.0, 10.38, 100, zero_cost), 100)
         self.assertAlmostEqual(transaction_cost(10_000, "buy", cost), 5.1)
         self.assertAlmostEqual(transaction_cost(10_000, "sell", cost), 10.1)
 
@@ -43,6 +51,16 @@ class ExecutionTest(unittest.TestCase):
         self.assertEqual(execution_block(bar(open=11, high=11, close=11), "buy"), "limit-up")
         self.assertEqual(execution_block(bar(open=9, low=9, close=9), "sell"), "limit-down")
         self.assertIsNone(execution_block(bar(open=10.5), "buy"))
+
+    def test_price_limits_use_cent_rounding_and_slippage_stays_inside_the_band(self) -> None:
+        limited = bar(previous_close=10.03, open=11.03, high=11.03, close=11.03)
+        self.assertEqual(price_limit(limited, "buy"), 11.03)
+        self.assertEqual(execution_block(limited, "buy"), "limit-up")
+
+        cost = AShareCostModel(slippage_rate=0.001)
+        self.assertEqual(execution_price(11.02, "buy", cost, limit_price=11.03), 11.03)
+        self.assertEqual(execution_price(9.03, "sell", cost, limit_price=9.03), 9.03)
+        self.assertEqual(execution_price(10.0, "buy", AShareCostModel(slippage_rate=0.0005)), 10.01)
 
     def test_invalid_prices_and_costs_are_rejected_not_coerced(self) -> None:
         with self.assertRaisesRegex(ValueError, "finite"):

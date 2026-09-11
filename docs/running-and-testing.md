@@ -16,6 +16,8 @@
 ```bash
 pnpm install --frozen-lockfile
 uv sync --frozen
+uv sync --project packages/quant-research --frozen
+uv sync --project packages/combinatorial-optimization --frozen --extra dev
 pnpm check
 ```
 
@@ -39,6 +41,26 @@ pnpm test:skills
 pnpm test:runtime
 ```
 
+量化研究端到端验证不需要模型凭据或真实行情：
+
+```bash
+pnpm quant:demo
+pnpm test:quant-research
+pnpm exec vitest run tests/quant-workflow-integration.test.ts
+```
+
+`quant:demo` 运行显式合成数据；DSH 集成测试通过真实 uv/Python 子进程完成 import/run/get/list，并验证工作区隔离。必须先同步量化 Python 环境且将 uv 加入 PATH；不会自动安装 LocalQuant 或请求外部数据。数据契约、训练边界、组合约束和成交语义见 [量化研究指南](quant-research.md)。
+
+许可证基线更新还需要 TDX 的冻结环境：
+
+```bash
+uv sync --project packages/finance-provider-tdx --frozen
+pnpm dependency:licenses:update
+pnpm dependency:licenses:check
+```
+
+只在依赖实际变化且审阅许可证后更新基线；普通 `check` 不要求全部 Python 环境已安装。
+
 ## Skills
 
 唯一运行入口是 `skills/`。当前 canonical Skills、V2 合并规则和离线 CLI 边界见根目录 `SKILLS_V2.md` 与 `skills/migration-manifest.json`。`company-financial-analysis` 中的 Python 脚本以及 `macro-cycle-policy-analysis` 的 PDF helper 不会因为 Skill 被发现而获得执行权限。
@@ -47,12 +69,15 @@ pnpm test:runtime
 
 默认 preset 仍是 `finance-analyst`。设置 `NGFI_AGENT_PRESET` 为 `company-research`、`strategy-research` 或 `portfolio-risk` 可在 headless/Web profile 中选择职责隔离的治理 preset；其他值会在 runtime prepare 时拒绝。所有 preset 共享现有 20 个基础金融工具，但只增加职责所需的 research、strategy/signal 或 portfolio tools。
 
+`finance_quant_research` 仅增加到 `strategy-research`。它接收原生 JSON 规格或数据/实验 ID，不接受路径、源码、任意模型文件或网络地址。大数据通过可信操作员 CLI 导入，Agent 按 ID 调用；计算超时和 `partial` 结果必须如实披露。
+
 ## 测试责任
 
 | 层级 | 位置 | 默认门禁 |
 |---|---|---|
 | package 单元/契约 | 各 `packages/*` 的源码与根 `tests/*-contracts.test.ts` / 领域测试 | `pnpm test:ts` |
 | 跨包契约 | `tests/` 中 data reconciliation、research audit、TS/Python bridge | `pnpm test:ts` |
+| 原生量化闭环 | `packages/quant-research/tests/`、`tests/quant-workflow-integration.test.ts` | `pnpm test:python`、`pnpm test:ts` |
 | runtime/composition | `tests/composition.test.ts`、`tests/isolation.test.ts`、`tests/*adapter.test.ts` | `pnpm test:ts`、`pnpm test:runtime` |
 | immutable eval fixtures | `evals/` 与 package 内固定 fixture | 对应 contract test |
 | live tests | `tests/*.live.test.ts`、CNE6 live marker | 仅显式 `test:live:*` |

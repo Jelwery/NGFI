@@ -11,6 +11,7 @@ NGFI 是一个基于 [DeepSeek Harness（DSH）](https://www.npmjs.com/package/@
 - 可按需加载的金融分析 Skills
 - 受控 research workspace、冻结 replay、报告 audit、thesis drift 与隔离式对抗审阅
 - 固定策略/指标、smoke 与 research backtest、信号 outcome/calibration 证据链
+- NGFI 原生版本化因子图、滚动样本外模型、约束组合优化和连续目标权重回测
 - staged-confirmed 持仓和 CNE6 portfolio/marginal/scenario risk
 - 独立的 CNE6 风格 A 股风险模型与数据构建 CLI
 - DSH Web 与一次性 headless 两种运行方式
@@ -61,6 +62,18 @@ pnpm web
 默认只监听 `127.0.0.1:3180`。可在 `.env` 中用 `FINANCE2DSH_PORT` 修改端口；为避免与 DSH 默认 profile 冲突，3080 和 3090 不可用。
 
 默认使用兼容的 `finance-analyst` preset。可通过 `NGFI_AGENT_PRESET=company-research`、`strategy-research` 或 `portfolio-risk` 选择职责隔离的治理 preset；每个 preset 继承原有 20 个金融工具，只增加本职责所需的受控工具。
+
+## 量化研究
+
+新增原生流程将因子、Ridge/HGB 滚动模型、CVXPY 组合约束和次日开盘回测贯通，保留 PIT 边界、实际持仓反馈、因子/模型诊断和不可变实验产物。LocalQuant 仅作为设计参考，无需安装或接入。
+
+```bash
+uv sync --project packages/quant-research --frozen
+pnpm quant:demo
+pnpm quant:research --workspace demo list
+```
+
+示例只使用合成数据，不是实际策略业绩。真实研究需显式导入完整 PIT 面板；当前为日频、long-only、单机基线，不支持公司行动账本，也不接实盘。`strategy-research` preset 可通过 `finance_quant_research` 查询 schema、导入数据、运行和检查实验；原有策略回测工具保持不变。完整契约、参数和命令见 [量化研究指南](docs/quant-research.md)。
 
 ## 模型配置
 
@@ -183,6 +196,7 @@ generated/agent-presets/              确定性生成的四个 preset
 skills/                               金融研究与行为诊断 Skills
 evals/                                可复用评测用例与 rubric
 packages/combinatorial-optimization/  CNE6 风险模型
+packages/quant-research/              原生因子、滚动模型、优化、回测与实验存储
 ```
 
 ## 验证与测试
@@ -201,7 +215,7 @@ pnpm data:upstream:test
 
 A 股 feature matrix 使用统一离线 fixture 覆盖 60 项 capability 和所有受控 variant，包括成功、合法 no-data、schema drift、参数上限、provenance、单位与 truncated。它属于常规 `pnpm test`；真实网络探针不属于默认门禁。
 
-`pnpm dependency:licenses:check` 是离线门禁：它从已安装的 pnpm production closure（排除平台可选包）和三份 `uv.lock` 的 production closure 生成确定性包列表，并与 [`docs/dependency-licenses.json`](docs/dependency-licenses.json) 中已审查的许可证基线比较；check 模式不要求 Python `.venv`。`UNKNOWN`、`UNLICENSED`、未经审查的许可证或明显强 copyleft 会失败；sharp 的可选 libvips LGPL runtime 以及缺少标准许可证声明的隔离 pytdx provider 均已记录为人工审查例外。依赖升级后先同步三个 Python 环境并审阅差异，再运行 `pnpm dependency:licenses:update`；只有 update 模式读取已安装的 Python metadata。
+`pnpm dependency:licenses:check` 是离线门禁：它从已安装的 pnpm production closure（排除平台可选包）和四份 `uv.lock` 的 production closure 生成确定性包列表，并与 [`docs/dependency-licenses.json`](docs/dependency-licenses.json) 中已审查的许可证基线比较；check 模式不要求 Python `.venv`。`UNKNOWN`、`UNLICENSED`、未经审查的许可证或明显强 copyleft 会失败；sharp 的可选 libvips LGPL runtime 以及缺少标准许可证声明的隔离 pytdx provider 均已记录为人工审查例外。依赖升级后先同步根目录、CNE6、TDX 和 quant-research 四个 Python 环境并审阅差异，再运行 `pnpm dependency:licenses:update`；只有 update 模式读取已安装的 Python metadata。
 
 高危漏洞检查需要联网，必须与离线 `pnpm check` 分开运行：
 
@@ -209,7 +223,7 @@ A 股 feature matrix 使用统一离线 fixture 覆盖 60 项 capability 和所�
 pnpm dependency:audit
 ```
 
-该命令以 `pnpm audit --prod --audit-level high` 检查 Node production 依赖，并用项目要求的 uv 自带 `uv audit --frozen --no-dev` 检查三份 uv production lock；任何生态的扫描器不可用或查询失败都会返回非零，不能视为通过。
+该命令以 `pnpm audit --prod --audit-level high` 检查 Node production 依赖，并用项目要求的 uv 自带 `uv audit --frozen --no-dev` 检查根目录、CNE6、TDX 和 quant-research 四份 uv production lock；任何生态的扫描器不可用或查询失败都会返回非零，不能视为通过。
 
 安全扫描可分别覆盖已跟踪文件、整个工作树和暂存区：
 

@@ -1,6 +1,9 @@
+import { mkdir, mkdtemp, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { dirname, join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { stableHash } from '@finance2dsh/strategy-core'
-import { createStrategyTools } from '@finance2dsh/dsh-tools'
+import { createStrategyTools, resolveQuantUvExecutable } from '@finance2dsh/dsh-tools'
 
 const project = `${process.cwd()}/packages/quant-research`
 function tools() {
@@ -24,6 +27,15 @@ function bar(index: number) {
 }
 
 describe('strategy DSH tools', () => {
+  it('prefers the prepared repository-local uv executable', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'ngfi-quant-uv-'))
+    const quantProjectRoot = join(root, 'packages', 'quant-research')
+    const localUv = join(root, '.runtime', 'python-tools', 'bin', 'uv')
+    await mkdir(dirname(localUv), { recursive: true })
+    await writeFile(localUv, '')
+    expect(resolveQuantUvExecutable({ quantProjectRoot })).toBe(localUv)
+  })
+
   it('exposes only fixed catalogs and rejects unknown parameters', async () => {
     const execute = tools()
     const catalog = await execute('finance_strategy_registry', { action: 'catalog' })

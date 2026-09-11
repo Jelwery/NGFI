@@ -47,6 +47,7 @@ export {
 export {
   STRATEGY_TOOL_NAMES,
   createStrategyTools,
+  resolveQuantUvExecutable,
   type StrategyToolOptions,
 } from './strategy-tools.js'
 export {
@@ -323,7 +324,7 @@ export function createAllFinanceTools(
 export function createGovernedFinanceTools(options: { runtimeRoot: string; quantProjectRoot: string; adversarialExecutor?: import('@finance2dsh/research-workflow').AdversarialChatExecutor }): ToolDefinition[] {
   return [
     ...createResearchTools({ runtimeRoot: options.runtimeRoot, ...(options.adversarialExecutor === undefined ? {} : { adversarialExecutor: options.adversarialExecutor }) }),
-    ...createStrategyTools({ quantProjectRoot: options.quantProjectRoot }),
+    ...createStrategyTools({ quantProjectRoot: options.quantProjectRoot, runtimeRoot: options.runtimeRoot }),
     ...createSignalTools({ runtimeRoot: options.runtimeRoot }),
     ...createPortfolioTools({ runtimeRoot: options.runtimeRoot }),
   ]

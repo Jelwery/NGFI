@@ -33,16 +33,25 @@ def pipeline_result() -> dict:
     }
 
 
+def build_snapshot(source: dict | None = None, **kwargs) -> dict:
+    return build_portfolio_risk_snapshot(
+        source or pipeline_result(),
+        available_at="2026-09-06T09:00:00+08:00",
+        **kwargs,
+    )
+
+
 def test_build_portfolio_risk_snapshot_projects_pipeline_without_mutation() -> None:
     source = pipeline_result()
     original_exposures = source["exposures"].copy()
 
-    snapshot = build_portfolio_risk_snapshot(source)
+    snapshot = build_snapshot(source)
 
     assert snapshot["schemaVersion"] == "1"
     assert snapshot["model"] == "CNE6"
     assert snapshot["modelVersion"] == "cne6-engine@0.1.0"
     assert snapshot["asOf"] == "2026-09-05"
+    assert snapshot["availableAt"] == "2026-09-06T09:00:00+08:00"
     assert snapshot["currency"] == "CNY"
     assert snapshot["factors"] == [
         {"name": "COUNTRY", "kind": "country"},
@@ -71,7 +80,7 @@ def test_build_portfolio_risk_snapshot_projects_pipeline_without_mutation() -> N
 def test_build_portfolio_risk_snapshot_hash_is_stable_and_semantic() -> None:
     first = pipeline_result()
     reordered = {key: first[key] for key in reversed(first)}
-    same = build_portfolio_risk_snapshot(reordered)
+    same = build_snapshot(reordered)
     changed = pipeline_result()
     changed["exposures"][0, 2] = 1.1
     changed["sigma_stock"] = (
@@ -81,8 +90,8 @@ def test_build_portfolio_risk_snapshot_hash_is_stable_and_semantic() -> None:
     )
     changed["sigma_stock"][np.diag_indices(2)] += changed["specific_risk"] ** 2
 
-    assert build_portfolio_risk_snapshot(first)["inputHash"] == same["inputHash"]
-    assert build_portfolio_risk_snapshot(changed)["inputHash"] != same["inputHash"]
+    assert build_snapshot(first)["inputHash"] == same["inputHash"]
+    assert build_snapshot(changed)["inputHash"] != same["inputHash"]
 
 
 @pytest.mark.parametrize(
@@ -100,13 +109,47 @@ def test_build_portfolio_risk_snapshot_rejects_invalid_pipeline_contract(
     source = pipeline_result()
     source[field] = value
     with pytest.raises(Cne6PortfolioSnapshotError, match=message):
-        build_portfolio_risk_snapshot(source)
+        build_snapshot(source)
+
+
+@pytest.mark.parametrize(
+    ("available_at", "message"),
+    [
+        ("2026-09-06T09:00:00", "with timezone"),
+        ("2026-09-04T09:00:00+08:00", "cannot precede"),
+    ],
+)
+def test_build_portfolio_risk_snapshot_rejects_invalid_availability(
+    available_at: str,
+    message: str,
+) -> None:
+    with pytest.raises(Cne6PortfolioSnapshotError, match=message):
+        build_portfolio_risk_snapshot(
+            pipeline_result(),
+            available_at=available_at,
+        )
+
+
+def test_build_portfolio_risk_snapshot_compares_availability_in_shanghai_time() -> None:
+    snapshot = build_portfolio_risk_snapshot(
+        pipeline_result(),
+        available_at="2026-09-04T23:30:00-12:00",
+    )
+    assert snapshot["asOf"] == "2026-09-05"
+
+    invalid = pipeline_result()
+    invalid["meta"]["end_date"] = ""
+    with pytest.raises(Cne6PortfolioSnapshotError, match="ISO date"):
+        build_portfolio_risk_snapshot(
+            invalid,
+            available_at="2026-09-06T09:00:00+08:00",
+        )
 
 
 def test_build_portfolio_risk_snapshot_reports_covariance_quality_failures() -> None:
     source = pipeline_result()
     source["factor_cov"] = np.diag([0.0004, -0.0001, 0.000225])
-    snapshot = build_portfolio_risk_snapshot(source)
+    snapshot = build_snapshot(source)
 
     assert snapshot["quality"]["status"] == "invalid"
     assert snapshot["quality"]["positiveSemidefinite"] is False
@@ -125,19 +168,19 @@ def test_build_portfolio_risk_snapshot_rejects_unmappable_code_and_bad_specific_
     unsupported = pipeline_result()
     unsupported["codes"] = ["us.AAPL", "sz.000001"]
     with pytest.raises(Cne6PortfolioSnapshotError, match="unsupported CNE6 security code"):
-        build_portfolio_risk_snapshot(unsupported)
+        build_snapshot(unsupported)
 
     non_positive = pipeline_result()
     non_positive["specific_risk"][0] = 0
     with pytest.raises(Cne6PortfolioSnapshotError, match="strictly positive"):
-        build_portfolio_risk_snapshot(non_positive)
+        build_snapshot(non_positive)
 
 
 def test_build_portfolio_risk_snapshot_does_not_expose_pipeline_callables() -> None:
     source = pipeline_result()
     source["adapter"] = lambda: None
     source["meta"]["writer"] = lambda: None
-    snapshot = build_portfolio_risk_snapshot(source)
+    snapshot = build_snapshot(source)
 
     assert "adapter" not in snapshot
     assert "pipeline" not in snapshot

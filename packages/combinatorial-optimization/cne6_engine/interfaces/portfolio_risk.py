@@ -8,7 +8,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+from datetime import date, datetime
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import numpy as np
 
@@ -19,6 +21,7 @@ MODEL_NAME = "CNE6"
 SNAPSHOT_SCHEMA_VERSION = "1"
 DEFAULT_RECONCILIATION_TOLERANCE = 1e-10
 DEFAULT_CONDITION_WARNING = 1e8
+CNE6_TIMEZONE = ZoneInfo("Asia/Shanghai")
 
 
 class Cne6PortfolioSnapshotError(ValueError):
@@ -145,6 +148,7 @@ def _quality(
 def build_portfolio_risk_snapshot(
     pipeline_result: dict[str, Any],
     *,
+    available_at: str,
     model_version: str | None = None,
     reconciliation_tolerance: float = DEFAULT_RECONCILIATION_TOLERANCE,
     condition_warning: float = DEFAULT_CONDITION_WARNING,
@@ -156,6 +160,16 @@ def build_portfolio_risk_snapshot(
     """
     if not isinstance(pipeline_result, dict):
         raise Cne6PortfolioSnapshotError("pipeline_result must be a dict")
+    try:
+        available_instant = datetime.fromisoformat(available_at.replace("Z", "+00:00"))
+    except (AttributeError, ValueError) as error:
+        raise Cne6PortfolioSnapshotError(
+            "available_at must be an ISO-8601 timestamp with timezone"
+        ) from error
+    if available_instant.tzinfo is None or available_instant.utcoffset() is None:
+        raise Cne6PortfolioSnapshotError(
+            "available_at must be an ISO-8601 timestamp with timezone"
+        )
     if not np.isfinite(reconciliation_tolerance) or reconciliation_tolerance <= 0:
         raise Cne6PortfolioSnapshotError("reconciliation_tolerance must be positive")
     if not np.isfinite(condition_warning) or condition_warning <= 1:
@@ -178,6 +192,14 @@ def build_portfolio_risk_snapshot(
         raise Cne6PortfolioSnapshotError("factor_names must be unique")
     if not isinstance(meta, dict) or not isinstance(meta.get("end_date"), str):
         raise Cne6PortfolioSnapshotError("meta.end_date is required")
+    try:
+        model_date = date.fromisoformat(meta["end_date"])
+    except ValueError as error:
+        raise Cne6PortfolioSnapshotError("meta.end_date must be an ISO date") from error
+    if model_date.isoformat() != meta["end_date"]:
+        raise Cne6PortfolioSnapshotError("meta.end_date must be an ISO date")
+    if available_instant.astimezone(CNE6_TIMEZONE).date() < model_date:
+        raise Cne6PortfolioSnapshotError("available_at cannot precede meta.end_date")
 
     security_count = len(codes)
     factor_count = len(factor_names)
@@ -225,6 +247,7 @@ def build_portfolio_risk_snapshot(
         "model": MODEL_NAME,
         "modelVersion": resolved_version,
         "asOf": meta["end_date"],
+        "availableAt": available_at,
         "factors": factors,
         "securities": securities,
         "factorCovariance": factor_cov.tolist(),
@@ -242,6 +265,7 @@ def build_portfolio_risk_snapshot(
         "model": MODEL_NAME,
         "modelVersion": resolved_version,
         "asOf": meta["end_date"],
+        "availableAt": available_at,
         "currency": "CNY",
         "covariancePeriod": "daily",
         "factors": factors,

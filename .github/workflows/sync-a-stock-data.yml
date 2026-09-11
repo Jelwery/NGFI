@@ -204,7 +204,7 @@ jobs:
         continue-on-error: true
         env:
           TARGET_VERSION: ${{ steps.candidate.outputs.version }}
-          LOCK_FILE: packages/finance-provider-astock/upstream/upstream.lock.json
+          LOCK_FILE: packages/finance-data-service/providers/astock/upstream/upstream.lock.json
         run: |
           set -euo pipefail
           LOCK_FILE="$LOCK_FILE" TARGET_VERSION="$TARGET_VERSION" GITHUB_OUTPUT="$GITHUB_OUTPUT" node <<'NODE'
@@ -303,7 +303,7 @@ jobs:
           set -euo pipefail
           check_path() {
             case "$1" in
-              packages/finance-provider-astock/upstream/*|packages/finance-provider-astock/python/generated/*|THIRD_PARTY_NOTICES.md) return 0 ;;
+              packages/finance-data-service/providers/astock/upstream/*|packages/finance-data-service/providers/astock/python/generated/*|THIRD_PARTY_NOTICES.md) return 0 ;;
               *) echo "::error file=$1::candidate changed a path outside the vendored snapshot"; return 1 ;;
             esac
           }
@@ -326,8 +326,8 @@ jobs:
           )
 
           git add -A -- \
-            packages/finance-provider-astock/upstream \
-            packages/finance-provider-astock/python/generated \
+            packages/finance-data-service/providers/astock/upstream \
+            packages/finance-data-service/providers/astock/python/generated \
             THIRD_PARTY_NOTICES.md
           if git diff --cached --quiet; then
             echo "has_changes=false" >> "$GITHUB_OUTPUT"
@@ -426,7 +426,7 @@ jobs:
             --cpus 1 \
             --ulimit nofile=256:256 \
             --tmpfs /tmp:rw,noexec,nosuid,nodev,size=64m \
-            --volume "$GITHUB_WORKSPACE/packages/finance-provider-astock/upstream:/candidate:ro" \
+            --volume "$GITHUB_WORKSPACE/packages/finance-data-service/providers/astock/upstream:/candidate:ro" \
             --volume "$TRUSTED_PYTHON_DEPS:/opt/trusted-deps:ro" \
             --workdir /candidate \
             --env HOME=/tmp \
@@ -484,8 +484,8 @@ jobs:
           # --no-renames makes both sides of any rename explicit. The publisher
           # independently validates the applied worktree and the resulting commit.
           git diff --cached --binary --full-index --no-renames -- \
-            packages/finance-provider-astock/upstream \
-            packages/finance-provider-astock/python/generated \
+            packages/finance-data-service/providers/astock/upstream \
+            packages/finance-data-service/providers/astock/python/generated \
             THIRD_PARTY_NOTICES.md > "$ARTIFACT_DIR/candidate.patch"
           test -s "$ARTIFACT_DIR/candidate.patch"
           cp "$RUNNER_TEMP/a-stock-report.md" "$ARTIFACT_DIR/report.md"
@@ -641,7 +641,7 @@ jobs:
 
           check_path() {
             case "$1" in
-              packages/finance-provider-astock/upstream/*|packages/finance-provider-astock/python/generated/*|THIRD_PARTY_NOTICES.md) return 0 ;;
+              packages/finance-data-service/providers/astock/upstream/*|packages/finance-data-service/providers/astock/python/generated/*|THIRD_PARTY_NOTICES.md) return 0 ;;
               *) echo "::error file=$1::refusing scope-external publication path"; return 1 ;;
             esac
           }

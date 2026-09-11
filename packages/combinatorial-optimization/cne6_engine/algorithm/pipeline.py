@@ -5,7 +5,7 @@ Daily flow for one ``end_date``:
   1. Load the DataBundle (layer 2 adapter).
   2. For each of the last ``lookback_days`` trade dates, build (or load from
      cache) the daily exposure matrix X_t = [country, industry, styles].
-     Columns align to the end-date factor set; a style missing on a date
+     Columns align to the declared factor dictionary; a style missing on a date
      yields NaN for every stock, which drops that date's regression.
   3. Stream daily WLS regressions → factor returns f and specific returns u.
   4. Factor covariance F (NW-EWMA ×2 + VRA + OBA) and specific risk σ.
@@ -13,10 +13,11 @@ Daily flow for one ``end_date``:
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 import polars as pl
@@ -26,10 +27,40 @@ from cne6_engine.algorithm.factor_cov import compute_factor_covariance
 from cne6_engine.algorithm.factor_return import (
     daily_cross_sectional_regression_time_varying,
 )
+from cne6_engine.algorithm.registry import level1_names
 from cne6_engine.algorithm.specific_risk import compute_specific_risk
 from cne6_engine.algorithm.synthesis import synthesize_styles
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
+EXPOSURE_CONFIG_VERSION = "vintage-pit-v3"
+
+
+def _json_safe(value):
+    if isinstance(value, np.ndarray):
+        return _json_safe(value.tolist())
+    if isinstance(value, dict):
+        return {k: _json_safe(v) for k, v in value.items()}
+    if isinstance(value, (tuple, list)):
+        return [_json_safe(v) for v in value]
+    if isinstance(value, np.generic):
+        return _json_safe(value.item())
+    if isinstance(value, float) and not np.isfinite(value):
+        return None
+    return value
+
+
+def _exposure_identity(bundle) -> str:
+    digest = hashlib.sha256(json.dumps(_json_safe({
+        "schema": SCHEMA_VERSION, "config": EXPOSURE_CONFIG_VERSION,
+        "quality": bundle.quality.to_dict(), "provenance": bundle.provenance,
+    }), sort_keys=True).encode())
+    # Hash actual contract contents too: callers may change an in-memory bundle
+    # while retaining its original source/version tag.
+    for contract in (bundle.market, bundle.benchmark, bundle.fundamentals, bundle.industry, bundle.analyst):
+        if contract is not None:
+            digest.update(str(contract.frame.schema).encode())
+            digest.update(contract.frame.hash_rows(seed=0).to_numpy().tobytes())
+    return digest.hexdigest()
 
 
 @dataclass
@@ -41,6 +72,7 @@ class DailyExposure:
     market_cap: np.ndarray    # (N,)
     industry: list[str]
     style_names: list[str]
+    metadata: dict = field(default_factory=dict)
 
 
 def _design_matrix(
@@ -73,12 +105,15 @@ def build_daily_exposure(
     canonical_industries: list[str] | None = None,
     canonical_styles: list[str] | None = None,
     verbose: bool = False,
+    cache_identity: str | None = None,
 ) -> DailyExposure:
     """Compute (or load cached) exposures for one date.
 
     Canonical column sets keep K identical across dates; pass None to use
     this date's own sets (used for the end date, which defines them).
     """
+    identity = cache_identity or _exposure_identity(bundle)
+    metadata: dict = {}
     cache_path = (
         os.path.join(cache_dir, f"exposures_{date}.parquet")
         if cache_dir else None
@@ -92,7 +127,10 @@ def build_daily_exposure(
 
     if cache_path and os.path.exists(cache_path):
         cached = pl.read_parquet(cache_path)
-        if cached["schema_version"][0] == SCHEMA_VERSION:
+        if (len(cached) and "cache_identity" in cached.columns and "quality_metadata" in cached.columns
+                and cached["schema_version"][0] == SCHEMA_VERSION
+                and cached["cache_identity"][0] == identity):
+            metadata = json.loads(cached["quality_metadata"][0])
             codes = cached["code"].to_list()
             industries = cached["industry"].to_list()
             caps = cached["market_cap"].to_numpy().astype(float)
@@ -120,7 +158,26 @@ def build_daily_exposure(
         S, style_names, smeta = synthesize_styles(
             frame, industry_map, caps,
         )
-        valid = smeta["valid_mask"]
+        # Never resurrect a delisted/missing end-date security via median fill.
+        current_codes = set(last["code"].to_list())
+        valid = smeta["valid_mask"] & np.array([c in current_codes for c in codes])
+        exclusions = dict(bundle.provenance.get("universe", {}).get("exclusions", {}))
+        exclusions.update({c: "missing_current_market_row" if c not in current_codes else "invalid_style_exposure"
+                           for c, keep in zip(codes, valid) if not keep})
+        descriptor_quality = meta["descriptor_quality"]
+        for name, fill_mask in smeta["fill_masks"].items():
+            record = descriptor_quality[name]
+            imputed_codes = {c for c, filled in zip(codes, fill_mask) if filled}
+            record["imputed_mask"] = [c in imputed_codes for c in meta["original_universe"]["codes"]]
+            record["post_synthesis_quality_mask"] = ["imputed" if c in imputed_codes else q
+                for c, q in zip(meta["original_universe"]["codes"], record["quality_mask"])]
+        metadata = _json_safe({
+            "descriptors": meta, "synthesis": smeta, "exclusions": exclusions,
+            "original_universe": meta["original_universe"],
+            "coverage": {"numerator": int(valid.sum()), "denominator": meta["original_universe"]["count"],
+                         "coverage": float(valid.sum() / meta["original_universe"]["count"]) if meta["original_universe"]["count"] else 0.0},
+            "cache_identity": identity,
+        })
         if not valid.all():
             codes = [c for c, v in zip(codes, valid) if v]
             caps = caps[valid]
@@ -138,6 +195,8 @@ def build_daily_exposure(
                 pl.Series("industry", industries),
                 pl.Series("market_cap", caps),
                 pl.lit(SCHEMA_VERSION).alias("schema_version"),
+                pl.lit(identity).alias("cache_identity"),
+                pl.lit(json.dumps(metadata, allow_nan=False, sort_keys=True)).alias("quality_metadata"),
                 *[
                     pl.Series(f"style_{name}", S[:, j])
                     for j, name in enumerate(style_names)
@@ -154,27 +213,24 @@ def build_daily_exposure(
         industries, S, style_names, canonical_industries, canonical_styles,
     )
     return DailyExposure(
-        date, codes, X, factor_names, caps, industries, list(style_names),
+        date, codes, X, factor_names, caps, industries, list(style_names), metadata,
     )
 
 
 def _pivot_returns(bundle, dates: list[str], codes: list[str]) -> np.ndarray:
-    frame = bundle.market.frame.filter(
-        pl.col("date").is_in(dates) & pl.col("code").is_in(codes)
-    )
-    pivot = frame.pivot(index="date", on="code", values="daily_return")
-    pivot = pivot.sort("date")
-    pivot = pivot.select(["date"] + codes)
-    mat = pivot.drop("date").to_numpy().astype(float)
-    date_rows = pivot["date"].to_list()
-    if date_rows != dates:
-        raise ValueError("return panel dates misaligned with exposure dates")
+    frame = bundle.market.frame.filter(pl.col("date").is_in(dates) & pl.col("code").is_in(codes))
+    mat = np.full((len(dates), len(codes)), np.nan)
+    date_idx = {d: i for i, d in enumerate(dates)}
+    code_idx = {c: i for i, c in enumerate(codes)}
+    for code, date, value in frame.select("code", "date", "daily_return").iter_rows():
+        mat[date_idx[date], code_idx[code]] = np.nan if value is None else value
     return mat
 
 
 def compute_covariance(
     end_date: str,
     *,
+    factor_dictionary: dict,
     adapter=None,
     lookback_days: int = 252,
     cache_dir: str | None = None,
@@ -203,6 +259,7 @@ def compute_covariance(
 
     t0 = time.perf_counter()
     bundle = adapter.load_bundle(end_date)
+    exposure_identity = _exposure_identity(bundle)
     if verbose:
         print(f"[1/4] bundle loaded ({time.perf_counter() - t0:.1f}s)")
 
@@ -213,13 +270,32 @@ def compute_covariance(
             f"only {len(dates)} trade dates available; need >= 30"
         )
 
-    # ---- exposures + streaming regression ----
+    if (not isinstance(factor_dictionary, dict) or set(factor_dictionary) != {"version", "validFrom", "validThrough", "industries", "styles"}
+            or not isinstance(factor_dictionary["version"], str) or not factor_dictionary["version"]):
+        raise ValueError("a versioned factor dictionary is required")
+    from datetime import date as calendar_date
+    valid_from = calendar_date.fromisoformat(factor_dictionary["validFrom"])
+    valid_through = calendar_date.fromisoformat(factor_dictionary["validThrough"])
+    first_index = all_dates.index(dates[0])
+    first_exposure = all_dates[max(0, first_index - 1)]
+    if not valid_from <= calendar_date.fromisoformat(first_exposure) <= calendar_date.fromisoformat(end_date) <= valid_through:
+        raise ValueError("factor dictionary must cover all lagged exposures and the end date")
+    canonical_industries = factor_dictionary["industries"]
+    canonical_styles = factor_dictionary["styles"]
+    for names in (canonical_industries, canonical_styles):
+        if not isinstance(names, list) or not names or any(not isinstance(name, str) or not name for name in names) or len(names) != len(set(names)):
+            raise ValueError("factor dictionary columns must be non-empty unique names")
+    if set(canonical_styles) - set(level1_names()) or set(canonical_industries) & (set(canonical_styles) | {"COUNTRY"}):
+        raise ValueError("invalid or colliding factor dictionary columns")
+    factor_dictionary = json.loads(json.dumps(factor_dictionary))
+    dictionary_hash = hashlib.sha256(json.dumps(factor_dictionary, sort_keys=True).encode()).hexdigest()
+
     t0 = time.perf_counter()
     end_exp = build_daily_exposure(
         bundle, end_date, cache_dir=cache_dir, verbose=verbose,
+        cache_identity=exposure_identity,
+        canonical_industries=canonical_industries, canonical_styles=canonical_styles,
     )
-    canonical_industries = sorted(set(end_exp.industry))
-    canonical_styles = end_exp.style_names
 
     codes = end_exp.codes
     code_idx = {c: i for i, c in enumerate(codes)}
@@ -227,43 +303,55 @@ def compute_covariance(
     K = len(end_exp.factor_names)
     n_ind = len(canonical_industries)
 
-    returns = _pivot_returns(bundle, dates, codes)
-
+    # Regress on the historical universe, not only surviving end-date codes.
+    # Residuals are projected back to final codes only AFTER each regression.
+    history_codes = bundle.market.codes
+    history_idx = {c: i for i, c in enumerate(history_codes)}
+    returns = _pivot_returns(bundle, dates, history_codes)
+    previous_dates = {d: all_dates[i - 1] if i else None for i, d in enumerate(all_dates)}
     n_days = len(dates)
     factor_returns = np.full((n_days, K), np.nan)
     specific_returns = np.full((n_days, N), np.nan)
-    caps_cube = np.full((n_days, N), np.nan)
+    regression_quality = []
 
     for t, d in enumerate(dates):
-        if d == end_date:
-            day = end_exp
-        else:
-            day = build_daily_exposure(
-                bundle, d, cache_dir=cache_dir,
-                canonical_industries=canonical_industries,
-                canonical_styles=canonical_styles, verbose=False,
-            )
-        X_t = np.full((N, K), np.nan)
-        caps_t = np.full(N, np.nan)
-        if day.X.shape[1] == K:
-            for j, c in enumerate(day.codes):
-                i = code_idx.get(c)
-                if i is not None:
-                    X_t[i] = day.X[j]
-                    caps_t[i] = day.market_cap[j]
-        caps_cube[t] = caps_t
+        exposure_date = previous_dates[d]
+        diagnostic = {"date": d, "exposure_date": exposure_date, "quality_flag": "missing",
+                      "numerator": 0, "denominator": int(np.isfinite(returns[t]).sum()), "coverage": 0.0}
+        regression_quality.append(diagnostic)
+        if exposure_date is None:
+            diagnostic["reason"] = "no_prior_trading_date"
+            continue
+        day = build_daily_exposure(
+            bundle, exposure_date, cache_dir=cache_dir,
+            canonical_industries=canonical_industries,
+            canonical_styles=canonical_styles, verbose=False, cache_identity=exposure_identity,
+        )
+        y_t = np.array([returns[t, history_idx[c]] for c in day.codes])
+        valid = np.isfinite(y_t) & np.isfinite(day.X).all(axis=1) & np.isfinite(day.market_cap) & (day.market_cap > 0)
+        diagnostic.update({"codes": [c for c, keep in zip(day.codes, valid) if keep],
+                           "numerator": int(valid.sum()),
+                           "coverage": float(valid.sum() / diagnostic["denominator"]) if diagnostic["denominator"] else 0.0,
+                           "descriptor_quality": {name: {key: record[key] for key in ("quality_flag", "coverage", "numerator", "denominator", "reasons")}
+                                                  for name, record in day.metadata["descriptors"]["descriptor_quality"].items()},
+                           "exclusions": day.metadata["exclusions"]})
         f_t, u_t = daily_cross_sectional_regression_time_varying(
-            returns[t:t + 1], X_t[np.newaxis, :, :],
-            caps_t[np.newaxis, :], industry_count=n_ind,
+            y_t[np.newaxis, :], day.X[np.newaxis, :, :],
+            day.market_cap[np.newaxis, :], industry_count=n_ind,
         )
         factor_returns[t] = f_t[0]
-        specific_returns[t] = u_t[0]
+        diagnostic["quality_flag"] = "unverified" if np.isfinite(f_t[0]).all() else "missing"
+        for j, c in enumerate(day.codes):
+            if c in code_idx:
+                specific_returns[t, code_idx[c]] = u_t[0, j]
 
     valid_days = np.isfinite(factor_returns).all(axis=1)
     if verbose:
         print(f"[2/4] regressions done: {int(valid_days.sum())}/{n_days} days "
               f"({time.perf_counter() - t0:.1f}s)")
 
+    if valid_days.sum() < 2:
+        raise ValueError("need at least two valid lagged cross-sectional regressions")
     f_valid = factor_returns[valid_days]
     u_valid = specific_returns[valid_days]
 
@@ -276,20 +364,30 @@ def compute_covariance(
         n_simulations=100, seed=42,
     )
     cov_kwargs.update(factor_cov_kwargs or {})
-    F = compute_factor_covariance(f_valid, **cov_kwargs)
+    numerical_diagnostics: dict = {}
+    F = compute_factor_covariance(f_valid, diagnostics=numerical_diagnostics, **cov_kwargs)
 
     sr_kwargs = dict(
         vol_half_life=21, nw_lags=5, nw_half_life=252,
         bayesian_q=0.25, vra_half_life=42,
     )
     sr_kwargs.update(specific_risk_kwargs or {})
-    end_caps = caps_cube[valid_days][-1]
+    end_caps = end_exp.market_cap
     sigma = compute_specific_risk(u_valid, end_caps, **sr_kwargs)
+    finite_exposure = np.isfinite(end_exp.X).all(axis=1)
+    valid_risk = np.isfinite(sigma) & (sigma > 0) & finite_exposure
+    risk_exclusions = {c: "missing_declared_factor_exposure" if not exposed else "insufficient_specific_return_history"
+                       for c, keep, exposed in zip(codes, valid_risk, finite_exposure) if not keep}
+    if not valid_risk.any():
+        raise ValueError("no securities have finite positive specific risk")
+    codes = [c for c, keep in zip(codes, valid_risk) if keep]
+    sigma = sigma[valid_risk]
+    N = len(codes)
     if verbose:
         print(f"[3/4] F and sigma estimated ({time.perf_counter() - t0:.1f}s)")
 
     # ---- assemble stock covariance ----
-    X_end = end_exp.X
+    X_end = end_exp.X[valid_risk]
     sigma_stock = X_end @ F @ X_end.T
     sigma_stock[np.diag_indices(N)] += sigma ** 2
 
@@ -307,8 +405,30 @@ def compute_covariance(
             "n_stocks": N,
             "n_factors": K,
             "factor_cov_kwargs": cov_kwargs,
+            "factor_dictionary": factor_dictionary, "factor_dictionary_hash": dictionary_hash,
             "specific_risk_kwargs": sr_kwargs,
             "provenance": bundle.provenance,
+            "available_at": bundle.provenance.get("model_available_at"),
+            "data_quality": {
+                "source_quality": _json_safe(bundle.quality.to_dict()),
+                "descriptor_quality": end_exp.metadata["descriptors"]["descriptor_quality"],
+                "descriptor_exclusions": end_exp.metadata["descriptors"]["excluded"],
+                "synthesis": end_exp.metadata["synthesis"],
+                "original_universe": end_exp.metadata["original_universe"],
+                "exclusions": {**end_exp.metadata["exclusions"], **risk_exclusions},
+                "coverage": {"numerator": N, "denominator": end_exp.metadata["original_universe"]["count"],
+                             "coverage": N / end_exp.metadata["original_universe"]["count"]},
+                "factor_returns": {"exposure_timing": "previous_trading_day", "universe": "time_varying",
+                                   "point_in_time": bundle.quality.point_in_time is True, "quality_flag": "unverified",
+                                   "coverage": float(valid_days.mean()), "numerator": int(valid_days.sum()), "denominator": n_days,
+                                   "factor_dictionary_hash": dictionary_hash,
+                                   "reasons": ["provider_pit_not_verified"] if bundle.quality.point_in_time is not True else [],
+                                   "days": regression_quality},
+                "specific_returns": {"codes": end_exp.codes, "numerator": np.isfinite(u_valid).sum(axis=0).tolist(),
+                                     "denominator": len(u_valid), "coverage": np.isfinite(u_valid).mean(axis=0).tolist()},
+                "numerical_diagnostics": numerical_diagnostics,
+                "cache_identity": exposure_identity,
+            },
         },
     }
 

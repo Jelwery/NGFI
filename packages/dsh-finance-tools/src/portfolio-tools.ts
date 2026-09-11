@@ -1,4 +1,9 @@
-import { join } from 'node:path'
+import { createHash } from 'node:crypto'
+import { readFileSync } from 'node:fs'
+import { join, resolve } from 'node:path'
+import { canonicalJson, evidenceId, modelRunId, sha256, type ModelRun, type Evidence, type JsonObject } from '@finance2dsh/research-core'
+import { ResearchWorkspace } from '@finance2dsh/research-workspace'
+import { quantBridge } from './strategy-tools.js'
 import { defineTool, type ToolDefinition } from '@deepseek-ai/dsh-tools'
 import {
   Cne6PortfolioRiskFacade,
@@ -8,14 +13,16 @@ import {
   type HoldingsImportContext,
   type HoldingsStore,
 } from '@finance2dsh/portfolio-risk'
-import { atomicJsonWrite, containedPath, ensurePlainDirectory, readJsonFile, requireRuntimeId, strictTool, withExclusiveLock } from './runtime-store.js'
+import { atomicJsonWrite, containedPath, ensurePlainDirectory, quantCodeIdentity, readJsonFile, requireRuntimeId, strictTool, withExclusiveLock } from './runtime-store.js'
 
 export const PORTFOLIO_TOOL_NAMES = [
   'finance_holdings',
   'finance_portfolio_risk',
+  'finance_portfolio_optimize',
+  'finance_rebalance_plan',
 ] as const
 
-export interface PortfolioToolOptions { runtimeRoot: string }
+export interface PortfolioToolOptions { runtimeRoot: string; quantProjectRoot?: string }
 
 type HoldingsEvent =
   | { action: 'stage'; format: 'json' | 'csv'; text: string; context: HoldingsImportContext }
@@ -73,8 +80,141 @@ function load(path: string): { state: HoldingsState; store: HoldingsStore } {
   return { state, store }
 }
 
+function researchStore(options: PortfolioToolOptions, workspaceId: unknown) {
+  const root = containedPath(options.runtimeRoot, 'research', requireRuntimeId(workspaceId, 'workspace_id'))
+  ensurePlainDirectory(root)
+  return new ResearchWorkspace({ root })
+}
+
+function confirmedInput(options: PortfolioToolOptions, args: Record<string, unknown>, input: Record<string, unknown>) {
+  const book = load(target(options, args.workspace_id, args.portfolio_id).state).store.snapshot()
+  const snapshot = book.confirmed
+  if (snapshot === null || book.staged !== null || snapshot.snapshotHash !== args.holdings_snapshot_hash) throw new Error('confirmed holdings snapshot mismatch or pending staged changes')
+  if (snapshot.baseCurrency !== 'CNY') throw new TypeError('optimizer requires CNY holdings')
+  const asOf = Date.parse(String(input.asOf))
+  const holdingTime = Date.parse(snapshot.asOf)
+  if (!Number.isFinite(asOf) || !Number.isFinite(holdingTime) || holdingTime > asOf) throw new TypeError('holdings as-of is invalid or later than optimization')
+  const quantities = new Map<string, number>()
+  for (const position of snapshot.positions) {
+    const id = position.instrument
+    const key = `${id.market}:${id.exchange}:${id.symbol}:${id.assetType}`
+    quantities.set(key, (quantities.get(key) ?? 0) + position.quantity)
+  }
+  if (!Array.isArray(input.assets)) throw new TypeError('assets must be an array')
+  for (const value of input.assets) {
+    const asset = object(value, 'asset')
+    const id = object(asset.instrument, 'instrument')
+    const key = `${id.market}:${id.exchange}:${id.symbol}:${id.assetType}`
+    if (asset.quantity !== (quantities.get(key) ?? 0)) throw new TypeError(`asset quantity differs from confirmed holdings: ${key}`)
+    quantities.delete(key)
+  }
+  if (quantities.size) throw new TypeError('optimization input omits confirmed holdings')
+  return snapshot
+}
+
+function optimizationTool(options: PortfolioToolOptions, name: 'finance_portfolio_optimize' | 'finance_rebalance_plan'): ToolDefinition {
+  return defineTool({
+    name,
+    description: name === 'finance_portfolio_optimize'
+      ? 'Optimize explicit cross-sectional scores against CNE6 risk and a registered mandate artifact. Stores immutable inputs, result, evidence and code lineage; dry-run only.'
+      : 'Return an audited 100-share rebalance draft from an existing OptimizationRun and the unchanged confirmed holdings. Does not solve again or place orders.',
+    parameters: {
+      workspace_id: { type: 'string', required: true }, case_id: { type: 'string', required: true },
+      portfolio_id: { type: 'string', required: true }, holdings_snapshot_hash: { type: 'string', required: true },
+      expected_revision: { type: 'integer', required: true }, dry_run: { type: 'boolean' },
+      input: { type: 'object', additionalProperties: true }, input_artifact: { type: 'string' },
+      mandate_artifact: { type: 'string' }, optimization_run_id: { type: 'string' },
+    },
+    output: JSON_OUTPUT, timeoutMs: 120_000,
+    async execute(raw, exec) {
+      const args = raw as Record<string, unknown>
+      if (args.dry_run !== undefined && args.dry_run !== true) throw new TypeError('only dry-run is supported')
+      const caseId = requiredText(args.case_id, 'case_id')
+      if (!/^case-[0-9a-f]{64}$/.test(caseId)) throw new TypeError('invalid case_id')
+      const store = researchStore(options, args.workspace_id)
+      const state = store.open(caseId)
+      if (state.revision !== args.expected_revision) throw new Error('research revision conflict')
+      if (state.case.subject.kind !== 'portfolio' || state.case.subject.portfolioId !== args.portfolio_id) throw new Error('research case portfolio mismatch')
+      const project = resolve(options.quantProjectRoot ?? join(process.cwd(), 'packages/combinatorial-optimization'))
+      const artifact = (value: unknown): Record<string, unknown> => {
+        const ref = requiredText(value, 'artifact')
+        if (!/^artifacts\/[a-zA-Z0-9_./-]+\.json$/.test(ref) || ref.split('/').includes('..') || !state.fileHashes[ref]) throw new TypeError('artifact must be a registered case JSON file')
+        const path = containedPath(store.casePath(caseId), ref)
+        const parsed = object(readJsonFile(path, null), 'artifact JSON')
+        const hash = `sha256:${createHash('sha256').update(readFileSync(path)).digest('hex')}`
+        if (hash !== state.fileHashes[ref]) throw new Error('artifact hash changed during read')
+        return parsed
+      }
+      if (name === 'finance_rebalance_plan') {
+        if (args.input !== undefined || args.input_artifact !== undefined || args.mandate_artifact !== undefined) throw new TypeError('rebalance plan accepts only a saved OptimizationRun, not replacement inputs')
+        const run = state.modelRuns.find(item => item.id === args.optimization_run_id && item.model === 'portfolio-optimization')
+        if (!run || run.output.status !== 'ok') throw new Error('successful OptimizationRun not found')
+        if (run.parameters.holdingsSnapshotHash !== args.holdings_snapshot_hash) throw new Error('OptimizationRun holdings mismatch')
+        const original = object(run.parameters.input, 'stored optimization input')
+        confirmedInput(options, args, original)
+        const result = object(run.output.value, 'optimization result')
+        if (result.status !== 'ok' || result.repaired === null) throw new Error('optimization has no feasible repaired plan')
+        const plan: Omit<ModelRun, 'id'> = {
+          model: 'portfolio-rebalance-plan', version: '1.0.0', inputRefs: [{ kind: 'model-run', id: run.id }],
+          parameters: { holdingsSnapshotHash: args.holdings_snapshot_hash as string, dryRun: true },
+          output: { status: 'ok', value: { dryRun: true, optimizationRunId: run.id, plan: result.repaired as JsonObject } },
+          warnings: ['Simulation only; no order submission.'], createdAt: run.createdAt,
+        }
+        const saved = store.saveModelRun(caseId, state.revision, { id: modelRunId(plan), ...plan })
+        return jsonSafe({ ...saved, modelRunId: modelRunId(plan), dryRun: true, optimizationRunId: run.id, plan: result.repaired })
+      }
+      if ((args.input === undefined) === (args.input_artifact === undefined)) throw new TypeError('supply exactly one of input or input_artifact')
+      const input = args.input_artifact === undefined ? object(args.input, 'input') : artifact(args.input_artifact)
+      const mandate = artifact(args.mandate_artifact)
+      if (input.mandate !== undefined && canonicalJson(input.mandate) !== canonicalJson(mandate)) throw new TypeError('input mandate differs from registered mandate')
+      const payload: Record<string, unknown> = { ...input, mandate, dryRun: true }
+      const asOf = requiredText(payload.asOf, 'asOf')
+      if (!Number.isFinite(Date.parse(asOf))) throw new TypeError('asOf must be a valid timestamp')
+      const caseDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(asOf))
+      if (state.case.asOf !== caseDate && Date.parse(state.case.asOf) !== Date.parse(asOf)) throw new TypeError('optimization date differs from research case')
+      if (input.dryRun !== undefined && input.dryRun !== true) throw new TypeError('only dry-run is supported')
+      const holdings = confirmedInput(options, args, payload)
+      const evidenceRefs = new Set<string>()
+      for (const row of payload.assets as Record<string, unknown>[]) {
+        if (!Array.isArray(row.evidenceRefs) || row.evidenceRefs.length === 0) throw new TypeError('every score needs evidence references')
+        for (const ref of row.evidenceRefs) {
+          const evidence = state.evidence.find(item => item.id === ref)
+          if (!evidence || evidence.sourceRef.availableAt === undefined || Date.parse(evidence.sourceRef.availableAt) > Date.parse(String(input.asOf))) throw new TypeError('score evidence is absent or future-available')
+          evidenceRefs.add(String(ref))
+        }
+      }
+      const identity = quantCodeIdentity(project)
+      const result = object(await quantBridge({ quantProjectRoot: project }, 'portfolio-optimize', payload, exec.signal), 'OptimizationRun')
+      confirmedInput(options, args, payload)
+      const createdAt = requiredText(input.asOf, 'asOf')
+      const content: Omit<ModelRun, 'id'> = {
+        model: 'portfolio-optimization', version: '1.0.0',
+        inputRefs: [...evidenceRefs].sort().map(id => ({ kind: 'evidence' as const, id })),
+        parameters: { input: payload as JsonObject, mandateArtifact: String(args.mandate_artifact), mandateHash: sha256(mandate), holdingsSnapshotHash: holdings.snapshotHash, ...identity, seed: 0 },
+        output: result.status === 'ok' ? { status: 'ok', value: result as JsonObject }
+          : { status: 'insufficient', reason: 'Optimization rejected', details: result as JsonObject },
+        warnings: result.status === 'ok' ? [] : [JSON.stringify(result.rejectionReasons)], createdAt,
+      }
+      const id = modelRunId(content)
+      const saved = store.saveModelRun(caseId, state.revision, { id, ...content })
+      const calculation: Omit<Extract<Evidence, { kind: 'calculation' }>, 'id'> = {
+        kind: 'calculation', subject: state.case.subject, field: 'OptimizationRun', value: result as JsonObject,
+        modelRunRef: id, quality: result.status === 'ok' ? 'medium' : 'low',
+        sourceRef: { provider: 'ngfi-optimizer', upstream: identity.codeVersion, sourceKind: 'derived', retrievedAt: createdAt, availableAt: createdAt, hash: sha256(result) },
+        limitations: ['Rank preference is not an expected return forecast.', 'Continuous duals do not describe an integer optimum.'],
+      }
+      const evidence = { id: evidenceId(calculation), ...calculation }
+      const current = store.open(caseId)
+      const written = current.evidence.some(item => item.id === evidence.id) ? saved : store.appendEvidence(caseId, current.revision, [evidence])
+      return jsonSafe({ revision: written.revision, modelRunId: id, evidenceId: evidence.id, result })
+    },
+  })
+}
+
 export function createPortfolioTools(options: PortfolioToolOptions): ToolDefinition[] {
   return [
+    optimizationTool(options, 'finance_portfolio_optimize'),
+    optimizationTool(options, 'finance_rebalance_plan'),
     defineTool({
       name: 'finance_holdings',
       description: 'Import, stage, inspect, explicitly confirm, or discard holdings in a bounded runtime book. Invalid/empty imports are returned as invalid and never staged; writes require exact revision and confirmation hash.',

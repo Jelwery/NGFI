@@ -273,7 +273,10 @@ function metadata(
 ): RiskResultMetadata {
   return {
     model: 'CNE6', modelVersion: model.modelVersion, asOf: model.asOf, coverage, inputHash,
-    qualityStatus: qualityStatus(issues, model.quality), covarianceQuality: model.quality,
+    qualityStatus: qualityStatus(issues, model.quality) === 'ok' && model.sourceQuality?.quality_flag !== 'good'
+      ? 'degraded' : qualityStatus(issues, model.quality), covarianceQuality: model.quality,
+    sourceQuality: model.sourceQuality ?? { quality_flag: 'unverified', coverage: null },
+    descriptorQuality: model.descriptorQuality ?? {},
   }
 }
 

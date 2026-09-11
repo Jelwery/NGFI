@@ -32,6 +32,10 @@ def _weekdays(n: int, start: date) -> list[str]:
 
 DATES = _weekdays(N_DATES, date(2024, 1, 2))
 END_DATE = DATES[-1]
+FACTOR_DICTIONARY = {
+    "version": "synthetic-v1", "validFrom": "2024-01-01", "validThrough": "2024-12-31",
+    "industries": sorted(INDUSTRIES), "styles": ["Size", "Volatility", "Momentum", "Quality", "Value"],
+}
 
 
 class StubAdapter:
@@ -147,7 +151,7 @@ def pipeline_result(bundle, tmp_path_factory):
     cache_dir = str(tmp_path_factory.mktemp("exposure_cache"))
     return compute_covariance(
         END_DATE,
-        adapter=StubAdapter(bundle),
+        adapter=StubAdapter(bundle), factor_dictionary=FACTOR_DICTIONARY,
         lookback_days=N_DATES,
         cache_dir=cache_dir,
         factor_cov_kwargs=dict(
@@ -178,6 +182,36 @@ class TestPipeline:
         assert "Size" in names
         assert "Volatility" in names
 
+    def test_declared_dictionary_is_retained_and_not_inferred(self, pipeline_result):
+        assert pipeline_result["meta"]["factor_dictionary"] == FACTOR_DICTIONARY
+        assert pipeline_result["factor_names"] == ["COUNTRY"] + FACTOR_DICTIONARY["industries"] + FACTOR_DICTIONARY["styles"]
+        quality = pipeline_result["meta"]["data_quality"]["factor_returns"]
+        assert "end_date_style_set_selection" not in quality["reasons"]
+        assert quality["factor_dictionary_hash"] == pipeline_result["meta"]["factor_dictionary_hash"]
+
+    @pytest.mark.parametrize("change", ["expired", "late-start", "unknown-style", "duplicate", "collision"])
+    def test_rejects_invalid_factor_dictionary(self, bundle, tmp_path, change):
+        import copy
+        dictionary = copy.deepcopy(FACTOR_DICTIONARY)
+        if change == "expired":
+            dictionary["validThrough"] = "2024-01-01"
+        elif change == "late-start":
+            dictionary["validFrom"] = END_DATE
+        elif change == "unknown-style":
+            dictionary["styles"] = ["unknown"]
+        elif change == "duplicate":
+            dictionary["styles"].append("Size")
+        else:
+            dictionary["industries"].append("COUNTRY")
+        with pytest.raises(ValueError, match="factor dictionary"):
+            compute_covariance(END_DATE, factor_dictionary=dictionary, adapter=StubAdapter(bundle),
+                               lookback_days=N_DATES, cache_dir=str(tmp_path), verbose=False)
+
+    def test_missing_declared_factor_stays_nan(self):
+        X, names = pipeline_module._design_matrix(["银行"], np.array([[1.0]]), ["Size"], ["银行"], ["Size", "Sentiment"])
+        assert names == ["COUNTRY", "银行", "Size", "Sentiment"]
+        assert np.isnan(X[0, -1])
+
     def test_factor_cov_psd(self, pipeline_result):
         F = pipeline_result["factor_cov"]
         assert np.allclose(F, F.T)
@@ -205,7 +239,7 @@ class TestPipeline:
     def test_cache_reuse(self, bundle, tmp_path):
         cache_dir = str(tmp_path / "cache")
         kwargs = dict(
-            adapter=StubAdapter(bundle), lookback_days=N_DATES,
+            adapter=StubAdapter(bundle), factor_dictionary=FACTOR_DICTIONARY, lookback_days=N_DATES,
             cache_dir=cache_dir, verbose=False,
             factor_cov_kwargs=dict(
                 vol_half_life=20, vol_nw_lags=2,
@@ -219,6 +253,19 @@ class TestPipeline:
         assert len(cached_files) == N_DATES
         second = compute_covariance(END_DATE, **kwargs)
         assert np.allclose(first["sigma_stock"], second["sigma_stock"])
+        assert first["meta"]["data_quality"] == second["meta"]["data_quality"]
+
+    def test_quality_survives_snapshot_with_missing_analyst_data(self, pipeline_result):
+        from cne6_engine.interfaces.portfolio_risk import build_portfolio_risk_snapshot
+        snapshot = build_portfolio_risk_snapshot(pipeline_result)
+        descriptors = snapshot["descriptorQuality"]
+        assert len(descriptors) == 42
+        assert descriptors["RRIBS"]["quality_flag"] == "missing"
+        assert descriptors["RRIBS"]["coverage"] == 0
+        assert snapshot["sourceQuality"]["status"] == "warning"
+        assert "unpublished_level2_mapping_equal_weight_approximation" in snapshot["sourceQuality"]["proxyFlags"]
+        assert snapshot["dataQuality"]["factor_returns"]["exposure_timing"] == "previous_trading_day"
+        assert all(row["denominator"] >= row["numerator"] for row in descriptors.values())
 
     def test_snapshot_adapters_namespace_exposure_cache(self, bundle, tmp_path, monkeypatch):
         class SnapshotAdapter(StubAdapter):
@@ -235,7 +282,7 @@ class TestPipeline:
 
         monkeypatch.setattr(pipeline_module, "build_daily_exposure", record_cache)
         compute_covariance(
-            END_DATE, adapter=SnapshotAdapter(bundle, "a" * 64),
+            END_DATE, adapter=SnapshotAdapter(bundle, "a" * 64), factor_dictionary=FACTOR_DICTIONARY,
             lookback_days=N_DATES, cache_dir=str(tmp_path / "cache"), verbose=False,
             factor_cov_kwargs=dict(
                 vol_half_life=20, vol_nw_lags=2, corr_half_life=60,
@@ -249,7 +296,7 @@ class TestPipeline:
         out_dir = str(tmp_path / "out")
         compute_covariance(
             END_DATE,
-            adapter=StubAdapter(bundle), lookback_days=N_DATES,
+            adapter=StubAdapter(bundle), factor_dictionary=FACTOR_DICTIONARY, lookback_days=N_DATES,
             cache_dir=str(tmp_path / "cache"),
             output_dir=out_dir, verbose=False,
             factor_cov_kwargs=dict(

@@ -1,6 +1,6 @@
 # A 股 60 项能力与工具路由
 
-运行时单一事实来源是 `packages/finance-provider-astock/feature-registry.json`。当前固定上游为 `a-stock-data v3.8.0`（tag object `9f995e66ee792255e492a15627f98615627041c6`，peeled commit `2012ce7cd0e75d379c5e6cbd3115514f300f3bc8`）。60 个 capability、67 个 capability-callable 映射和 70 个受控 tool variant 全部闭合；组合项允许同一个锁定 callable 提供多个高层视图。
+运行时单一事实来源是 `packages/finance-data-service/providers/astock/feature-registry.json`。当前固定上游为 `a-stock-data v3.8.0`（tag object `9f995e66ee792255e492a15627f98615627041c6`，peeled commit `2012ce7cd0e75d379c5e6cbd3115514f300f3bc8`）。60 个 capability、67 个 capability-callable 映射和 70 个受控 tool variant 全部闭合；组合项允许同一个锁定 callable 提供多个高层视图。
 
 ## 调用规则
 

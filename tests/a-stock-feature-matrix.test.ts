@@ -6,7 +6,7 @@ import type { DataCapability, InstrumentId } from '@finance2dsh/core'
 import {
   ASHARE_FEATURES, AStockProvider, getAshareFeature,
   type AshareFeatureDefinition,
-} from '../packages/finance-provider-astock/src/index.js'
+} from '../packages/finance-data-service/src/providers/astock/index.js'
 import { createAshareFinanceTools } from '../packages/dsh-finance-tools/src/ashare-tools.js'
 
 const root = process.cwd()
@@ -14,7 +14,7 @@ const fixtureRoot = join(root, 'tests/fixtures/a-stock-data')
 const noDataRoot = join(fixtureRoot, 'feature-cases/no-data')
 const schemaRoot = join(fixtureRoot, 'feature-cases/schema-drift')
 const manifest = JSON.parse(readFileSync(
-  join(root, 'packages/finance-provider-astock/upstream/capability-manifest.json'), 'utf8',
+  join(root, 'packages/finance-data-service/providers/astock/upstream/capability-manifest.json'), 'utf8',
 )) as {
   summary: { statusCounts: Record<string, number> }
   capabilities: Array<{
@@ -28,7 +28,7 @@ const manifest = JSON.parse(readFileSync(
 const instrument: InstrumentId = {
   market: 'CN', exchange: 'SSE', symbol: '600519', assetType: 'equity',
 }
-const runner = join(root, 'packages/finance-provider-astock/python/runner.py')
+const runner = join(root, 'packages/finance-data-service/providers/astock/python/runner.py')
 const limits = { maxRecords: 1_000, maxDateSpanDays: 3_660, maxOutputBytes: 4 * 1024 * 1024, networkTimeoutMs: 10_000 }
 
 function provider(selectedRoot: string): AStockProvider {

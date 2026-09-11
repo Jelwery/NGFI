@@ -20,6 +20,7 @@ from cne6_engine.algorithm.rolling import (
     _wls_at_targets,
     _wls_at_targets_sliding,
     cmra_range,
+    finite_mean,
     monthly_returns,
 )
 
@@ -216,7 +217,7 @@ def season(panel: MarketPanel, years: int = 5) -> np.ndarray:
             vals.append(np.full(panel.n, np.nan))
     stacked = np.vstack(vals)
     with np.errstate(invalid="ignore"):
-        out = np.nanmean(stacked, axis=0)
+        out = finite_mean(stacked, axis=0)
     return out
 
 
@@ -261,7 +262,7 @@ def _log_excess(panel: MarketPanel) -> np.ndarray:
 def rstr(panel: MarketPanel) -> np.ndarray:
     excess = _log_excess(panel)
     series = _ewma_sum_at_sliding(excess, 252, 126, _last_targets(panel.t, 11))
-    return np.nanmean(series, axis=1)
+    return finite_mean(series, axis=1)
 
 
 def ltrstr(panel: MarketPanel) -> np.ndarray:
@@ -272,7 +273,7 @@ def ltrstr(panel: MarketPanel) -> np.ndarray:
         return np.full(panel.n, np.nan)
     targets = np.arange(end - 10, end + 1, dtype=np.int64)
     series = _ewma_sum_at_sliding(excess, 1040, 260, targets)
-    return -np.nanmean(series, axis=1)
+    return -finite_mean(series, axis=1)
 
 
 def lthalpha(panel: MarketPanel) -> np.ndarray:
@@ -285,7 +286,7 @@ def lthalpha(panel: MarketPanel) -> np.ndarray:
     alphas = _wls_at_targets_sliding(
         panel.returns, panel.benchmark, 1040, 260, targets, first_valid,
     )[:, :, 1]
-    return -np.nanmean(alphas, axis=1)
+    return -finite_mean(alphas, axis=1)
 
 
 PRICE_DESCRIPTORS = {

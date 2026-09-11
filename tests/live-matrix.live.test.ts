@@ -1,9 +1,9 @@
 import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { TdxCommunityProvider, TdxOfficialProvider } from '../packages/finance-provider-tdx/src/index.js'
-import { IfindOfficialProvider } from '../packages/finance-provider-ifind/src/index.js'
-import { Cne6LocalProvider } from '../packages/finance-provider-cne6/src/index.js'
+import { TdxCommunityProvider, TdxOfficialProvider } from '../packages/finance-data-service/src/providers/tdx/index.js'
+import { IfindOfficialProvider } from '../packages/finance-data-service/src/providers/ifind/index.js'
+import { Cne6LocalProvider } from '../packages/finance-data-service/src/providers/cne6/index.js'
 
 type LiveOutcome =
   | 'pass'

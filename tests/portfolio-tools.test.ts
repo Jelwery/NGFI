@@ -2,7 +2,10 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
+import { execFileSync } from 'node:child_process'
 import { portfolioHash } from '@finance2dsh/portfolio-risk'
+import { evidenceId } from '@finance2dsh/research-core'
+import { ResearchWorkspace } from '@finance2dsh/research-workspace'
 import { createPortfolioTools } from '@finance2dsh/dsh-tools'
 
 const roots: string[] = []
@@ -37,6 +40,51 @@ function model(stockCovariance = [[0.0006]]) {
 }
 
 describe('portfolio DSH tools', () => {
+  it('persists optimization evidence and reuses only a matching confirmed draft', async () => {
+    const runtimeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ngfi-optimize-audit-'))
+    roots.push(runtimeRoot)
+    const project = path.join(process.cwd(), 'packages/combinatorial-optimization')
+    const input = JSON.parse(execFileSync(path.join(project, '.venv/bin/python'), ['-c',
+      'import json,runpy; m=runpy.run_path("quant_tests/test_optimizer.py"); print(json.dumps(m["example_input"]()))'], { cwd: project, encoding: 'utf8' }))
+    const tools = createPortfolioTools({ runtimeRoot, quantProjectRoot: project })
+    const execute = (name: string, args: Record<string, unknown>) => tools.find(tool => tool.name === name)!
+      .execute(args as never, { signal: new AbortController().signal } as never) as Promise<any>
+    const staged = await execute('finance_holdings', {
+      action: 'stage-json', workspace_id: 'risk', portfolio_id: 'core-cn', expected_revision: 0,
+      as_of: '2026-01-06', base_currency: 'CNY', content: JSON.stringify(positions),
+    })
+    await execute('finance_holdings', { action: 'confirm', workspace_id: 'risk', portfolio_id: 'core-cn',
+      expected_revision: 1, expected_snapshot_hash: staged.snapshot.snapshotHash })
+    const store = new ResearchWorkspace({ root: path.join(runtimeRoot, 'research/risk') })
+    const state = store.create({ subject: { kind: 'portfolio', portfolioId: 'core-cn' }, mandate: 'Dry-run rank allocation',
+      asOf: '2026-01-06', createdAt: '2026-01-06T01:00:00.000Z' })
+    const content = { kind: 'structured' as const, subject: state.case.subject, field: 'scores', value: [1, -1], quality: 'high' as const,
+      sourceRef: { provider: 'fixture', upstream: 'scores-v1', sourceKind: 'user' as const, availableAt: '2026-01-06T01:00:00.000Z', retrievedAt: '2026-01-06T01:00:00.000Z' }, limitations: [] }
+    const ev = { id: evidenceId(content), ...content }
+    const appended = store.appendEvidence(state.case.caseId, state.revision, [ev])
+    const artifact = store.writeArtifact(state.case.caseId, appended.revision, 'mandate.json', JSON.stringify(input.mandate))
+    input.assets[0].quantity = 100
+    input.assets[0].sellableQuantity = 100
+    input.cash = 99000
+    for (const asset of input.assets) asset.evidenceRefs = [ev.id]
+    delete input.inputHash
+    input.inputHash = portfolioHash(input)
+    const args = { workspace_id: 'risk', case_id: state.case.caseId, portfolio_id: 'core-cn',
+      expected_revision: artifact.revision, holdings_snapshot_hash: staged.snapshot.snapshotHash, mandate_artifact: artifact.path, input }
+    const optimized = await execute('finance_portfolio_optimize', args)
+    expect(optimized.result.status).toBe('ok')
+    expect(optimized.result.continuous.alpha).toEqual({ 'CN:SSE:600000:equity': 1, 'CN:SZSE:000001:equity': -1 })
+    const saved = store.open(state.case.caseId)
+    expect(saved.modelRuns).toHaveLength(1)
+    expect(saved.evidence.some(item => item.id === optimized.evidenceId)).toBe(true)
+    const planArgs = { workspace_id: 'risk', case_id: state.case.caseId, portfolio_id: 'core-cn', expected_revision: saved.revision,
+      holdings_snapshot_hash: staged.snapshot.snapshotHash, optimization_run_id: optimized.modelRunId }
+    const plan = await execute('finance_rebalance_plan', planArgs)
+    expect(plan).toMatchObject({ dryRun: true, optimizationRunId: optimized.modelRunId, plan: optimized.result.repaired })
+    await expect(execute('finance_portfolio_optimize', { ...args, dry_run: false })).rejects.toThrow('dry-run')
+    await expect(execute('finance_rebalance_plan', { ...planArgs, expected_revision: plan.revision, holdings_snapshot_hash: 'sha256:wrong' })).rejects.toThrow('holdings')
+    await expect(execute('finance_portfolio_optimize', { ...args, expected_revision: plan.revision, mandate_artifact: '../escape.json' })).rejects.toThrow('registered')
+  }, 30_000)
   it('requires staged then hash-confirmed holdings and preserves revisions', async () => {
     const execute = fixture()
     const staged = await execute('finance_holdings', {

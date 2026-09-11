@@ -40,11 +40,17 @@ export const STRATEGY_RESEARCH_TOOL_ALLOWLIST = [
   ...FINANCE_TOOL_ALLOWLIST,
   ...STRATEGY_TOOL_NAMES,
   ...SIGNAL_TOOL_NAMES,
+  'finance_research_case',
+  'finance_research_ledger',
+  'finance_research_snapshot',
 ] as const
 
 export const PORTFOLIO_RISK_TOOL_ALLOWLIST = [
   ...FINANCE_TOOL_ALLOWLIST,
   ...PORTFOLIO_TOOL_NAMES,
+  'finance_research_case',
+  'finance_research_ledger',
+  'finance_research_snapshot',
 ] as const
 
 export const PRESET_TOOL_ALLOWLISTS = {

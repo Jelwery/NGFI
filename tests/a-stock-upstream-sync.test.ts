@@ -13,7 +13,7 @@ import { compareManifestSets } from '../scripts/a-stock-data/report.mjs'
 
 const execFile = promisify(execFileCallback)
 const ROOT = process.cwd()
-const UPSTREAM = join(ROOT, 'packages/finance-provider-astock/upstream')
+const UPSTREAM = join(ROOT, 'packages/finance-data-service/providers/astock/upstream')
 const SNAPSHOT_FILES = [
   'SKILL.md', 'LICENSE', 'CHANGELOG.md', 'tests/test_official_data.py', 'docs/source-integration-v3.8.0.md',
 ]
@@ -56,7 +56,7 @@ async function prepareDestination() {
   const destination = await mkdtemp(join(tmpdir(), 'ngfi-astock-destination-'))
   const copies: Array<readonly [string, string]> = [
     ['scripts/a-stock-data/extraction-spec.json', 'scripts/a-stock-data/extraction-spec.json'],
-    ['packages/finance-provider-astock/upstream/source-manifest.json', 'packages/finance-provider-astock/upstream/source-manifest.json'],
+    ['packages/finance-data-service/providers/astock/upstream/source-manifest.json', 'packages/finance-data-service/providers/astock/upstream/source-manifest.json'],
   ]
   for (const [from, to] of copies) {
     await mkdir(dirname(join(destination, to)), { recursive: true })
@@ -149,7 +149,7 @@ describe('a-stock-data synchronization and reporting', () => {
     expect(publishScript).toContain('git diff-tree --root --no-commit-id --name-status -r -z')
     expect(publish?.if).toBe("needs.prepare.result == 'success' && needs.prepare.outputs.state == 'ready'")
 
-    const allowedPaths = 'packages/finance-provider-astock/upstream/*|packages/finance-provider-astock/python/generated/*|THIRD_PARTY_NOTICES.md'
+    const allowedPaths = 'packages/finance-data-service/providers/astock/upstream/*|packages/finance-data-service/providers/astock/python/generated/*|THIRD_PARTY_NOTICES.md'
     expect(jobScript(prepare ?? {})).toContain(allowedPaths)
     expect(publishScript).toContain(allowedPaths)
     expect(jobScript(prepare ?? {})).toContain("status.includes('R') || status.includes('C')")
@@ -309,16 +309,16 @@ describe('a-stock-data synchronization and reporting', () => {
     const dryRoot = await prepareDestination()
     const dryRun = await syncVendor({ root: dryRoot, sourceDir: source, version: 'v0.0.1', dryRun: true })
     expect(dryRun).toMatchObject({ status: 'updated', changed: true, dryRun: true })
-    await expect(readFile(join(dryRoot, 'packages/finance-provider-astock/upstream/upstream.lock.json'))).rejects.toThrow()
+    await expect(readFile(join(dryRoot, 'packages/finance-data-service/providers/astock/upstream/upstream.lock.json'))).rejects.toThrow()
 
     const destination = await prepareDestination()
     const first = await syncVendor({ root: destination, sourceDir: source, version: 'v0.0.1' })
-    const firstLock = await readFile(join(destination, 'packages/finance-provider-astock/upstream/upstream.lock.json'), 'utf8')
-    const firstSource = await json(join(destination, 'packages/finance-provider-astock/upstream/source-manifest.json'))
-    const firstGenerated = await readFile(join(destination, 'packages/finance-provider-astock/python/generated/astock_upstream.py'), 'utf8')
+    const firstLock = await readFile(join(destination, 'packages/finance-data-service/providers/astock/upstream/upstream.lock.json'), 'utf8')
+    const firstSource = await json(join(destination, 'packages/finance-data-service/providers/astock/upstream/source-manifest.json'))
+    const firstGenerated = await readFile(join(destination, 'packages/finance-data-service/providers/astock/python/generated/astock_upstream.py'), 'utf8')
     const second = await syncVendor({ root: destination, sourceDir: source, version: 'v0.0.1' })
-    const secondLock = await readFile(join(destination, 'packages/finance-provider-astock/upstream/upstream.lock.json'), 'utf8')
-    const secondGenerated = await readFile(join(destination, 'packages/finance-provider-astock/python/generated/astock_upstream.py'), 'utf8')
+    const secondLock = await readFile(join(destination, 'packages/finance-data-service/providers/astock/upstream/upstream.lock.json'), 'utf8')
+    const secondGenerated = await readFile(join(destination, 'packages/finance-data-service/providers/astock/python/generated/astock_upstream.py'), 'utf8')
 
     expect(first.changed).toBe(true)
     const parsedLock = JSON.parse(firstLock)
@@ -341,19 +341,19 @@ describe('a-stock-data synchronization and reporting', () => {
     const source = await prepareLocalTag()
     const destination = await prepareDestination()
     await syncVendor({ root: destination, sourceDir: source, version: 'v0.0.1' })
-    const before = await readFile(join(destination, 'packages/finance-provider-astock/upstream/upstream.lock.json'), 'utf8')
+    const before = await readFile(join(destination, 'packages/finance-data-service/providers/astock/upstream/upstream.lock.json'), 'utf8')
     await commitTag(source, 'v0.0.2', () => appendFile(join(source, 'LICENSE'), '\n'))
     await expect(syncVendor({ root: destination, sourceDir: source, version: 'v0.0.2' }))
       .rejects.toMatchObject({ blocked: true, code: 'legal-review' })
-    expect(await readFile(join(destination, 'packages/finance-provider-astock/upstream/upstream.lock.json'), 'utf8')).toBe(before)
+    expect(await readFile(join(destination, 'packages/finance-data-service/providers/astock/upstream/upstream.lock.json'), 'utf8')).toBe(before)
   }, 60_000)
 
   it('snapshots NOTICE when present and blocks its later appearance or change', async () => {
     const noticeSource = await prepareLocalTag({ notice: 'Upstream attribution\n' })
     const noticeDestination = await prepareDestination()
     await syncVendor({ root: noticeDestination, sourceDir: noticeSource, version: 'v0.0.1' })
-    const noticeLock = await json(join(noticeDestination, 'packages/finance-provider-astock/upstream/upstream.lock.json'))
-    const noticeManifest = await json(join(noticeDestination, 'packages/finance-provider-astock/upstream/source-manifest.json'))
+    const noticeLock = await json(join(noticeDestination, 'packages/finance-data-service/providers/astock/upstream/upstream.lock.json'))
+    const noticeManifest = await json(join(noticeDestination, 'packages/finance-data-service/providers/astock/upstream/source-manifest.json'))
     expect(noticeLock.files.map((entry: { path: string }) => entry.path)).toContain('NOTICE')
     expect(noticeManifest.snapshotFiles).toEqual(noticeLock.files)
     await commitTag(noticeSource, 'v0.0.2', () => appendFile(join(noticeSource, 'NOTICE'), 'Changed\n'))

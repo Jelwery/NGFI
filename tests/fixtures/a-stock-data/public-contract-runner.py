@@ -8,7 +8,7 @@ from urllib.parse import parse_qs
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[3]
-RUNNER = ROOT / "packages" / "finance-provider-astock" / "python" / "runner.py"
+RUNNER = ROOT / "packages" / "finance-data-service" / "providers" / "astock" / "python" / "runner.py"
 SPEC = importlib.util.spec_from_file_location("ngfi_astock_runner", RUNNER)
 assert SPEC is not None and SPEC.loader is not None
 MODULE = importlib.util.module_from_spec(SPEC)
@@ -80,6 +80,11 @@ def public_json(url, query, _timeout_ms, *, capability, body=None, headers=None,
       "announcementId": "official-001",
       "announcementTitle": "2025年年度报告",
       "announcementTypeName": "年度报告",
+      "announcementTime": 1774828800000,
+    }, {
+      "announcementId": "official-002",
+      "announcementTitle": "2025年年度报告补充公告",
+      "announcementTypeName": None,
       "announcementTime": 1774828800000,
     }]}
   raise AssertionError(f"unexpected fixed public URL {url}")

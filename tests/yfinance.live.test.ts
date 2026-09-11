@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { YFinanceProvider } from '@finance2dsh/provider-yfinance'
+import { YFinanceProvider } from '@finance2dsh/data-service/providers/yfinance'
 import { createBehaviorMarketEvidenceTool } from '@finance2dsh/dsh-tools'
 import type { ToolRunContext } from '@deepseek-ai/dsh-tools'
 

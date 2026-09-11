@@ -8,7 +8,7 @@ import {
   CNE6_LOCAL_CAPABILITIES,
   Cne6LocalProvider,
   type Cne6Fundamentals,
-} from '../packages/finance-provider-cne6/src/index.js'
+} from '../packages/finance-data-service/src/providers/cne6/index.js'
 
 const repositoryRoot = process.cwd()
 const projectRoot = resolve(repositoryRoot, 'packages/combinatorial-optimization')
@@ -99,7 +99,7 @@ describe('Cne6LocalProvider committed-artifact contract', () => {
     expect(inspection.reportHash).toMatch(/^[0-9a-f]{64}$/)
   })
 
-  it('uses only available_date for a PIT-safe fundamentals as_of query', async () => {
+  it('filters available_date without claiming unverified fundamentals are PIT-safe', async () => {
     const result = await provider().query({
       dataset: 'fundamentals',
       asOf: '2025-12-31',
@@ -107,7 +107,7 @@ describe('Cne6LocalProvider committed-artifact contract', () => {
       limit: 10,
     })
 
-    expect(result.pitGrade).toBe('safe')
+    expect(result.pitGrade).toBe('partial')
     expect(result.asOf).toBe('2025-12-31')
     expect(result.rows).toEqual([
       {
@@ -684,7 +684,7 @@ describe('Cne6LocalProvider committed-artifact contract', () => {
         }],
         returned: 1,
         truncated: false,
-        pitSafe: true,
+        pitSafe: false,
       },
       provenance: {
         fiscalPeriod: '2024-12-31',
@@ -743,7 +743,7 @@ describe('Cne6LocalProvider committed-artifact contract', () => {
     })
     const output = execFileSync('uv', [
       'run', '--project', projectRoot, 'python',
-      resolve(repositoryRoot, 'packages/finance-provider-cne6/python/runner.py'),
+      resolve(repositoryRoot, 'packages/finance-data-service/providers/cne6/python/runner.py'),
     ], { cwd: repositoryRoot, input: `${request}\n`, encoding: 'utf8' })
     expect(JSON.parse(output)).toMatchObject({
       version: '1',

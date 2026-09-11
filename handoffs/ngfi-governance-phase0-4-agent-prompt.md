@@ -38,7 +38,7 @@
 - TypeScript workspace build 通过；
 - 全量 TypeScript typecheck 通过；
 - Vitest：38 files、641 tests 全部通过；
-- `packages/quant-research`：23 个 Python tests 全部通过；
+- `packages/combinatorial-optimization`：23 个 Python tests 全部通过；
 - CNE6：142 passed、2 skipped；
 - Skills V2 contracts：14 tests 全部通过；
 - `公司财务分析/scripts/selftest.py` 全部通过；

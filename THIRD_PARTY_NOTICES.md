@@ -9,13 +9,13 @@ NGFI includes portions of **a-stock-data**, authored and maintained by Simon Lin
 - Annotated tag object: `9f995e66ee792255e492a15627f98615627041c6`
 - Peeled commit: `2012ce7cd0e75d379c5e6cbd3115514f300f3bc8`
 - License: Apache License 2.0
-- License copy: `packages/finance-provider-astock/upstream/LICENSE`
+- License copy: `packages/finance-data-service/providers/astock/upstream/LICENSE`
 
 The immutable audit snapshot contains the upstream `SKILL.md`, `LICENSE`,
 `CHANGELOG.md`, `tests/test_official_data.py`, and
 `docs/source-integration-v3.8.0.md`. Their byte-level identities are recorded in
-`packages/finance-provider-astock/upstream/upstream.lock.json` and
-`packages/finance-provider-astock/upstream/source-manifest.json`. The upstream
+`packages/finance-data-service/providers/astock/upstream/upstream.lock.json` and
+`packages/finance-data-service/providers/astock/upstream/source-manifest.json`. The upstream
 repository does not contain a `NOTICE` file at this tag; this file is NGFI's
 attribution and modification notice, not a copied upstream notice.
 
@@ -28,7 +28,7 @@ manifest and raw-fence audit artifacts. Those audit artifacts are generated NGFI
 files; they are not imported or executed by the provider at runtime.
 
 Separately, the importable runtime module at
-`packages/finance-provider-astock/python/generated/astock_upstream.py`
+`packages/finance-data-service/providers/astock/python/generated/astock_upstream.py`
 mechanically includes only the marked `official-data-core` and
 `official-data-backups` blocks, in upstream source order, plus an NGFI generated-
 file header. The runtime module and full-fence audit artifacts are modified/derived

@@ -60,6 +60,7 @@ function model(): Cne6ModelSnapshot {
     ],
     coverage: { universeCount: 2, exposureCount: 2, specificRiskCount: 2 },
     inputHash: portfolioHash({ cne6: 'fixture-v1' }),
+    sourceQuality: { quality_flag: 'good', coverage: 1 },
     quality: {
       status: 'ok', symmetric: true, positiveSemidefinite: true, maxAsymmetry: 0,
       minEigenvalue: 0.0001, maxEigenvalue: 0.001128, conditionNumber: 4,

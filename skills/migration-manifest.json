@@ -10,12 +10,12 @@
   ],
   "skills": [
     {
-      "name": "company-financial-analysis",
+      "name": "financial-analysis",
       "sourcePath": "公司财务分析",
       "sourceTreeSha256": "68107a9f83eaf664291b557cecd12ed419c5bf7fcb00571bf97225b707c89cfd",
-      "targetPath": "skills/company-financial-analysis",
-      "merge": "copy-and-adapt-runtime-boundary",
-      "compatibility": "All SKILL.md, references, deterministic scripts and schemas retained; host paths removed; scripts remain offline CLI helpers unless a preset explicitly allowlists a narrow adapter."
+      "targetPath": "skills/financial-analysis",
+      "merge": "consolidated-domain-calculations-and-governed-workflow",
+      "compatibility": "Industry references retained; calculations moved to finance-core/python, ingestion to data-service, DCF uses the canonical core bridge; old report validators are import-only."
     },
     {
       "name": "macro-cycle-policy-analysis",
@@ -34,5 +34,12 @@
       "merge": "production-base-plus-v2-superset",
       "compatibility": "Production evidence hierarchy, candidate mechanisms, competing explanations, tool use, PGR/PLR, confidence, privacy and mental-health boundaries retained. V2 status gates, rational-null, three-mechanism maximum, adversarial resistance, no-default-write and no-current-trade-advice constraints absorbed."
     }
-  ]
+  ],
+  "consolidatedEntrypoints": {
+    "company-financial-analysis": "financial-analysis",
+    "equity-deep-dive": "company-research",
+    "dcf-valuation": "equity-valuation",
+    "relative-valuation": "equity-valuation",
+    "consensus-check": "equity-valuation"
+  }
 }

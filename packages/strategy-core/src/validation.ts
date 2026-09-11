@@ -797,7 +797,8 @@ export function validateBacktestRun(value: unknown): StrategyValidationResult<Ba
     'executionHash', 'costModel', 'benchmark', 'metrics', 'artifacts', 'status', 'warnings',
     'startedAt', 'completedAt',
   ]
-  exactKeys(value, keys, keys, '$', issues)
+  exactKeys(value, [...keys, 'inputContentHash'], keys, '$', issues)
+  if (value.inputContentHash !== undefined) stableHash(value.inputContentHash, '$.inputContentHash', issues)
   stableHash(value.id, '$.id', issues)
   nonEmptyString(value.engine, '$.engine', issues, 128)
   nonEmptyString(value.engineVersion, '$.engineVersion', issues, 64)
@@ -821,12 +822,17 @@ export function validateBacktestRun(value: unknown): StrategyValidationResult<Ba
     if (value.costModel.parameters !== undefined) jsonValue(value.costModel.parameters, '$.costModel.parameters', issues)
   }
   if (!isRecord(value.benchmark)) issue(issues, 'invalid-type', '$.benchmark', 'must be an object')
-  else if (value.benchmark.status === 'available') {
-    exactKeys(value.benchmark, ['status', 'instrument', 'datasetHash'], ['status', 'instrument', 'datasetHash'], '$.benchmark', issues)
+  else if (value.benchmark.status === 'available' || value.benchmark.status === 'partial') {
+    exactKeys(value.benchmark, ['status', 'instrument', 'datasetHash', 'seriesHash', 'pointCount', 'totalReturn'], ['status', 'instrument', 'datasetHash'], '$.benchmark', issues)
     instrument(value.benchmark.instrument, '$.benchmark.instrument', issues)
     stableHash(value.benchmark.datasetHash, '$.benchmark.datasetHash', issues)
+    if (value.benchmark.seriesHash !== undefined) stableHash(value.benchmark.seriesHash, '$.benchmark.seriesHash', issues)
+    if (value.benchmark.pointCount !== undefined && (!Number.isSafeInteger(value.benchmark.pointCount) || (value.benchmark.pointCount as number) < 1)) issue(issues, 'invalid-value', '$.benchmark.pointCount', 'must be a positive integer')
+    if (value.benchmark.totalReturn !== undefined) metric(value.benchmark.totalReturn, '$.benchmark.totalReturn', issues)
   } else {
-    exactKeys(value.benchmark, ['status', 'reason'], ['status', 'reason'], '$.benchmark', issues)
+    exactKeys(value.benchmark, ['status', 'reason', 'instrument', 'datasetHash'], ['status', 'reason'], '$.benchmark', issues)
+    if (value.benchmark.instrument !== undefined) instrument(value.benchmark.instrument, '$.benchmark.instrument', issues)
+    if (value.benchmark.datasetHash !== undefined) stableHash(value.benchmark.datasetHash, '$.benchmark.datasetHash', issues)
     if (!['missing', 'insufficient', 'not-meaningful', 'error'].includes(String(value.benchmark.status))) {
       issue(issues, 'invalid-value', '$.benchmark.status', 'has an unknown unavailable benchmark status')
     }

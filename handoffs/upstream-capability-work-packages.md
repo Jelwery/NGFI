@@ -264,7 +264,7 @@ WP01 和 WP03 可以并行。WP08 可在 WP03 的 bar contract 冻结后并行�
 
 **目标**：形成统一策略研究和晋级证据。
 
-**文件范围**：packages/quant-research/pyproject.toml、packages/quant-research/ngfi_quant/、packages/quant-research/tests/、必要 root Python/scripts 接线。
+**文件范围**：packages/combinatorial-optimization/pyproject.toml、packages/combinatorial-optimization/ngfi_quant/、packages/combinatorial-optimization/quant_tests/、必要 root Python/scripts 接线。
 
 **模块**：execution calendar、A 股费用与整手、涨跌停或停牌不可成交、组合资金核算、基准、IS/OOS、nested walk-forward、cost stress、CSCV-PBO、deflated Sharpe、minimum track record、promotion decision。
 
@@ -300,7 +300,7 @@ WP01 和 WP03 可以并行。WP08 可在 WP03 的 bar contract 冻结后并行�
 
 **目标**：重写最小因子研究内核，不迁移 QuantFlow 平台。
 
-**文件范围**：packages/quant-research/ngfi_quant/factors/、packages/quant-research/tests/test_factors.py。
+**文件范围**：packages/combinatorial-optimization/ngfi_quant/factors/、packages/combinatorial-optimization/quant_tests/test_factors.py。
 
 **V1 能力**：date/instrument/factor 长表；截面 winsorize、标准化和缺失策略；行业或市值中性化；IC、RankIC、ICIR；分组收益与多空收益；turnover、coverage；Pearson/Spearman 相关矩阵；等权、IC 权重、最小相关性约束组合；完整 lineage 与 train/test 边界。
 

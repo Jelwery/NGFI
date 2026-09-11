@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { normalizeAshareInstrument } from '@finance2dsh/core'
-import { AStockProvider } from '../packages/finance-provider-astock/src/index.js'
+import { AStockProvider } from '../packages/finance-data-service/src/providers/astock/index.js'
 
 const live = process.env.NGFI_LIVE_ASTOCK === '1' ? describe : describe.skip
 const SHANGHAI_DATE_TIME = new Intl.DateTimeFormat('en-CA', {

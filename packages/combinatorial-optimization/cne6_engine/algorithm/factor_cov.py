@@ -39,7 +39,7 @@ def compute_vra_multiplier(
     vols = np.asarray(predicted_vols, dtype=np.float64)
 
     # Guard against zero / near-zero vols
-    inv_vols = np.where(vols > 1e-12, 1.0 / vols, 0.0)
+    inv_vols = np.divide(1.0, vols, out=np.zeros_like(vols), where=vols > 1e-12)
 
     # Compute B_t for each day
     B = np.empty(T, dtype=np.float64)
@@ -67,6 +67,9 @@ def _estimate_raw_factor_cov(
     Returns the raw combined covariance matrix and the volatility vector
     (the latter is needed by the caller for VRA computation).
     """
+    factor_returns = np.asarray(factor_returns, dtype=float)
+    if factor_returns.ndim != 2 or factor_returns.shape[0] < 2 or factor_returns.shape[1] < 1 or not np.isfinite(factor_returns).all():
+        raise ValueError("factor_returns must be finite with shape (T >= 2, K >= 1)")
     C_vol = nw_adjusted_covariance(factor_returns, half_life=vol_half_life, nw_lags=vol_nw_lags)
     vols = extract_volatility_diag(C_vol)
     C_corr = nw_adjusted_covariance(factor_returns, half_life=corr_half_life, nw_lags=corr_nw_lags)
@@ -86,6 +89,7 @@ def monte_carlo_oba(
     seed: int | None = 42,
     verbose: bool = False,
     n_workers: int = 4,
+    diagnostics: dict | None = None,
 ) -> np.ndarray:
     """Monte Carlo eigenfactor risk adjustment (OBA).
 
@@ -111,20 +115,33 @@ def monte_carlo_oba(
     Returns:
         (K, K) bias-adjusted positive-definite covariance matrix.
     """
-    if n_workers <= 0:
-        raise ValueError(f"n_workers must be positive, got {n_workers}")
-
-    # Ensure F_input is strictly PSD for multivariate_normal sampling.
-    # Tiny negative eigenvalues can arise from numerical noise in correlation
-    # extraction; flooring them to 0 before simulation is harmless.
-    eig_raw, eigvecs_raw = np.linalg.eigh(F_input)
-    eig_raw = np.maximum(eig_raw, np.max(eig_raw) * 1e-12 if np.max(eig_raw) > 0 else 1e-12)
-    F_psd = eigvecs_raw @ np.diag(eig_raw) @ eigvecs_raw.T
-    F_psd = (F_psd + F_psd.T) / 2.0
-
-    eigvals, eigvecs = np.linalg.eigh(F_psd)
+    if n_workers <= 0 or n_simulations <= 0:
+        raise ValueError("n_workers and n_simulations must be positive")
+    F_input = np.asarray(F_input, dtype=float)
+    if F_input.ndim != 2 or F_input.shape[0] != F_input.shape[1] or not F_input.size or not np.isfinite(F_input).all():
+        raise ValueError("OBA covariance must be a finite nonempty square matrix")
+    scale = max(float(np.max(np.abs(F_input))), np.finfo(float).tiny)
+    asymmetry = float(np.max(np.abs(F_input - F_input.T)))
+    if asymmetry > scale * 1e-10:
+        raise ValueError("OBA covariance must be symmetric")
+    eig_raw, eigvecs = np.linalg.eigh((F_input + F_input.T) / 2.0)
+    # NW estimates need not be PSD. Project explicitly and expose the size of
+    # the repair; do not delegate acceptance to RNG tolerance warnings.
+    floor = max(float(eig_raw[-1]) * 1e-12, np.finfo(float).tiny)
+    eigvals = np.maximum(eig_raw, floor)
+    root = eigvecs * np.sqrt(eigvals)[np.newaxis, :]
+    F_psd = root @ root.T
+    if not np.isfinite(root).all() or np.linalg.eigvalsh(F_psd)[0] < -scale * 1e-10:
+        raise ValueError("OBA PSD projection failed")
+    if diagnostics is not None:
+        diagnostics.update({"sampling": "eigen_root", "input_min_eigenvalue": float(eig_raw[0]),
+                            "psd_floor": floor, "floored_eigenvalues": int(np.sum(eig_raw < floor)),
+                            "psd_adjustment_frobenius": float(np.linalg.norm(F_psd - F_input)),
+                            "input_asymmetry": asymmetry})
     K = len(eigvals)
     T = factor_returns.shape[0]
+    if T < 2 or factor_returns.ndim != 2 or factor_returns.shape[1] != K:
+        raise ValueError("OBA returns must have shape (T >= 2, K)")
     rng = np.random.default_rng(seed)
 
     sim_variances = np.zeros((n_simulations, K))
@@ -132,7 +149,7 @@ def monte_carlo_oba(
     report_every = max(1, n_simulations // 5)
 
     simulated_returns = [
-        rng.multivariate_normal(np.zeros(K), F_psd, size=T)
+        rng.standard_normal((T, K)) @ root.T
         for _ in range(n_simulations)
     ]
     estimate = partial(
@@ -188,7 +205,10 @@ def _apply_oba(
     seed: int | None,
     verbose: bool,
     max_condition_number: float,
+    diagnostics: dict | None = None,
 ) -> np.ndarray:
+    if not np.isfinite(max_condition_number) or max_condition_number <= 1:
+        raise ValueError("max_condition_number must exceed one")
     if oba_method == "monte_carlo":
         F_final = monte_carlo_oba(
             F_vra,
@@ -200,10 +220,14 @@ def _apply_oba(
             n_simulations=n_simulations,
             seed=seed,
             verbose=verbose,
+            diagnostics=diagnostics,
         )
         eigenvalues, eigenvectors = np.linalg.eigh(F_final)
         largest = float(eigenvalues[-1])
         floor = largest / max_condition_number
+        if diagnostics is not None:
+            diagnostics["condition_floor"] = floor
+            diagnostics["condition_floored_eigenvalues"] = int(np.sum(eigenvalues < floor))
         if eigenvalues[0] < floor:
             F_final = eigenvectors @ np.diag(
                 np.maximum(eigenvalues, floor)
@@ -280,6 +304,7 @@ def compute_factor_covariance(
     seed: int | None = 42,
     verbose: bool = False,
     max_condition_number: float = 1e6,
+    diagnostics: dict | None = None,
 ) -> np.ndarray:
     """Compute the factor covariance matrix F (K x K).
 
@@ -337,6 +362,10 @@ def compute_factor_covariance(
         seed,
         verbose,
         max_condition_number,
+        diagnostics,
     )
-
+    if diagnostics is not None:
+        eigenvalues = np.linalg.eigvalsh((F_final + F_final.T) / 2)
+        diagnostics.update({"oba_method": oba_method, "final_min_eigenvalue": float(eigenvalues[0]),
+                            "final_max_eigenvalue": float(eigenvalues[-1]), "vra_multiplier": m_t})
     return F_final

@@ -137,6 +137,10 @@ export interface Cne6ModelSnapshot {
   readonly coverage: Cne6ModelCoverage
   readonly inputHash: ContentHash
   readonly quality: CovarianceQuality
+  readonly sourceQuality?: { readonly quality_flag: string; readonly coverage: number | null; readonly status?: string; readonly proxyFlags?: readonly string[] }
+  readonly descriptorQuality?: Readonly<Record<string, unknown>>
+  readonly dataQuality?: Readonly<Record<string, unknown>>
+  readonly availableAt?: string
 }
 
 export type PortfolioRiskIssueCode =
@@ -177,6 +181,8 @@ export interface RiskResultMetadata {
   readonly inputHash: ContentHash
   readonly qualityStatus: RiskQualityStatus
   readonly covarianceQuality: CovarianceQuality
+  readonly sourceQuality: Cne6ModelSnapshot['sourceQuality']
+  readonly descriptorQuality: Readonly<Record<string, unknown>>
 }
 
 export interface FactorExposure {

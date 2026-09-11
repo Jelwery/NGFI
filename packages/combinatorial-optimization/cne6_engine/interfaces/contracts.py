@@ -2,7 +2,7 @@
 """Layer 2 standard data contracts.
 
 These schemas are the stable interface between data adapters (layer 2) and the
-algorithm layer (layer 3).  They are defined by what the 46 CNE6 descriptor
+algorithm layer (layer 3).  They are defined by what the 42 implemented CNE6 descriptor
 variables need — not by what any particular data source happens to provide.
 
 Design rules:
@@ -15,7 +15,7 @@ Design rules:
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from typing import Any, Optional
 
 import polars as pl
@@ -226,8 +226,8 @@ class FundamentalHistory:
             raise ValueError(
                 f"FundamentalHistory: null keys {pairs}"
             )
-        _check_unique(self.frame, ["code", "report_date"], "FundamentalHistory")
-        _check_sorted(self.frame, ["code", "report_date"], "FundamentalHistory")
+        _check_unique(self.frame, ["code", "report_date", "available_date"], "FundamentalHistory")
+        _check_sorted(self.frame, ["code", "report_date", "available_date"], "FundamentalHistory")
         bad_avail = self.frame.filter(
             pl.col("available_date") < pl.col("report_date")
         ).height
@@ -237,9 +237,14 @@ class FundamentalHistory:
                 "before report_date (lookahead)"
             )
 
+    def visible_periods(self, date: str) -> pl.DataFrame:
+        return (self.frame.filter(pl.col("available_date") <= date)
+                .sort(["code", "report_date", "available_date"])
+                .unique(subset=["code", "report_date"], keep="last", maintain_order=True))
+
     def asof(self, date: str, *, annual_only: bool = True) -> pl.DataFrame:
         """Latest report observable at ``date`` per code (PIT-safe)."""
-        visible = self.frame.filter(pl.col("available_date") <= date)
+        visible = self.visible_periods(date)
         if annual_only:
             visible = visible.filter(
                 pl.col("report_date").str.slice(5, 5) == "12-31"
@@ -295,6 +300,69 @@ class IndustryMembership:
         ))
 
 
+QUALITY_FLAGS = frozenset({"good", "proxy", "missing", "imputed", "unverified"})
+
+
+@dataclass(frozen=True)
+class QualityRecord:
+    """Machine-readable quality of a source or field; coverage is not accuracy."""
+
+    quality_flag: str = "unverified"
+    coverage: float | None = None
+    numerator: int | None = None
+    denominator: int | None = None
+    reasons: tuple[str, ...] = ()
+    point_in_time: bool | None = None
+
+    def validate(self) -> None:
+        if self.quality_flag not in QUALITY_FLAGS:
+            raise ValueError(f"unknown quality_flag: {self.quality_flag}")
+        if self.coverage is not None and not 0 <= self.coverage <= 1:
+            raise ValueError("quality coverage must be between zero and one")
+        if (self.numerator is None) != (self.denominator is None):
+            raise ValueError("quality numerator and denominator must be supplied together")
+        if self.denominator is not None:
+            if not 0 <= self.numerator <= self.denominator:
+                raise ValueError("invalid quality numerator/denominator")
+            expected = self.numerator / self.denominator if self.denominator else 0.0
+            if self.coverage is None or abs(self.coverage - expected) > 1e-12:
+                raise ValueError("quality coverage disagrees with numerator/denominator")
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class DataQuality:
+    """Source attestation and optional field records, never inferred from values.
+
+    A populated frame or a valid checksum does not attest a verified provider or
+    point-in-time history. Missing attestations therefore remain unverified.
+    Field keys use contract names (``benchmark_return`` and ``industry`` for
+    the non-market contracts).
+    """
+
+    quality_flag: str = "unverified"
+    coverage: float | None = None
+    provider: str | None = None
+    provider_verified: bool = False
+    point_in_time: bool | None = None
+    source_version: str | None = None
+    config_version: str | None = None
+    reasons: tuple[str, ...] = ("provider_not_verified",)
+    field_records: dict[str, QualityRecord] = field(default_factory=dict)
+
+    def validate(self) -> None:
+        QualityRecord(self.quality_flag, self.coverage).validate()
+        if self.quality_flag == "good" and not (self.provider and self.provider_verified):
+            raise ValueError("good source quality requires a verified provider")
+        for record in self.field_records.values():
+            record.validate()
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
 @dataclass(frozen=True)
 class DataBundle:
     """Everything the algorithm layer needs, from any adapter."""
@@ -305,8 +373,10 @@ class DataBundle:
     industry: IndustryMembership
     analyst: Optional[AnalystData] = None
     provenance: dict[str, Any] = field(default_factory=dict)
+    quality: DataQuality = field(default_factory=DataQuality)
 
     def validate(self) -> None:
+        self.quality.validate()
         self.market.validate()
         self.benchmark.validate()
         self.fundamentals.validate()

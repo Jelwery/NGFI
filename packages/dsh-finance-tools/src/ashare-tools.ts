@@ -19,7 +19,7 @@ import {
   getAshareFeature,
   type AshareFeatureDefinition,
   type AshareFeatureVariant,
-} from '@finance2dsh/provider-astock'
+} from '@finance2dsh/data-service/providers/astock'
 import { defineTool, type ToolDefinition } from '@deepseek-ai/dsh-tools'
 import type { AshareDataComposition, AshareProviderId } from './ashare-composition.js'
 

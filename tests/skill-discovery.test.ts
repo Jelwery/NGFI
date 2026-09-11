@@ -24,7 +24,11 @@ describe('canonical skill filesystem', () => {
     const observation = await provider.list({ cwd: PROJECT_ROOT })
     const candidates = Array.isArray(observation) ? observation : observation.candidates
     const names = candidates.map((candidate: { name: string }) => candidate.name)
-    expect(names).toContain('company-financial-analysis')
+    expect(names).toContain('financial-analysis')
+    expect(names).toContain('equity-valuation')
+    expect(names).not.toContain('company-financial-analysis')
+    expect(names).not.toContain('equity-deep-dive')
+    expect(names).toHaveLength(11)
     expect(names).toContain('macro-cycle-policy-analysis')
     expect(names.filter((name: string) => name === 'investment-behavior-diagnosis')).toHaveLength(1)
     expect(names).toEqual(expect.arrayContaining([

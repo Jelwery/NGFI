@@ -22,20 +22,22 @@ dependencies = [
     "akshare>=1.12",
     "pyyaml>=6.0",
     "aiohttp-socks>=0.9",
+    "cvxpy>=1.7,<2",
+    "osqp>=1.0,<2",
 ]
 
 [project.optional-dependencies]
 dev = ["pytest>=7.4"]
 
 [tool.setuptools.packages.find]
-include = ["cne6_engine", "cne6_engine.*"]
+include = ["cne6_engine", "cne6_engine.*", "ngfi_quant", "ngfi_quant.*"]
 
 [tool.setuptools.package-data]
 cne6_engine = ["config.yaml"]
 
 [tool.pytest.ini_options]
 testpaths = ["cne6_engine/tests"]
-addopts = "-m 'not live'"
+addopts = "-m 'not live' -W error"
 markers = [
     "live: accesses the real Sina/AKShare/East Money upstreams",
 ]

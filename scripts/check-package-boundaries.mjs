@@ -34,16 +34,23 @@ for (const [name, manifest] of manifests) {
   if (existsSync(sourceRoot)) for (const file of readdirSync(sourceRoot, { recursive: true })) {
     if (typeof file !== 'string' || !file.endsWith('.ts')) continue
     const source = readFileSync(resolve(sourceRoot, file), 'utf8')
-    for (const match of source.matchAll(/(?:from\s+|import\()(['"])(@[^/'"]+\/[^/'"]+)\1/gu)) {
+    for (const match of source.matchAll(/(?:from\s+|import\()(['"])(@[^/'"]+\/[^/'"]+)(?:\/[^'"]+)?\1/gu)) {
       if (match[2] !== name) imported.add(match[2])
     }
     if (DOMAIN_PACKAGES.has(manifest.directory)
         && /(?:@deepseek-ai\/(?:dsh|cordis)|(?:from\s+|import\()['"](?:node:)?(?:http|https|net|tls|dns))/u.test(source)) {
       failures.push(`${name}: domain/application package imports DSH or network/UI infrastructure`)
     }
-    if (manifest.directory.startsWith('finance-provider-')
+    if (manifest.directory === 'finance-data-service'
         && /@finance2dsh\/(?:dsh-tools|dsh-bundle)/u.test(source)) {
-      failures.push(`${name}: provider depends on Agent adapter`)
+      failures.push(`${name}: data layer depends on Agent adapter`)
+    }
+    if (DOMAIN_PACKAGES.has(manifest.directory) && /@finance2dsh\/data-service\/providers\//u.test(source)) {
+      failures.push(`${name}: domain imports concrete provider`)
+    }
+    if (manifest.directory === 'finance-data-service' && !file.startsWith('providers/')
+        && /(?:from\s+|import\()['"][^'"]*providers\//u.test(source)) {
+      failures.push(`${name}: routing core imports concrete provider`)
     }
     if (manifest.directory === 'dsh-finance-bundle'
         && /@finance2dsh\/(?!dsh-tools(?:['"]|\/))/u.test(source)) {

@@ -51,24 +51,6 @@ importers:
       '@finance2dsh/portfolio-risk':
         specifier: workspace:*
         version: link:packages/portfolio-risk
-      '@finance2dsh/provider-astock':
-        specifier: workspace:*
-        version: link:packages/finance-provider-astock
-      '@finance2dsh/provider-cne6':
-        specifier: workspace:*
-        version: link:packages/finance-provider-cne6
-      '@finance2dsh/provider-ifind':
-        specifier: workspace:*
-        version: link:packages/finance-provider-ifind
-      '@finance2dsh/provider-tdx':
-        specifier: workspace:*
-        version: link:packages/finance-provider-tdx
-      '@finance2dsh/provider-tushare-mcp':
-        specifier: workspace:*
-        version: link:packages/finance-provider-tushare-mcp
-      '@finance2dsh/provider-yfinance':
-        specifier: workspace:*
-        version: link:packages/finance-provider-yfinance
       '@finance2dsh/research-audit':
         specifier: workspace:*
         version: link:packages/research-audit
@@ -164,24 +146,6 @@ importers:
       '@finance2dsh/portfolio-risk':
         specifier: workspace:*
         version: link:../portfolio-risk
-      '@finance2dsh/provider-astock':
-        specifier: workspace:*
-        version: link:../finance-provider-astock
-      '@finance2dsh/provider-cne6':
-        specifier: workspace:*
-        version: link:../finance-provider-cne6
-      '@finance2dsh/provider-ifind':
-        specifier: workspace:*
-        version: link:../finance-provider-ifind
-      '@finance2dsh/provider-tdx':
-        specifier: workspace:*
-        version: link:../finance-provider-tdx
-      '@finance2dsh/provider-tushare-mcp':
-        specifier: workspace:*
-        version: link:../finance-provider-tushare-mcp
-      '@finance2dsh/provider-yfinance':
-        specifier: workspace:*
-        version: link:../finance-provider-yfinance
       '@finance2dsh/research-audit':
         specifier: workspace:*
         version: link:../research-audit
@@ -214,45 +178,9 @@ importers:
       '@finance2dsh/core':
         specifier: workspace:*
         version: link:../finance-core
-
-  packages/finance-provider-astock:
-    dependencies:
-      '@finance2dsh/core':
-        specifier: workspace:*
-        version: link:../finance-core
-
-  packages/finance-provider-cne6:
-    dependencies:
-      '@finance2dsh/core':
-        specifier: workspace:*
-        version: link:../finance-core
-
-  packages/finance-provider-ifind:
-    dependencies:
-      '@finance2dsh/core':
-        specifier: workspace:*
-        version: link:../finance-core
-
-  packages/finance-provider-tdx:
-    dependencies:
-      '@finance2dsh/core':
-        specifier: workspace:*
-        version: link:../finance-core
-
-  packages/finance-provider-tushare-mcp:
-    dependencies:
-      '@finance2dsh/core':
-        specifier: workspace:*
-        version: link:../finance-core
       '@modelcontextprotocol/sdk':
         specifier: 1.30.0
         version: 1.30.0(zod@4.5.4)
-
-  packages/finance-provider-yfinance:
-    dependencies:
-      '@finance2dsh/core':
-        specifier: workspace:*
-        version: link:../finance-core
 
   packages/portfolio-risk:
     dependencies:

@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
-RUNNER = ROOT / "packages" / "finance-provider-astock" / "python" / "runner.py"
+RUNNER = ROOT / "packages" / "finance-data-service" / "providers" / "astock" / "python" / "runner.py"
 SPEC = importlib.util.spec_from_file_location("ngfi_astock_runner_limits", RUNNER)
 assert SPEC is not None and SPEC.loader is not None
 MODULE = importlib.util.module_from_spec(SPEC)

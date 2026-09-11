@@ -10,7 +10,9 @@
     "skipLibCheck": true,
     "declaration": true,
     "sourceMap": true,
-    "types": ["node"]
+    "types": [
+      "node"
+    ]
   },
   "include": [
     "packages/finance-core/src/**/*.ts",
@@ -24,12 +26,6 @@
     "packages/strategy-accumulation-breakout/src/**/*.ts",
     "packages/signal-evaluation/src/**/*.ts",
     "packages/portfolio-risk/src/**/*.ts",
-    "packages/finance-provider-astock/src/**/*.ts",
-    "packages/finance-provider-cne6/src/**/*.ts",
-    "packages/finance-provider-ifind/src/**/*.ts",
-    "packages/finance-provider-tdx/src/**/*.ts",
-    "packages/finance-provider-tushare-mcp/src/**/*.ts",
-    "packages/finance-provider-yfinance/src/**/*.ts",
     "packages/dsh-finance-tools/src/**/*.ts",
     "packages/dsh-finance-bundle/src/**/*.ts",
     "src/**/*.ts",
@@ -38,4 +34,3 @@
     "vitest.live.config.ts"
   ]
 }
-

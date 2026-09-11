@@ -18,7 +18,7 @@ import {
   type AStockDisclosures,
   type AStockFundamentals,
   type AStockTradingCalendar,
-} from '../packages/finance-provider-astock/src/index.js'
+} from '../packages/finance-data-service/src/providers/astock/index.js'
 
 const skillRoot = join(process.cwd(), 'skills/a-share-data-research')
 const fixtureRoot = join(process.cwd(), 'tests/fixtures/a-stock-data')

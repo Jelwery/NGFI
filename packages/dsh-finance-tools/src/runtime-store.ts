@@ -1,9 +1,27 @@
-import { randomBytes } from 'node:crypto'
-import { closeSync, existsSync, lstatSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, unlinkSync, writeFileSync } from 'node:fs'
+import { createHash, randomBytes } from 'node:crypto'
+import { execFileSync } from 'node:child_process'
+import { closeSync, existsSync, lstatSync, mkdirSync, openSync, readFileSync, readdirSync, realpathSync, renameSync, unlinkSync, writeFileSync } from 'node:fs'
 import { dirname, join, parse, resolve, sep } from 'node:path'
 import type { ToolDefinition } from '@deepseek-ai/dsh-tools'
 
 const SAFE_ID = /^[a-z0-9][a-z0-9._-]{0,63}$/u
+
+export function quantCodeIdentity(project: string) {
+  const digest = createHash('sha256')
+  const visit = (directory: string, prefix: string) => {
+    for (const entry of readdirSync(directory, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+      if (entry.isSymbolicLink()) throw new TypeError('quant code must not contain symlinks')
+      if (entry.isDirectory() && entry.name !== '__pycache__') visit(join(directory, entry.name), `${prefix}${entry.name}/`)
+      else if (entry.isFile() && entry.name.endsWith('.py')) digest.update(`${prefix}${entry.name}\0`).update(readFileSync(join(directory, entry.name)))
+    }
+  }
+  visit(join(project, 'ngfi_quant'), 'ngfi_quant/')
+  return {
+    codeVersion: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: project, encoding: 'utf8' }).trim(),
+    codeContentHash: `sha256:${digest.digest('hex')}`,
+    dependencyLockHash: `sha256:${createHash('sha256').update(readFileSync(join(project, 'uv.lock'))).digest('hex')}`,
+  }
+}
 
 export function requireRuntimeId(value: unknown, label: string): string {
   if (typeof value !== 'string' || !SAFE_ID.test(value)) {

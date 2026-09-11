@@ -7,7 +7,7 @@ import type { ToolRunContext } from '@deepseek-ai/dsh-tools'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import type { CapabilityRequest, CanonicalDataResult } from '@finance2dsh/core'
 import { FinanceDataService } from '../packages/finance-data-service/src/index.js'
-import { createAStockProviderRegistration } from '../packages/finance-provider-astock/src/index.js'
+import { createAStockProviderRegistration } from '../packages/finance-data-service/src/providers/astock/index.js'
 import {
   createDefaultAshareDataComposition,
 } from '../packages/dsh-finance-tools/src/ashare-composition.js'

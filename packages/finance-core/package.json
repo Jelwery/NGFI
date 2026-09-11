@@ -11,7 +11,7 @@
       "import": "./lib/index.js"
     }
   },
-  "files": ["lib"],
+  "files": ["lib", "python"],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "clean": "rm -rf lib",

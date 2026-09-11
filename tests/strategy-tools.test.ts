@@ -1,8 +1,12 @@
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+import { ResearchWorkspace } from '@finance2dsh/research-workspace'
 import { describe, expect, it } from 'vitest'
 import { stableHash } from '@finance2dsh/strategy-core'
 import { createStrategyTools } from '@finance2dsh/dsh-tools'
 
-const project = `${process.cwd()}/packages/quant-research`
+const project = `${process.cwd()}/packages/combinatorial-optimization`
 function tools() {
   const values = createStrategyTools({ quantProjectRoot: project })
   return (name: string, args: Record<string, unknown>) => {
@@ -24,6 +28,28 @@ function bar(index: number) {
 }
 
 describe('strategy DSH tools', () => {
+  it('registers train-only weight candidates and returns the recorded holdout on replay', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ngfi-walk-forward-'))
+    try {
+      const store = new ResearchWorkspace({ root: path.join(root, 'research/quant') })
+      const state = store.create({ subject: { kind: 'topic', topic: 'frozen candidates' }, mandate: 'Train weights only', asOf: '2026-01-08', createdAt: '2026-01-01T00:00:00.000Z' })
+      const tool = createStrategyTools({ quantProjectRoot: project, runtimeRoot: root }).find(item => item.name === 'finance_strategy_backtest')!
+      const input = {
+        rows: Array.from({ length: 8 }, (_, index) => ['a', 'b'].map(candidateId => ({ date: `2026-01-0${index + 1}`, candidateId, value: candidateId === 'a' ? 0.01 : -0.01 }))).flat(),
+        folds: [{ trainStart: '2026-01-01', trainEnd: '2026-01-04', testStart: '2026-01-05', testEnd: '2026-01-08', purgeDays: 0, labelHorizonDays: 1 }],
+        candidates: { a: { weights: { value: 1 }, threshold: 0.1 }, b: { weights: { value: 0.5 }, threshold: 0.2 } },
+        datasetVersion: 'fixture-v1', codeVersion: 'fixture-code-v1', seed: 7,
+      }
+      const args = { tier: 'walk-forward', workspace_id: 'quant', case_id: state.case.caseId, expected_revision: 0, input }
+      const first = await tool.execute(args as never, { signal: new AbortController().signal } as never) as any
+      expect(first.replay).toBe(false)
+      expect(first.result.results[0]).toMatchObject({ testerCalls: 1, parameters: { candidate: 'a', weights: { value: 1 }, threshold: 0.1 } })
+      const again = await tool.execute({ ...args, expected_revision: first.revision } as never, { signal: new AbortController().signal } as never) as any
+      expect(again.replay).toBe(true)
+      expect(again.result).toEqual(first.result)
+      expect(store.open(state.case.caseId).modelRuns).toHaveLength(2)
+    } finally { fs.rmSync(root, { recursive: true, force: true }) }
+  }, 30_000)
   it('exposes only fixed catalogs and rejects unknown parameters', async () => {
     const execute = tools()
     const catalog = await execute('finance_strategy_registry', { action: 'catalog' })

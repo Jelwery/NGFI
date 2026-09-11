@@ -7,7 +7,7 @@ import {
   redactTushareText,
   redactTushareUrl,
   resolveTushareEndpoint,
-} from '../packages/finance-provider-tushare-mcp/src/index.js'
+} from '../packages/finance-data-service/src/providers/tushare-mcp/index.js'
 import { CORE_TOOLS, createDeferred, createFakeTushareMcp } from './fixtures/tushare/streamable-http.js'
 
 const endpoint = 'https://api.tushare.pro/mcp/?token=fixture-secret-that-must-not-leak'
@@ -46,11 +46,11 @@ describe('TushareMcpProvider configuration and discovery', () => {
       .toThrow(RangeError)
   })
 
-  it('uses the documented path form for token-only configuration and redacts both URL forms', () => {
+  it('uses query authentication for token-only configuration and redacts both URL forms', () => {
     const secret = 'fixture-secret-that-must-not-leak'
     const resolved = resolveTushareEndpoint({ token: secret, env: {} })
-    expect(resolved?.url.toString()).toBe(`https://api.tushare.pro/mcp/token=${secret}`)
-    expect(resolved?.redactedUrl).toBe('https://api.tushare.pro/mcp/token=[REDACTED]')
+    expect(resolved?.url.toString()).toBe(`https://api.tushare.pro/mcp/?token=${secret}`)
+    expect(resolved?.redactedUrl).toBe('https://api.tushare.pro/mcp/?token=[REDACTED]')
     expect(redactTushareUrl('https://api.tushare.pro/mcp/' + 'token=' + secret)).not.toContain(secret)
     expect(redactTushareUrl('https://api.tushare.pro/mcp/?' + 'token=' + secret)).not.toContain(secret)
   })

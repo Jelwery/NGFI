@@ -65,7 +65,7 @@ pnpm web
 
 ## 量化研究
 
-新增原生流程将因子、Ridge/HGB 滚动模型、CVXPY 组合约束和次日开盘回测贯通，保留 PIT 边界、实际持仓反馈、因子/模型诊断和不可变实验产物。LocalQuant 仅作为设计参考，无需安装或接入。
+新增原生流程将因子、Ridge/HGB 滚动模型、CVXPY 组合约束和次日开盘回测贯通，保留 PIT 边界、实际持仓反馈、因子/模型诊断和不可变实验产物。
 
 ```bash
 uv sync --project packages/quant-research --frozen

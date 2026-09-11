@@ -209,6 +209,51 @@ class OptimizerTest(unittest.TestCase):
         payload["mandate"]["qualityPolicy"]["maxAgeDaysByDomain"] = {"price": 500}
         self.assertIn("maxAgeDaysByDomain.price", " ".join(optimize_portfolio(seal(payload))["rejectionReasons"]))
 
+    def test_unscored_held_name_keeps_alpha_zero_without_shifting_ranked_pool(self):
+        # Three names, two scored (600000 high, 000001 low) plus an unscored held
+        # position. The unscored name must not enter the rank pool nor change the
+        # scored assets' [-1, 1] endpoints, and must carry an explicit reason.
+        payload = example_input()
+        held = {"market": "CN", "exchange": "SZSE", "symbol": "000002", "assetType": "equity"}
+        held_key = "CN:SZSE:000002:equity"
+        payload["assets"].append({
+            "instrument": held, "scoreReason": "no-research-coverage", "price": 10,
+            "priceAvailableAt": AT, "quantity": 100, "sellableQuantity": 100,
+            "industry": "bank", "advNotional": 10000000, "advAvailableAt": AT,
+            "canBuy": True, "canSell": True, "statusAvailableAt": AT,
+            "previousClose": 10, "limitRate": 0.1})
+        payload["benchmark"]["weights"] = {AK: 0.4, BK: 0.3, held_key: 0.3}
+        payload["riskSnapshot"]["securities"].append(
+            {"instrument": held, "exposures": [1, 0], "specificRisk": 0.01})
+        del payload["riskSnapshot"]["stockCovariance"]  # factor-only snapshot covers the added security
+        payload["cash"] = 99000
+        result = optimize_portfolio(seal(payload))
+        self.assertEqual(result["status"], "ok", result["rejectionReasons"])
+        self.assertEqual(result["continuous"]["alpha"], {AK: 1, BK: -1, held_key: 0})
+        self.assertEqual(result["continuous"]["scoringPool"], [AK, BK])
+        self.assertEqual(result["continuous"]["unscoredReasons"], {held_key: "no-research-coverage"})
+
+    def test_scored_and_unscored_field_shape_is_fail_closed(self):
+        cases = [
+            (lambda p: p["assets"][0].pop("score") or p["assets"][0].update(scoreReason="x"), "scoreAvailableAt"),
+            (lambda p: p["assets"][0].update(scoreReason="both"), "both score and scoreReason"),
+            (lambda p: (p["assets"][0].pop("score"), p["assets"][0].pop("scoreAvailableAt"), p["assets"][0].pop("evidenceRefs")), "requires a scoreReason"),
+        ]
+        for change, reason in cases:
+            with self.subTest(reason=reason):
+                payload = example_input()
+                change(payload)
+                result = optimize_portfolio(seal(payload))
+                self.assertEqual(result["status"], "rejected")
+                self.assertIn(reason, " ".join(result["rejectionReasons"]))
+        # Fewer than two scored assets is rejected even if held names remain.
+        payload = example_input()
+        payload["assets"][1].pop("score")
+        payload["assets"][1].pop("scoreAvailableAt")
+        payload["assets"][1].pop("evidenceRefs")
+        payload["assets"][1]["scoreReason"] = "no-coverage"
+        self.assertIn("cross-section", " ".join(optimize_portfolio(seal(payload))["rejectionReasons"]))
+
 
 if __name__ == "__main__":
     unittest.main()

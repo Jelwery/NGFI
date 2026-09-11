@@ -176,6 +176,13 @@ function optimizationTool(options: PortfolioToolOptions, name: 'finance_portfoli
       const holdings = confirmedInput(options, args, payload)
       const evidenceRefs = new Set<string>()
       for (const row of payload.assets as Record<string, unknown>[]) {
+        // Only scored assets carry alpha and therefore need evidence; unscored
+        // held/benchmark names declare an explicit scoreReason instead.
+        if (row.score === undefined) {
+          if (row.evidenceRefs !== undefined) throw new TypeError('unscored asset must not carry evidence references')
+          if (typeof row.scoreReason !== 'string' || row.scoreReason.trim() === '') throw new TypeError('unscored asset requires a scoreReason')
+          continue
+        }
         if (!Array.isArray(row.evidenceRefs) || row.evidenceRefs.length === 0) throw new TypeError('every score needs evidence references')
         for (const ref of row.evidenceRefs) {
           const evidence = state.evidence.find(item => item.id === ref)

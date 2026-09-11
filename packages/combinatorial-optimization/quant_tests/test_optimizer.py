@@ -233,6 +233,35 @@ class OptimizerTest(unittest.TestCase):
         self.assertEqual(result["continuous"]["scoringPool"], [AK, BK])
         self.assertEqual(result["continuous"]["unscoredReasons"], {held_key: "no-research-coverage"})
 
+    def test_continuous_cost_surrogate_defaults_off_and_biases_against_turnover(self):
+        # Default: no costAversion key -> aversion 0, so the surrogate makes no
+        # objective contribution (its reported weight is a diagnostic of trades).
+        base = optimize_portfolio(example_input())
+        self.assertEqual(base["status"], "ok", base["rejectionReasons"])
+        self.assertEqual(base["continuous"]["costModel"]["aversion"], 0)
+        self.assertEqual(base["continuous"]["objective"],
+                         optimize_portfolio(example_input())["continuous"]["objective"])
+        # A large cost aversion with a nonzero slippage rate must reduce the traded
+        # weight (buys become costly), so the top-ranked buy weight shrinks.
+        payload = example_input()
+        payload["costModel"]["slippageRate"] = 0.01
+        payload["mandate"]["costAversion"] = 50
+        costed = optimize_portfolio(seal(payload))
+        self.assertEqual(costed["status"], "ok", costed["rejectionReasons"])
+        self.assertGreater(costed["continuous"]["costModel"]["surrogateCostWeight"], 0)
+        self.assertAlmostEqual(costed["continuous"]["costModel"]["buyRate"], 0.0003 + 0.00001 + 0.01)
+        self.assertAlmostEqual(costed["continuous"]["costModel"]["sellRate"], 0.0003 + 0.00001 + 0.0005 + 0.01)
+        self.assertLess(costed["continuous"]["weights"][AK], base["continuous"]["weights"][AK])
+        # Repaired plan reports the convex-approximation gap versus settled fees.
+        gap = costed["repaired"]["costApproximation"]
+        self.assertAlmostEqual(gap["settledWeight"] - gap["surrogateWeight"], gap["gapWeight"], places=12)
+        self.assertEqual(gap["settledCosts"], costed["repaired"]["totalCosts"])
+
+    def test_cost_aversion_is_fail_closed_on_bad_value(self):
+        payload = example_input()
+        payload["mandate"]["costAversion"] = -1
+        self.assertIn("costAversion", " ".join(optimize_portfolio(seal(payload))["rejectionReasons"]))
+
     def test_scored_and_unscored_field_shape_is_fail_closed(self):
         cases = [
             (lambda p: p["assets"][0].pop("score") or p["assets"][0].update(scoreReason="x"), "scoreAvailableAt"),

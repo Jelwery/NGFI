@@ -149,6 +149,8 @@ A1 与 A3 的纯契约设计可交叉讨论，但代码实施一次只推进一�
 
 ### A3：优化器升级
 
+> 进度（2026-09-11，工程升级，非策略准入）：A3 按工作包推进，一次只改一项主行为。**第 1 包已完成：分域 freshness**。`optimize_portfolio` 的 `mandate.qualityPolicy` 新增可选 `maxAgeDaysByDomain`（`price`/`tradingStatus`/`risk`/`research`/`holdings`/`benchmark`），未指定的域回退到全局 `maxAgeDays`；价格/ADV 按 price 域、交易状态按 tradingStatus 域、riskSnapshot 按 risk 域、score 按 research 域、现金与持仓按 holdings 域、基准按 benchmark 域分别做 PIT 校验，不再用单一天数套住年报与日行情。结果新增 `freshnessPolicy` 字段回显生效窗口。未知域或越界天数 fail-closed。新增 3 项 optimizer 测试（默认回退、研究窗与价格窗分离、未知域/越界拒绝），quant 46 项通过。A2 实质门禁仍 blocked，本包不改变该结论。后续包（缺分持仓/基准分离、连续成本、PortfolioStateSnapshot、整手 oracle、内容寻址 artifact）尚未开始。
+
 #### A3.1 输入与状态契约
 
 - 将候选资产、基准全集、现有持仓分开，模型宇宙覆盖其并集。基准不在候选池的权重仍进入基准暴露与主动风险，不能过滤并重归一。

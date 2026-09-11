@@ -11,7 +11,9 @@ NGFI 是一个基于 [DeepSeek Harness（DSH）](https://www.npmjs.com/package/@
 - 可按需加载的金融分析 Skills
 - 受控 research workspace、冻结 replay、报告 audit、thesis drift 与隔离式对抗审阅
 - 固定策略/指标、smoke 与 research backtest、信号 outcome/calibration 证据链
-- staged-confirmed 持仓和 CNE6 portfolio/marginal/scenario risk
+- staged-confirmed 持仓、CNE6 风险、rank α + OSQP 组合优化与 100 股整手 dry-run 调仓
+- 日频目标组合回测、现金/费用/滑点/T+1/公司行动、CSI300/800 基准与行业/风格/选股归因
+- 预登记权重/阈值候选的 walk-forward 与不可变 model-runs/evidence 审计
 - 独立的 CNE6 风格 A 股风险模型与数据构建 CLI
 - DSH Web 与一次性 headless 两种运行方式
 
@@ -38,6 +40,7 @@ DEEPSEEK_API_KEY=your-api-key
 ```bash
 pnpm install
 uv sync
+uv sync --project packages/combinatorial-optimization --extra dev --frozen
 ```
 
 直接执行一次金融分析：
@@ -92,7 +95,7 @@ A 股数据只通过以下 8 个 curated tools 暴露给 Agent。它们是稳定
 | `finance_cn_market_activity` | 盘口/逐笔、资金流、龙虎榜、两融、大宗、涨跌停、异动、热榜、期权及官方备份 |
 | `finance_cn_macro_index` | 社融、PMI、指数成分/权重/估值和交易日历 |
 
-`packages/finance-provider-astock/feature-registry.json` 是运行时映射的单一事实来源。固定上游 `a-stock-data v3.8.0` 的 60 个 capability、67 个 capability-callable 映射均已覆盖，并通过 70 个受控 tool variant 暴露；组合 capability 中的每个 callable 都有独立 variant。实现状态为 14 个 `implemented-canonical`、45 个 `implemented-experimental` 和 1 个 `implemented-optional-auth`，没有 `deferred-policy`、`unsupported` 或未映射 callable。完整矩阵见 [`skills/a-share-data-research/references/capability-routing.md`](skills/a-share-data-research/references/capability-routing.md)。
+`packages/finance-data-service/providers/astock/feature-registry.json` 是运行时映射的单一事实来源。固定上游 `a-stock-data v3.8.0` 的 60 个 capability、67 个 capability-callable 映射均已覆盖，并通过 70 个受控 tool variant 暴露；组合 capability 中的每个 callable 都有独立 variant。实现状态为 14 个 `implemented-canonical`、45 个 `implemented-experimental` 和 1 个 `implemented-optional-auth`，没有 `deferred-policy`、`unsupported` 或未映射 callable。完整矩阵见 [`skills/a-share-data-research/references/capability-routing.md`](skills/a-share-data-research/references/capability-routing.md)。
 
 实现状态不等于实时可用性。公开站点、社区 TDX、匿名 BaoStock/BSE 会受网络、地域、频率和 schema 变化影响；catalog 和 live probe 会如实报告 `pass`、`no-data`、`blocked-auth`、`unavailable-network`、`rate-limited`、`schema-drift` 或 `upstream-error`，不会把失败伪装成空结果。
 
@@ -171,13 +174,13 @@ profiles/                             headless 和 Web profile
 packages/dsh-finance-bundle/          DSH finance composition 与 runner
 packages/dsh-finance-tools/           DSH 金融工具
 packages/finance-core/                数据契约与确定性金融计算
-packages/finance-provider-yfinance/   全球股票 yfinance 数据适配器
+packages/finance-data-service/providers/yfinance/   全球股票 yfinance 数据适配器
 packages/finance-data-service/        A 股 provider 注册、路由与 fallback
-packages/finance-provider-astock/     固定公开来源 A 股适配器
-packages/finance-provider-tushare-mcp/ TuShare MCP 适配器
-packages/finance-provider-tdx/        TDX official/community 边界
-packages/finance-provider-ifind/      iFinD official 配置边界
-packages/finance-provider-cne6/       CNE6 本地只读适配器
+packages/finance-data-service/providers/astock/     固定公开来源 A 股适配器
+packages/finance-data-service/providers/tushare-mcp/ TuShare MCP 适配器
+packages/finance-data-service/providers/tdx/        TDX official/community 边界
+packages/finance-data-service/providers/ifind/      iFinD official 配置边界
+packages/finance-data-service/providers/cne6/       CNE6 本地只读适配器
 config/agent-presets/                 人工维护的四个 preset source of truth
 generated/agent-presets/              确定性生成的四个 preset
 skills/                               金融研究与行为诊断 Skills

@@ -11,7 +11,9 @@ import {
   type StrategyRunInput,
 } from '@finance2dsh/strategy-core'
 import { INDICATOR_DEFINITIONS, computeIndicator, indicatorDefinition } from '@finance2dsh/technical-analysis'
-import { strictTool } from './runtime-store.js'
+import { ResearchWorkspace } from '@finance2dsh/research-workspace'
+import { canonicalJson, evidenceId, modelRunId, sha256, type JsonObject as ResearchJsonObject, type ModelRun } from '@finance2dsh/research-core'
+import { containedPath, ensurePlainDirectory, quantCodeIdentity, requireRuntimeId, strictTool } from './runtime-store.js'
 
 const MAX_BRIDGE_BYTES = 8 * 1024 * 1024
 
@@ -24,6 +26,7 @@ export const STRATEGY_TOOL_NAMES = [
 export interface StrategyToolOptions {
   quantProjectRoot: string
   uvExecutable?: string
+  runtimeRoot?: string
 }
 
 const JSON_OUTPUT = {
@@ -46,15 +49,16 @@ function strategyRegistry(): StrategyRegistry {
     .registerStrategy(ACCUMULATION_BREAKOUT_STRATEGY_V1)
 }
 
-async function quantBridge(
-  options: StrategyToolOptions, operation: 'research-backtest' | 'promotion', input: unknown, signal?: AbortSignal,
+export async function quantBridge(
+  options: StrategyToolOptions, operation: 'research-backtest' | 'promotion' | 'portfolio-optimize' | 'rebalance-plan' | 'walk-forward', input: unknown, signal?: AbortSignal,
 ) {
+  if (signal?.aborted) throw new Error('quant computation aborted')
   const project = resolve(options.quantProjectRoot)
   const payload = JSON.stringify(input)
   if (Buffer.byteLength(payload) > MAX_BRIDGE_BYTES) throw new RangeError('quant research input exceeds 8 MiB')
   const executable = options.uvExecutable ?? 'uv'
   const stdout = await new Promise<string>((resolveOutput, reject) => {
-    const child = spawn(executable, ['run', '--project', project, '--frozen', '--offline', 'python', '-m', 'ngfi_quant.agent_bridge', operation], {
+    const child = spawn(executable, ['run', '--project', project, '--frozen', '--offline', '--no-sync', '--no-env-file', '--no-config', 'python', '-m', 'ngfi_quant.agent_bridge', operation], {
       cwd: project, stdio: ['pipe', 'pipe', 'pipe'],
       env: {
         PATH: process.env.PATH,
@@ -71,11 +75,18 @@ async function quantBridge(
       if (bytes > MAX_BRIDGE_BYTES) child.kill('SIGKILL')
       else output.push(chunk)
     })
-    child.stderr.on('data', (chunk: Buffer) => errors.push(chunk))
+    let errorBytes = 0
+    child.stderr.on('data', (chunk: Buffer) => {
+      errorBytes += chunk.length
+      if (errorBytes > MAX_BRIDGE_BYTES) child.kill('SIGKILL')
+      else errors.push(chunk)
+    })
+    child.stdin.on('error', () => child.kill('SIGTERM'))
     child.once('error', error => { clearTimeout(timeout); reject(error) })
     child.once('exit', status => {
       clearTimeout(timeout)
-      if (bytes > MAX_BRIDGE_BYTES) reject(new Error('quant research output exceeds 8 MiB'))
+      if (signal?.aborted) reject(new Error('quant computation aborted'))
+      else if (bytes > MAX_BRIDGE_BYTES || errorBytes > MAX_BRIDGE_BYTES) reject(new Error('quant research output exceeds 8 MiB'))
       else if (status !== 0) reject(new Error(`quant research bridge failed: ${Buffer.concat(errors).toString('utf8').trim()}`))
       else resolveOutput(Buffer.concat(output).toString('utf8'))
     })
@@ -135,7 +146,8 @@ export function createStrategyTools(options: StrategyToolOptions): ToolDefinitio
       name: 'finance_strategy_backtest',
       description: 'Run either the fixed TypeScript smoke contract check or the fixed Python research-grade backtest. Smoke output always has promotionEligible=false and cannot be used by the promotion tool.',
       parameters: {
-        tier: { type: 'string', enum: ['smoke', 'research'], required: true },
+        tier: { type: 'string', enum: ['smoke', 'research', 'walk-forward'], required: true },
+        workspace_id: { type: 'string' }, case_id: { type: 'string' }, expected_revision: { type: 'integer' },
         strategy_id: { type: 'string' },
         input: { type: 'object', additionalProperties: true, required: true },
         config: { type: 'object', additionalProperties: true },
@@ -145,10 +157,53 @@ export function createStrategyTools(options: StrategyToolOptions): ToolDefinitio
       timeoutMs: 120_000,
       isConcurrencySafe: () => true,
       async execute(args, exec) {
-        if (args.tier === 'research') {
-          const result = object(await quantBridge(options, 'research-backtest', args.input, exec.signal), 'research result')
-          assertBacktestRun(result.run)
-          if (result.run.engineTier !== 'research') throw new TypeError('research bridge returned a non-research run')
+        if (args.tier === 'research' || args.tier === 'walk-forward') {
+          const registered = args.workspace_id !== undefined || args.case_id !== undefined
+          if (args.tier === 'walk-forward' && !registered) throw new TypeError('walk-forward requires a registered research case')
+          let store: ResearchWorkspace | undefined
+          let caseId = ''
+          let revision = 0
+          let registration: Omit<ModelRun, 'id'> | undefined
+          if (registered) {
+            const root = containedPath(options.runtimeRoot ?? resolve(process.cwd(), '.runtime/finance-data'), 'research', requireRuntimeId(args.workspace_id, 'workspace_id'))
+            ensurePlainDirectory(root)
+            store = new ResearchWorkspace({ root })
+            if (typeof args.case_id !== 'string' || !/^case-[0-9a-f]{64}$/.test(args.case_id)) throw new TypeError('invalid case_id')
+            caseId = args.case_id
+            const state = store.open(caseId)
+            if (state.revision !== args.expected_revision) throw new Error('research revision conflict')
+            const model = args.tier === 'walk-forward' ? 'walk-forward' : 'portfolio-backtest'
+            const input = object(args.input, 'input')
+            const identity = quantCodeIdentity(resolve(options.quantProjectRoot))
+            const key = sha256({ model, input, identity })
+            const cached = state.modelRuns.find(run => run.model === model && run.parameters.requestHash === key)
+            if (cached !== undefined) return jsonSafe({ revision: state.revision, modelRunId: cached.id, replay: true, result: cached.output.status === 'ok' ? cached.output.value : cached.output })
+            const start = args.tier === 'walk-forward' ? state.case.createdAt : String(object(input.metadata, 'metadata').startedAt)
+            const source = { kind: 'structured' as const, subject: state.case.subject, field: 'frozen-experiment-input', value: input as ResearchJsonObject,
+              quality: 'unknown' as const, sourceRef: { provider: 'user', upstream: 'explicit-frozen-input', sourceKind: 'user' as const, retrievedAt: start, hash: sha256(input) },
+              limitations: ['Caller supplied input; historical source lineage must be independently verified.'] }
+            const sourceId = evidenceId(source)
+            registration = { model: `${model}-registration`, version: '1.0.0', inputRefs: [{ kind: 'evidence', id: sourceId }],
+              parameters: { requestHash: key, input: input as ResearchJsonObject, ...identity },
+              output: { status: 'ok', value: { status: 'registered', testRuns: 0 } }, warnings: [], createdAt: start }
+            const prior = state.modelRuns.find(run => run.model === registration!.model && run.parameters.requestHash === key)
+            if (prior) throw new Error('experiment was already registered; interrupted test cannot be retried as a fresh holdout')
+            const evidenceRevision = state.evidence.some(item => item.id === sourceId) ? state.revision
+              : store.appendEvidence(caseId, state.revision, [{ id: sourceId, ...source }]).revision
+            revision = store.saveModelRun(caseId, evidenceRevision, { id: modelRunId(registration), ...registration }).revision
+          }
+          const result = object(await quantBridge(options, args.tier === 'walk-forward' ? 'walk-forward' : 'research-backtest', args.input, exec.signal), 'research result')
+          if (args.tier === 'research') {
+            assertBacktestRun(result.run)
+            if (result.run.engineTier !== 'research') throw new TypeError('research bridge returned a non-research run')
+          }
+          if (store && registration) {
+            canonicalJson(result)
+            const run: Omit<ModelRun, 'id'> = { ...registration, model: args.tier === 'walk-forward' ? 'walk-forward' : 'portfolio-backtest',
+              inputRefs: [{ kind: 'model-run', id: modelRunId(registration) }], output: { status: 'ok', value: result as ResearchJsonObject } }
+            const saved = store.saveModelRun(caseId, revision, { id: modelRunId(run), ...run })
+            return jsonSafe({ ...saved, modelRunId: modelRunId(run), replay: false, result })
+          }
           return jsonSafe(result)
         }
         if (typeof args.strategy_id !== 'string') throw new TypeError('strategy_id is required for smoke')

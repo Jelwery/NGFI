@@ -32,7 +32,7 @@ def daily_cross_sectional_regression_time_varying(
     industry_count: int | None = None,
     min_valid: int | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Run WLS using the contemporaneous exposure matrix for every day.
+    """Run WLS with caller-aligned exposures (pipeline supplies prior-day X).
 
     With ``industry_count`` set, industry factor returns are constrained so
     that their cap-weighted sum is zero — this separates the intercept
@@ -90,5 +90,5 @@ def daily_cross_sectional_regression_time_varying(
             )
             f_t = basis @ reduced_f
         factor_returns[t] = f_t
-        specific_returns[t] = y_t - X_t @ f_t
+        specific_returns[t, valid] = y_t[valid] - X_t[valid] @ f_t
     return factor_returns, specific_returns

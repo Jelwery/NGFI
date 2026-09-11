@@ -35,7 +35,7 @@ function sourceCorpus(directory) {
   let corpus = ''
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
     const path = join(directory, entry.name)
-    if (entry.isDirectory()) corpus += sourceCorpus(path)
+    if (entry.isDirectory() && !['node_modules', '.venv', '.uv-cache', 'lib', '__pycache__', 'upstream'].includes(entry.name)) corpus += sourceCorpus(path)
     else if (/\.(?:ts|py)$/u.test(entry.name)) corpus += readFileSync(path, 'utf8')
   }
   return corpus
@@ -43,7 +43,7 @@ function sourceCorpus(directory) {
 
 function actualSkills(root) {
   return trackedPaths(root)
-    .filter(path => /^skills\/[^/]+\/SKILL\.md$/u.test(path))
+    .filter(path => /^skills\/[^/]+\/SKILL\.md$/u.test(path) && existsSync(resolve(root, path)))
     .map(path => frontmatterName(resolve(root, path)))
     .filter(Boolean)
     .sort()
@@ -54,7 +54,7 @@ function actualTools(root) {
   const names = []
   for (const path of trackedPaths(root).filter(path => /^packages\/dsh-finance-tools\/src\/.*\.ts$/u.test(path))) {
     const source = readFileSync(resolve(root, path), 'utf8')
-    for (const match of source.matchAll(/name:\s*['"](finance_[a-z0-9_]+)['"]/gu)) names.push(match[1])
+    for (const match of source.matchAll(/(?:name:\s*|optimizationTool\(options,\s*)['"](finance_[a-z0-9_]+)['"]/gu)) names.push(match[1])
   }
   return [...new Set(names)].sort()
 }

@@ -271,12 +271,17 @@ def bayesian_shrinkage(
             continue
         g_sigma = raw_sigma[idx]
         g_mcap = market_caps[idx]
-        pos = np.isfinite(g_mcap) & (g_mcap > 0)
+        finite = np.isfinite(g_sigma)
+        pos = finite & np.isfinite(g_mcap) & (g_mcap > 0)
         if pos.any():
             prior_means[g] = np.average(g_sigma[pos], weights=g_mcap[pos])
+        elif finite.any():
+            prior_means[g] = float(np.mean(g_sigma[finite]))
         else:
-            prior_means[g] = float(np.nanmean(g_sigma))
-        deltas[g] = np.sqrt(np.mean((g_sigma - prior_means[g]) ** 2))
+            prior_means[g] = np.nan
+            deltas[g] = np.nan
+            continue
+        deltas[g] = np.sqrt(np.mean((g_sigma[finite] - prior_means[g]) ** 2))
 
     # --- 3. Apply shrinkage ---
     group_mean = prior_means[group_id]

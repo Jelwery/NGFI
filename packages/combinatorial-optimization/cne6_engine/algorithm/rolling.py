@@ -11,6 +11,14 @@ import numpy as np
 from numba import njit
 
 
+def finite_mean(values: np.ndarray, axis: int) -> np.ndarray:
+    """Finite-only mean with explicit empty-slice behavior (no RuntimeWarning)."""
+    valid = np.isfinite(values)
+    counts = valid.sum(axis=axis)
+    return np.divide(np.where(valid, values, 0.0).sum(axis=axis), counts,
+                     out=np.full(counts.shape, np.nan), where=counts > 0)
+
+
 def ewma_weights(window: int, half_life: int) -> np.ndarray:
     """Trailing-window EWMA weights, oldest→newest, normalized to sum 1."""
     if window <= 0:
@@ -29,10 +37,9 @@ def _wls_at_targets(
 ) -> np.ndarray:
     """Rolling EWMA-weighted regression at target column indices.
 
-    Matches the reference implementation (_rolling_regress, fill_na=0):
-    NaN returns are zero-filled with full EWMA weight, and stocks whose first
-    observation is inside the window are excluded for that target (as if not
-    listed at the window start).
+    Only paired finite x/y observations contribute, with EWMA weights
+    renormalized over those observations. Stocks first observed inside the
+    window remain excluded for that target.
 
     Returns (N, M, 3): beta, alpha, residual std (equal-weight over the
     window's regression rows) for each stock i at each target targets[m].
@@ -62,11 +69,9 @@ def _wls_at_targets(
             n = 0
             for k in range(window):
                 xv = x[start + k]
-                if np.isnan(xv):
-                    continue
                 yv = y[i, start + k]
-                if np.isnan(yv):
-                    yv = 0.0
+                if not np.isfinite(xv) or not np.isfinite(yv):
+                    continue
                 w = weights[k]
                 w_sum += w
                 wy += w * yv
@@ -82,18 +87,16 @@ def _wls_at_targets(
             var = 0.0
             for k in range(window):
                 xv = x[start + k]
-                if np.isnan(xv):
-                    continue
                 yv = y[i, start + k]
-                if np.isnan(yv):
-                    yv = 0.0
+                if not np.isfinite(xv) or not np.isfinite(yv):
+                    continue
                 w = weights[k]
                 dy = yv - wy
                 dx = xv - wx
                 cov += w * dy * dx
                 var += w * dx * dx
 
-            if var <= 1e-12:
+            if var / w_sum <= 1e-12:
                 continue
             beta = cov / var
             alpha = wy - beta * wx
@@ -101,11 +104,9 @@ def _wls_at_targets(
             sse = 0.0
             for k in range(window):
                 xv = x[start + k]
-                if np.isnan(xv):
-                    continue
                 yv = y[i, start + k]
-                if np.isnan(yv):
-                    yv = 0.0
+                if not np.isfinite(xv) or not np.isfinite(yv):
+                    continue
                 resid = yv - (alpha + beta * xv)
                 sse += resid * resid
 
@@ -213,7 +214,7 @@ def _wls_at_targets_sliding(
 ) -> np.ndarray:
     """Sliding variant of _wls_at_targets for consecutive targets (step 1).
 
-    Same zero-fill / listing semantics as _wls_at_targets.  Weighted moments
+    Same paired-finite / listing semantics as _wls_at_targets. Weighted moments
     slide with the recurrence S(t) = delta·S(t−1) + g_t − delta^W·g_{t−W};
     the unweighted SSE is recovered from unweighted moments (exact identity
     for Σ(y − α − βx)² given the fitted α, β).
@@ -235,8 +236,6 @@ def _wls_at_targets_sliding(
 
     for i in range(N):
         s_i = 0 if first_valid is None else int(first_valid[i])
-        if s_i > start0:
-            continue
         w_sum = 0.0
         wy = 0.0
         wx = 0.0
@@ -251,11 +250,9 @@ def _wls_at_targets_sliding(
         uyy = 0.0
         for k in range(window):
             xv = x[start0 + k]
-            if np.isnan(xv):
-                continue
             yv = y[i, start0 + k]
-            if np.isnan(yv):
-                yv = 0.0
+            if not np.isfinite(xv) or not np.isfinite(yv):
+                continue
             w = weights[k]
             w_sum += w
             wy += w * yv
@@ -269,7 +266,7 @@ def _wls_at_targets_sliding(
             uxx += xv * xv
             uxy += xv * yv
             uyy += yv * yv
-        if w_sum > 0.0 and n_valid > 1:
+        if w_sum > 0.0 and n_valid > 1 and s_i <= start0:
             my = wy / w_sum
             mx = wx / w_sum
             var = wxx / w_sum - mx * mx
@@ -292,8 +289,8 @@ def _wls_at_targets_sliding(
             x_old = x[pos_old]
             y_new = y[i, pos_new]
             y_old = y[i, pos_old]
-            h_new = 1.0 if not np.isnan(x_new) else 0.0
-            h_old = 1.0 if not np.isnan(x_old) else 0.0
+            h_new = 1.0 if np.isfinite(x_new) and np.isfinite(y_new) else 0.0
+            h_old = 1.0 if np.isfinite(x_old) and np.isfinite(y_old) else 0.0
             xg_new = x_new if h_new else 0.0
             xg_old = x_old if h_old else 0.0
             yg_new = y_new if (h_new and not np.isnan(y_new)) else 0.0
@@ -313,7 +310,7 @@ def _wls_at_targets_sliding(
             uxy = uxy + xg_new * yg_new - xg_old * yg_old
             uyy = uyy + yg_new * yg_new - yg_old * yg_old
 
-            if w_sum <= 0.0 or n_valid_f < 2.0:
+            if w_sum <= 0.0 or n_valid_f < 2.0 or s_i > pos_new - window + 1:
                 continue
             my = wy / w_sum
             mx = wx / w_sum

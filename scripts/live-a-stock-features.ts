@@ -3,7 +3,7 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import {
   ASHARE_FEATURES, AStockProvider, type AshareFeatureDefinition, type AshareFeatureVariant,
-} from '../packages/finance-provider-astock/src/index.js'
+} from '../packages/finance-data-service/src/providers/astock/index.js'
 import type { DataCapability, InstrumentId } from '@finance2dsh/core'
 
 type LiveStatus = 'pass' | 'no-data' | 'blocked-auth' | 'unavailable-network' | 'rate-limited' | 'schema-drift' | 'upstream-error'

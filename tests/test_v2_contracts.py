@@ -13,7 +13,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SKILLS_ROOT = ROOT / "skills"
 PRIMARY_SKILLS = {
-    "company-financial-analysis",
+    "financial-analysis",
     "macro-cycle-policy-analysis",
     "investment-behavior-diagnosis",
 }
@@ -41,14 +41,14 @@ class SkillContractTests(unittest.TestCase):
 
     def test_all_skills_put_v2_control_layer_first(self):
         legacy_headings = {
-            "company-financial-analysis": "## 角色",
+            "financial-analysis": "## Workflow",
             "macro-cycle-policy-analysis": "## 触发原则",
             "investment-behavior-diagnosis": "## 先识别用户真正要解决的任务",
         }
         for name in PRIMARY_SKILLS:
             path = SKILLS_ROOT / name / "SKILL.md"
             text = path.read_text(encoding="utf-8")
-            control = text.index("## V2 执行控制层")
+            control = text.index("## V2 execution contract" if name == "financial-analysis" else "## V2 执行控制层")
             first_legacy_section = text.index(legacy_headings[name])
             self.assertLess(control, first_legacy_section, path)
 
@@ -62,7 +62,8 @@ class SkillContractTests(unittest.TestCase):
         for skill_path in SKILLS_ROOT.glob("*/SKILL.md"):
             text = skill_path.read_text(encoding="utf-8")
             for relative in sorted(set(pattern.findall(text))):
-                self.assertTrue((skill_path.parent / relative).is_file(), relative)
+                candidates = [skill_path.parent / relative, SKILLS_ROOT / "financial-analysis" / relative]
+                self.assertTrue(any(path.is_file() for path in candidates), relative)
 
     def test_behavior_guardrails(self):
         text = (SKILLS_ROOT / "investment-behavior-diagnosis/SKILL.md").read_text(encoding="utf-8")
@@ -77,9 +78,9 @@ class SkillContractTests(unittest.TestCase):
         self.assertIn("禁止基于伪前提推导行业", text)
 
     def test_finance_guardrails(self):
-        text = (SKILLS_ROOT / "company-financial-analysis/SKILL.md").read_text(encoding="utf-8")
+        text = (SKILLS_ROOT / "financial-analysis/SKILL.md").read_text(encoding="utf-8")
         for phrase in (
-            "当前股价防火墙",
+            "intrinsic-only price firewall",
             "run_canonical.py",
             "validate_state.py",
             "通用 Z/M 模型不适用",
@@ -93,7 +94,7 @@ class StateValidatorTests(unittest.TestCase):
     def setUpClass(cls):
         cls.validator = load_module(
             "validate_state",
-            SKILLS_ROOT / "company-financial-analysis/scripts/validate_state.py",
+            ROOT / "packages/finance-core/python/validate_state.py",
         )
 
     def valid_state(self):
@@ -154,7 +155,7 @@ class StateValidatorTests(unittest.TestCase):
             completed = subprocess.run(
                 [
                     sys.executable,
-                    str(SKILLS_ROOT / "company-financial-analysis/scripts/validate_finance_output.py"),
+                    str(ROOT / "packages/finance-core/python/validate_finance_output.py"),
                     "--report",
                     str(report),
                     "--state",
@@ -172,7 +173,7 @@ class RatioDefinitionTests(unittest.TestCase):
     def test_canonical_roa_is_ebit_over_assets(self):
         ratios = load_module(
             "calc_ratios",
-            SKILLS_ROOT / "company-financial-analysis/scripts/calc_ratios.py",
+            ROOT / "packages/finance-core/python/calc_ratios.py",
         )
         data = {
             "company_type": "GENERAL",
@@ -227,7 +228,7 @@ class RatioDefinitionTests(unittest.TestCase):
             completed = subprocess.run(
                 [
                     sys.executable,
-                    str(SKILLS_ROOT / "company-financial-analysis/scripts/run_canonical.py"),
+                    str(ROOT / "packages/finance-core/python/run_canonical.py"),
                     "--script",
                     "calc_ratios.py",
                     "--input",
@@ -243,7 +244,7 @@ class RatioDefinitionTests(unittest.TestCase):
             self.assertTrue(output_path.is_file())
             records = json.loads((workdir / "_provenance.json").read_text(encoding="utf-8"))
             self.assertEqual(records[0]["exit_code"], 0)
-            self.assertEqual(records[0]["script"], str(SKILLS_ROOT / "company-financial-analysis/scripts/calc_ratios.py"))
+            self.assertEqual(records[0]["script"], str(ROOT / "packages/finance-core/python/calc_ratios.py"))
             self.assertIsNotNone(records[0]["input_sha256"])
             self.assertIsNotNone(records[0]["output_sha256"])
 

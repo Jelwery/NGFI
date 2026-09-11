@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { TushareMcpProvider, redactTushareText, resolveTushareEndpoint } from '../packages/finance-provider-tushare-mcp/src/index.js'
+import { TushareMcpProvider, redactTushareText, resolveTushareEndpoint } from '../packages/finance-data-service/src/providers/tushare-mcp/index.js'
 import type {
   ResolvedTushareEndpoint,
   TushareMarketBars,
   TushareTradingCalendar,
-} from '../packages/finance-provider-tushare-mcp/src/index.js'
+} from '../packages/finance-data-service/src/providers/tushare-mcp/index.js'
 import { normalizeAshareInstrument } from '@finance2dsh/core'
 import { loadDataProviderSecrets } from '../src/runtime.js'
 

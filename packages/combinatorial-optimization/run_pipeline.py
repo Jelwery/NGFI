@@ -24,6 +24,8 @@ def main() -> None:
                         help="end date YYYY-MM-DD (default: latest cached)")
     parser.add_argument("--lookback", type=int, default=252,
                         help="regression lookback in trade days")
+    parser.add_argument("--factor-dictionary", required=True,
+                        help="frozen JSON factor dictionary with version, validity dates, industries and styles")
     parser.add_argument("--quiet", action="store_true")
     args = parser.parse_args()
 
@@ -43,8 +45,12 @@ def main() -> None:
 
     project_root = os.path.dirname(os.path.abspath(__file__))
     t0 = time.perf_counter()
+    from cne6_engine.data_sources.acceptance import strict_json
+    with open(args.factor_dictionary, encoding="utf-8") as stream:
+        factor_dictionary = strict_json(stream.read())
     result = compute_covariance(
         end_date,
+        factor_dictionary=factor_dictionary,
         adapter=adapter,
         lookback_days=args.lookback,
         output_dir=os.path.join(project_root, "data", "output"),

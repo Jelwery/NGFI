@@ -245,13 +245,18 @@ export interface BacktestCostModelRef {
 
 export type BacktestBenchmarkRef =
   | {
-    readonly status: 'available'
+    readonly status: 'available' | 'partial'
     readonly instrument: InstrumentId
     readonly datasetHash: string
+    readonly seriesHash?: string
+    readonly pointCount?: number
+    readonly totalReturn?: BacktestMetric
   }
   | {
     readonly status: Exclude<QuantResultStatus, 'available' | 'unfillable'>
     readonly reason: string
+    readonly instrument?: InstrumentId
+    readonly datasetHash?: string
   }
 
 export interface BacktestArtifactRef {
@@ -265,6 +270,7 @@ export interface BacktestRun {
   readonly engine: string
   readonly engineVersion: string
   readonly engineTier: BacktestEngineTier
+  readonly inputContentHash?: string
   readonly dataset: BacktestDatasetRef
   readonly strategyHash: string
   readonly configHash: string

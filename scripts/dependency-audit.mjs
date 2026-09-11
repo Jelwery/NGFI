@@ -16,6 +16,7 @@ function pythonProject(path) {
 
 const pythonProjects = [
   pythonProject('.'),
+  pythonProject('packages/finance-data-service/providers/tdx'),
   ...readdirSync(resolve(root, 'packages'), { withFileTypes: true })
     .filter(entry => entry.isDirectory() && existsSync(resolve(root, 'packages', entry.name, 'pyproject.toml')))
     .map(entry => pythonProject(`packages/${entry.name}`)),

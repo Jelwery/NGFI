@@ -1,10 +1,10 @@
 # NGFI Skills V2
 
-V2 以原版三套 Skill 为基线，现已合并到 NGFI 的 canonical `skills/` 根，不再把工作流拆成大量物理子 Skill：
+V2 的三套原始能力已归入 canonical `skills/`。本轮公开入口进一步由15个收为11个：公司深研统一为 `company-research`，财务分析统一为 `financial-analysis`，DCF/相对估值/consensus 统一为 `equity-valuation` 的渐进子流程；下列三套历史能力仍保留：
 
 - `skills/investment-behavior-diagnosis`
 - `skills/macro-cycle-policy-analysis`
-- `skills/company-financial-analysis`
+- `skills/financial-analysis`
 
 这样保留了原版在复杂任务中的上下文一致性，同时吸收 A/B 测试中原子化版本的有效部分：输入 fast-path、边界判断、理论到行业追溯和明确的数据契约。
 
@@ -12,7 +12,7 @@ V2 以原版三套 Skill 为基线，现已合并到 NGFI 的 canonical `skills/
 
 - `/investment-behavior-diagnosis`
 - `/macro-cycle-policy-analysis`
-- `/company-financial-analysis`
+- `/financial-analysis`
 
 中文 `description` 保留，因此自然语言中文请求仍可依据描述触发；显式调用时使用以上名称。DSH runtime 只挂载这一个 `skills/` 根。
 
@@ -51,19 +51,19 @@ V2 因此采用：
 ### 公司财务分析
 
 - 唯一代码、数据解析、公司类型、致命信号、输出校验五道闸门；
-- 当前股价、目标价、上行空间和买卖建议采用 fail-closed 防火墙；
-- 只允许调用 Skill 内置规范脚本，禁止临时重写财务公式；
+- 默认先独立估值后比较市场价格；显式 intrinsic-only 模式保留股价防火墙；
+- 计算统一放在 finance-core，取数放在 data-service，禁止临时重写财务公式；
 - `calc_ratios.py` 的 ROA 口径锁定为 EBIT/总资产；
 - 银行明确跳过通用 Z/M 模型，使用银行专属指标和估值方法；
 - CV-1 由主 Agent 重算，触发后禁止启动估值；
-- `state.json` 使用稳定 Schema，并由脚本验证。
+- 历史 `state.json` 仅作为离线导入验证格式；新研究使用 evidence/model-runs 台账，不再建立第二套状态生命周期。
 
 ## 财务校验器
 
 ```bash
-python "skills/company-financial-analysis/scripts/validate_state.py" path/to/state.json
+python "packages/finance-core/python/validate_state.py" path/to/state.json
 
-python "skills/company-financial-analysis/scripts/validate_finance_output.py" \
+python "packages/finance-core/python/validate_finance_output.py" \
   --report path/to/report.md \
   --state path/to/state.json
 ```
@@ -71,7 +71,7 @@ python "skills/company-financial-analysis/scripts/validate_finance_output.py" \
 规范计算通过 `run_canonical.py` 调用，例如：
 
 ```bash
-python "skills/company-financial-analysis/scripts/run_canonical.py" \
+python "packages/finance-core/python/run_canonical.py" \
   --script calc_ratios.py \
   --input path/to/_data.json \
   --output path/to/_ratios.json
@@ -83,7 +83,7 @@ python "skills/company-financial-analysis/scripts/run_canonical.py" \
 
 ```bash
 python -m unittest discover -s tests -v
-python "skills/company-financial-analysis/scripts/selftest.py"
+python "packages/finance-core/python/selftest.py"
 python tests/run_dsh_smoke.py
 ```
 

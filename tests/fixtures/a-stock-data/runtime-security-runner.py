@@ -2,6 +2,8 @@
 """Exercise the production runner's process and network trust boundaries offline."""
 
 import importlib.util
+import contextlib
+import io
 import json
 import os
 import sys
@@ -9,7 +11,7 @@ import urllib.error
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
-RUNNER = ROOT / "packages" / "finance-provider-astock" / "python" / "runner.py"
+RUNNER = ROOT / "packages" / "finance-data-service" / "providers" / "astock" / "python" / "runner.py"
 SPEC = importlib.util.spec_from_file_location("ngfi_astock_runner", RUNNER)
 assert SPEC is not None and SPEC.loader is not None
 MODULE = importlib.util.module_from_spec(SPEC)
@@ -203,6 +205,24 @@ def main():
       raise AssertionError("CNInfo stock map is not HTTPS")
     exercise_urllib_policy()
     exercise_official_policy()
+    from operations import features
+    original_invoke = features._invoke
+    def noisy_source(*_args):
+      print(SECRET_MARKER)
+      return [{"source_value": 1}]
+    try:
+      features._invoke = noisy_source
+      output = io.StringIO()
+      with contextlib.redirect_stdout(output):
+        result = features.execute_feature({"featureId": "quote.tencent", "variant": "default", "limit": 1,
+          "instrument": {"market": "CN", "exchange": "SSE", "symbol": "600519", "assetType": "equity"}},
+          {"maxRecords": 1, "networkTimeoutMs": 1000, "maxOutputBytes": 1024})
+      if output.getvalue() or SECRET_MARKER in json.dumps(result):
+        raise AssertionError("source diagnostics contaminated the protocol")
+      if not any("console diagnostics" in warning for warning in result["warnings"]):
+        raise AssertionError("source diagnostics were not disclosed")
+    finally:
+      features._invoke = original_invoke
     if request.get("source") == "public-web" and request.get("operation") == "index":
       MODULE.load_generated_official = lambda *_args, **_kwargs: GeneratedOfficial
     response, _max_output = MODULE.handle(request)

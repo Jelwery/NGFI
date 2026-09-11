@@ -72,21 +72,23 @@ describe('DSH finance composition', () => {
     expect(COMPANY_RESEARCH_TOOL_ALLOWLIST).toEqual([...FINANCE_TOOL_ALLOWLIST, ...RESEARCH_TOOL_NAMES])
     expect(STRATEGY_RESEARCH_TOOL_ALLOWLIST).toEqual([
       ...FINANCE_TOOL_ALLOWLIST, ...STRATEGY_TOOL_NAMES, ...SIGNAL_TOOL_NAMES,
+      'finance_research_case', 'finance_research_ledger', 'finance_research_snapshot',
     ])
-    expect(PORTFOLIO_RISK_TOOL_ALLOWLIST).toEqual([...FINANCE_TOOL_ALLOWLIST, ...PORTFOLIO_TOOL_NAMES])
+    expect(PORTFOLIO_RISK_TOOL_ALLOWLIST).toEqual([...FINANCE_TOOL_ALLOWLIST, ...PORTFOLIO_TOOL_NAMES,
+      'finance_research_case', 'finance_research_ledger', 'finance_research_snapshot'])
     expect(PRESET_TOOL_ALLOWLISTS['finance-analyst']).toHaveLength(21)
   })
 
-  it('registers the exact fourteen governed tool names without changing the legacy factory', () => {
+  it('registers the sixteen governed tool names without changing the legacy factory', () => {
     const governed = createGovernedFinanceTools({
       runtimeRoot: join(PROJECT_ROOT, '.runtime', 'test-finance-data'),
-      quantProjectRoot: join(PROJECT_ROOT, 'packages', 'quant-research'),
+      quantProjectRoot: join(PROJECT_ROOT, 'packages', 'combinatorial-optimization'),
     }).map(tool => tool.name)
-    expect(governed).toEqual([
+    expect([...governed].sort()).toEqual([
       ...RESEARCH_TOOL_NAMES, ...STRATEGY_TOOL_NAMES, ...SIGNAL_TOOL_NAMES, ...PORTFOLIO_TOOL_NAMES,
-    ])
-    expect(governed).toHaveLength(14)
-    expect(new Set(governed).size).toBe(14)
+    ].sort())
+    expect(governed).toHaveLength(16)
+    expect(new Set(governed).size).toBe(16)
     expect(createFinanceTools(unusedProvider).map(tool => tool.name)).toEqual(EXPECTED_FINANCE_TOOLS)
   })
 

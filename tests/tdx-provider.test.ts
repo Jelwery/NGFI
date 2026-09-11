@@ -10,7 +10,7 @@ import {
   TDX_OFFICIAL_PROVIDER_ID,
   TdxCommunityProvider,
   TdxOfficialProvider,
-} from '../packages/finance-provider-tdx/src/index.js'
+} from '../packages/finance-data-service/src/providers/tdx/index.js'
 
 const FIXTURE_RUNNER = join(process.cwd(), 'tests/fixtures/tdx/runner.py')
 const PROCESS_TREE_RUNNER = join(process.cwd(), 'tests/fixtures/tdx/process-tree-runner.mjs')
@@ -158,14 +158,14 @@ function killFixtureProcess(pid: number): void {
 describe('TDX community process safety boundaries', () => {
   it('does not hard-code a platform-specific /bin/ps path in the POSIX supervisor', async () => {
     const source = await readFile(
-      join(process.cwd(), 'packages/finance-provider-tdx/src/index.ts'),
+      join(process.cwd(), 'packages/finance-data-service/src/providers/tdx/index.ts'),
       'utf8',
     )
     expect(source).not.toMatch(/spawnSync\(\s*['"]\/bin\/ps['"]/u)
   })
 
   it('resolves the default bare runner executable and uses hardened uv and Python arguments', () => {
-    const packageRoot = resolve(process.cwd(), 'packages/finance-provider-tdx')
+    const packageRoot = resolve(process.cwd(), 'packages/finance-data-service/providers/tdx')
     const defaultProvider = new TdxCommunityProvider({
       servers: [{ host: '127.0.0.1', port: 7709 }],
       environment: { PATH: process.env.PATH },
@@ -195,7 +195,7 @@ describe('TDX community process safety boundaries', () => {
   })
 
   it('uses a minimal child environment with fixed Python and uv isolation settings', () => {
-    const packageRoot = resolve(process.cwd(), 'packages/finance-provider-tdx')
+    const packageRoot = resolve(process.cwd(), 'packages/finance-data-service/providers/tdx')
     const inheritedEnvironment = {
       PATH: '/safe/bin', LANG: 'C.UTF-8', LC_ALL: 'C.UTF-8', LC_CTYPE: 'C.UTF-8',
       TMPDIR: '/safe/tmpdir', TMP: '/safe/tmp', TEMP: '/safe/temp',
@@ -922,7 +922,7 @@ describe('TDX optional providers', () => {
         connectTimeoutMs: 100,
       }
       const result = spawnSync('python3', [
-        join(process.cwd(), 'packages/finance-provider-tdx/python/runner.py'),
+        join(process.cwd(), 'packages/finance-data-service/providers/tdx/python/runner.py'),
       ], {
         input: JSON.stringify(request),
         encoding: 'utf8',
@@ -954,7 +954,7 @@ describe('TDX optional providers', () => {
 
   it('rejects non-whitelisted runner operations before importing pytdx', () => {
     const result = spawnSync('python3', [
-      join(process.cwd(), 'packages/finance-provider-tdx/python/runner.py'),
+      join(process.cwd(), 'packages/finance-data-service/providers/tdx/python/runner.py'),
     ], {
       input: JSON.stringify({
         version: '1',
@@ -981,7 +981,7 @@ describe('TDX optional providers', () => {
     const trace = join(directory, 'trace.txt')
     try {
       const result = spawnSync('python3', [
-        join(process.cwd(), 'packages/finance-provider-tdx/python/runner.py'),
+        join(process.cwd(), 'packages/finance-data-service/providers/tdx/python/runner.py'),
       ], {
         input: JSON.stringify({
           version: '1',
@@ -1015,8 +1015,8 @@ describe('TDX optional providers', () => {
   })
 
   it('ships its isolated runner and rejects unsafe server configuration', async () => {
-    await expect(access(join(process.cwd(), 'packages/finance-provider-tdx/python/runner.py'))).resolves.toBeUndefined()
-    await expect(access(join(process.cwd(), 'packages/finance-provider-tdx/pyproject.toml'))).resolves.toBeUndefined()
+    await expect(access(join(process.cwd(), 'packages/finance-data-service/providers/tdx/python/runner.py'))).resolves.toBeUndefined()
+    await expect(access(join(process.cwd(), 'packages/finance-data-service/providers/tdx/pyproject.toml'))).resolves.toBeUndefined()
     expect(() => community({ servers: ['https://example.com:7709'] })).toThrow(/host:port/)
     expect(() => community({ maxServerAttempts: 4 })).toThrow(/1 to 3/)
     expect(() => community({ connectTimeoutMs: 99 })).toThrow(/100 to 30000/)

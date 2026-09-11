@@ -26,7 +26,7 @@ describe('offline Agent governance trajectories', () => {
   it('keeps company research on frozen evidence and audit-gated completion', () => {
     const skill = read('skills/company-research/SKILL.md')
     expect(skill).toContain('finance_research_snapshot')
-    expect(skill).toMatch(/cannot report `complete` unless `finance_research_audit` passes/u)
+    expect(skill).toMatch(/Completion requires `finance_research_audit`[\s\S]*?gates to pass/u)
     expect(skill).toContain('workspace_id')
     expect(skill).toContain('expected_revision')
   })

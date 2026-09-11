@@ -154,24 +154,30 @@ class TestRolling:
         direct = _ewma_sum_at(series, 100, 50, targets)
         assert np.isfinite(direct).any()
 
-    def test_wls_zero_fills_nan(self):
-        # Reference convention: NaN returns are treated as 0 with full weight.
-        y = np.array([[0.02, np.nan, 0.04]])
-        x = np.array([0.01, 0.005, 0.015])
-        w = ewma_weights(3, 3)
-        yf = np.array([0.02, 0.0, 0.04])
-        total = w.sum()
-        my = (w @ yf) / total
-        mx = (w @ x) / total
-        var = (w * (x - mx) ** 2).sum() / total
-        beta = (w * (x - mx) * (yf - my)).sum() / total / var
-        alpha = my - beta * mx
-        sse = ((yf - (alpha + beta * x)) ** 2).sum()
-        sigma = np.sqrt(sse / 3)
-        out = _wls_at_targets(y, x, 3, 3, np.array([2], dtype=np.int64))
-        assert np.isclose(out[0, 0, 0], beta)
-        assert np.isclose(out[0, 0, 1], alpha)
-        assert np.isclose(out[0, 0, 2], sigma)
+    @pytest.mark.parametrize("missing", [np.nan, np.inf, -np.inf])
+    def test_wls_excludes_unpaired_observations(self, missing):
+        y = np.array([[0.02, missing, 0.04, 0.08, 0.06, 0.10]])
+        x = np.array([0.01, 0.005, 0.015, missing, 0.02, 0.03])
+        targets = np.array([2, 3, 4, 5], dtype=np.int64)
+        direct = _wls_at_targets(y, x, 3, 3, targets)
+        sliding = _wls_at_targets_sliding(y, x, 3, 3, targets)
+        np.testing.assert_allclose(direct, sliding, equal_nan=True, atol=1e-8)
+        assert direct[0, 0, 0] == pytest.approx(4.0)
+        assert direct[0, 0, 1] == pytest.approx(-0.02)
+        assert direct[0, 0, 2] == pytest.approx(0.0, abs=1e-12)
+
+    def test_wls_sliding_listing_becomes_eligible_inside_target_range(self):
+        x = np.arange(12, dtype=float) / 100
+        y = np.vstack([0.01 + 2 * x, np.full(12, np.nan)])
+        y[0, :3] = np.nan
+        targets = np.arange(5, 12, dtype=np.int64)
+        first_valid = np.array([3, 12], dtype=np.int64)
+        direct = _wls_at_targets(y, x, 5, 3, targets, first_valid)
+        sliding = _wls_at_targets_sliding(y, x, 5, 3, targets, first_valid)
+        np.testing.assert_allclose(direct, sliding, equal_nan=True, atol=1e-8)
+        assert np.isnan(sliding[0, :2]).all()
+        assert np.isfinite(sliding[0, 2:, :]).all()
+        assert np.isnan(sliding[1]).all()
 
     def test_wls_excludes_not_yet_listed(self):
         # Stock starts at index 2; window [1,3] starts before listing → NaN.

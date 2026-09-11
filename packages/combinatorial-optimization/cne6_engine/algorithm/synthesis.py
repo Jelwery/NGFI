@@ -15,6 +15,7 @@ from __future__ import annotations
 import numpy as np
 import polars as pl
 
+from cne6_engine.algorithm.rolling import finite_mean
 from cne6_engine.algorithm.registry import (
     DESCRIPTORS,
     descriptors_in_level2,
@@ -176,6 +177,19 @@ def synthesize_styles(
     meta: dict = {
         "industries": labels,
         "fill_rates": {},
+        "fill_masks": {},
+        "descriptor_quality": {},
+        "orthogonalization": {},
+        "cap_fallback": {
+            "quality_flag": "imputed" if np.any(~np.isfinite(caps) | (caps <= 0)) else "good",
+            "coverage": float(np.mean(np.isfinite(caps) & (caps > 0))) if n else 0.0,
+            "numerator": int(np.sum(np.isfinite(caps) & (caps > 0))), "denominator": n,
+            "fill_mask": (~np.isfinite(caps) | (caps <= 0)).tolist(),
+            "fallback_value": fallback_cap,
+            "method": "median_cap" if len(valid_caps) else "unit_cap_equal_weights",
+        },
+        "mapping_quality": {"quality_flag": "proxy", "coverage": 1.0,
+                            "reasons": ["unpublished_level2_mapping_equal_weight_approximation"]},
         "level2_active": [],
         "level1_active": [],
     }
@@ -188,7 +202,16 @@ def synthesize_styles(
         filled, fill_rate = fill_industry_median(
             clipped, industry_idx, n_ind, weights,
         )
-        meta["fill_rates"][name] = fill_rate
+        fill_mask = ~np.isfinite(raw) & np.isfinite(filled)
+        meta["fill_rates"][name] = float(fill_mask.mean()) if n else 0.0
+        meta["fill_masks"][name] = fill_mask.tolist()
+        meta["descriptor_quality"][name] = {
+            "quality_flag": "imputed" if fill_mask.any() else "good",
+            "coverage": float(np.isfinite(raw).mean()) if n else 0.0,
+            "numerator": int(np.isfinite(raw).sum()), "denominator": n,
+            "remaining_missing_mask": (~np.isfinite(filled)).tolist(),
+            "quality_mask": ["imputed" if f else "good" if np.isfinite(v) else "missing" for v, f in zip(filled, fill_mask)],
+        }
         z, _, _ = weighted_zscore(filled, weights)
         standardized[name] = z
 
@@ -203,19 +226,23 @@ def synthesize_styles(
         if not members:
             continue
         stacked = np.vstack([standardized[d] for d in members])
-        level2_values[l2] = np.nanmean(stacked, axis=0)
+        level2_values[l2] = finite_mean(stacked, axis=0)
 
     # --- Orthogonalization: industry + size, except the Size group --------
     for l2, values in level2_values.items():
         if l2 == "Size":
             continue
-        if l2 == "NonLinearSize":
-            # Already size-neutral by construction; industry-neutralize only.
-            level2_values[l2] = _orthogonalize(values, dummies)
-            continue
-        controls = dummies if lncap_raw is None else np.column_stack(
-            [dummies, lncap_raw]
-        )
+        # NonLinearSize is already size-neutral; others require size controls.
+        controls = dummies if l2 == "NonLinearSize" or lncap_raw is None else np.column_stack([dummies, lncap_raw])
+        valid = np.isfinite(values) & np.isfinite(controls).all(axis=1)
+        skipped = int(valid.sum()) < controls.shape[1] + 2
+        meta["orthogonalization"][l2] = {
+            "quality_flag": "proxy" if skipped or (lncap_raw is None and l2 != "NonLinearSize") else "good",
+            "skipped": skipped, "size_control_missing": lncap_raw is None and l2 != "NonLinearSize",
+            "coverage": float(valid.mean()) if n else 0.0,
+            "numerator": int(valid.sum()), "denominator": n,
+            "valid_mask": valid.tolist(), "reason": "insufficient_rows" if skipped else None,
+        }
         level2_values[l2] = _orthogonalize(values, controls)
 
     meta["level2_active"] = list(level2_values)
@@ -228,7 +255,7 @@ def synthesize_styles(
         if not members:
             continue
         stacked = np.vstack([level2_values[l2] for l2 in members])
-        raw = np.nanmean(stacked, axis=0)
+        raw = finite_mean(stacked, axis=0)
         z, _, _ = weighted_zscore(raw, weights)
         if np.isfinite(z).sum() < 3:
             continue

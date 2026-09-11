@@ -19,7 +19,7 @@ const python = [
 
 describe('quant-research BacktestRun bridge', () => {
   it('emits the exact strategy-core BacktestRun contract and identity', () => {
-    const project = path.join(process.cwd(), 'packages/quant-research')
+    const project = path.join(process.cwd(), 'packages/combinatorial-optimization')
     const output = execFileSync('uv', [
       'run', '--offline', '--frozen', '--project', project, 'python', '-c', python,
     ], {

@@ -2,11 +2,11 @@ import { access, mkdtemp, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { YFinanceProvider } from '@finance2dsh/provider-yfinance'
+import { YFinanceProvider } from '@finance2dsh/data-service/providers/yfinance'
 
 describe('YFinanceProvider process contract', () => {
   it('ships the private Python runner in the package', async () => {
-    const providerRoot = join(process.cwd(), 'packages/finance-provider-yfinance')
+    const providerRoot = join(process.cwd(), 'packages/finance-data-service/providers/yfinance')
     await expect(access(join(providerRoot, 'python/runner.py'))).resolves.toBeUndefined()
   })
 

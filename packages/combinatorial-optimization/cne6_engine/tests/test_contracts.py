@@ -180,6 +180,35 @@ class TestFundamentalHistory:
         assert row["equity"][0] == 5.5e9
 
 
+class TestFundamentalRevisions:
+    def test_visible_periods_preserve_original_until_revision_is_available(self):
+        original = _fundamental_frame()
+        revision = original.filter(pl.col("report_date") == "2024-12-31").with_columns(
+            pl.lit("2025-08-01").alias("available_date"), pl.lit(2e10).alias("revenue"),
+        )
+        history = FundamentalHistory(pl.concat([original, revision]).sort(["code", "report_date", "available_date"]))
+        history.validate()
+        assert history.asof("2025-07-31")["revenue"][0] == 1e10
+        assert history.asof("2025-08-01")["revenue"][0] == 2e10
+        assert history.asof("2026-05-01")["revenue"][0] == 1.1e10
+        assert history.visible_periods("2026-05-01").height == 2
+
+    def test_duplicate_same_available_date_is_ambiguous(self):
+        frame = _fundamental_frame()
+        with pytest.raises(ValueError, match="duplicate"):
+            FundamentalHistory(pl.concat([frame, frame.head(1)]).sort(["code", "report_date", "available_date"])).validate()
+
+    def test_annual_rank_does_not_count_revisions_as_extra_years(self):
+        from cne6_engine.algorithm.descriptors.fundamental_descriptors import visible_annuals
+        original = _fundamental_frame()
+        revision = original.head(1).with_columns(pl.lit("2025-08-01").alias("available_date"), pl.lit(2e10).alias("revenue"))
+        history = FundamentalHistory(pl.concat([original, revision]).sort(["code", "report_date", "available_date"]))
+        annuals = visible_annuals(history, "2026-05-01")
+        assert annuals.height == 2
+        assert annuals.filter(pl.col("_rn") == 2)["revenue"][0] == 2e10
+        assert visible_annuals(history, "2025-07-31")["revenue"][0] == 1e10
+
+
 class TestIndustryMembership:
     def test_valid_passes(self):
         industry = IndustryMembership(frame=_industry_frame())

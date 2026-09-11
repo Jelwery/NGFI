@@ -6,7 +6,7 @@ import {
   IFIND_OFFICIAL_PROVIDER_ID,
   IfindOfficialProvider,
   THS_PUBLIC_SOURCE_ID,
-} from '../packages/finance-provider-ifind/src/index.js'
+} from '../packages/finance-data-service/src/providers/ifind/index.js'
 
 const NOW = Date.parse('2026-09-05T00:00:00Z')
 

@@ -123,18 +123,15 @@ function backtestIdentity(run: Omit<BacktestRun, 'id' | 'startedAt' | 'completed
     engine: run.engine,
     engineVersion: run.engineVersion,
     engineTier: run.engineTier,
+    ...(run.inputContentHash === undefined ? {} : { inputContentHash: run.inputContentHash }),
     dataset: run.dataset,
     strategyHash: run.strategyHash,
     configHash: run.configHash,
     executionHash: run.executionHash,
     costModel: run.costModel,
-    benchmark: run.benchmark.status === 'available'
-      ? {
-        status: run.benchmark.status,
-        instrument: instrumentIdentity(run.benchmark.instrument),
-        datasetHash: run.benchmark.datasetHash,
-      }
-      : run.benchmark,
+    benchmark: run.benchmark.instrument === undefined ? run.benchmark : {
+      ...run.benchmark, instrument: instrumentIdentity(run.benchmark.instrument),
+    },
     metrics: run.metrics,
     artifacts: run.artifacts.map(artifact => ({ kind: artifact.kind, hash: artifact.hash })),
     status: run.status,

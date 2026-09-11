@@ -51,7 +51,7 @@ export class VendorError extends Error {
 
 export function resolveRepoPaths(root = resolve(THIS_DIR, '../..')) {
   const repositoryRoot = resolve(root)
-  const providerRoot = join(repositoryRoot, 'packages/finance-provider-astock')
+  const providerRoot = join(repositoryRoot, 'packages/finance-data-service/providers/astock')
   const upstreamRoot = join(providerRoot, 'upstream')
   const generatedRoot = join(providerRoot, 'python/generated')
   return Object.freeze({

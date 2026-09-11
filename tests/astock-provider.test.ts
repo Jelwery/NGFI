@@ -8,10 +8,10 @@ import {
   AStockProvider,
   ASTOCK_CAPABILITIES,
   createAStockProviderRegistration,
-} from '../packages/finance-provider-astock/src/index.js'
+} from '../packages/finance-data-service/src/providers/astock/index.js'
 
 const projectRoot = process.cwd()
-const providerRoot = join(projectRoot, 'packages/finance-provider-astock')
+const providerRoot = join(projectRoot, 'packages/finance-data-service/providers/astock')
 const fixtureRoot = join(projectRoot, 'tests/fixtures/a-stock-data')
 const pythonRunner = join(providerRoot, 'python/runner.py')
 
@@ -475,7 +475,7 @@ describe('AStockProvider process and safety boundaries', () => {
 
   it('terminates the runner before settling a stdin write failure', async () => {
     const source = await readFile(
-      join(projectRoot, 'packages/finance-provider-astock/src/provider.ts'),
+      join(projectRoot, 'packages/finance-data-service/src/providers/astock/provider.ts'),
       'utf8',
     )
     expect(source).toMatch(
@@ -598,6 +598,7 @@ describe('AStockProvider process and safety boundaries', () => {
     })
     expect(fundamentals.provenance.upstreamSource).toBe('sina-public-web-finance')
     expect(disclosures.data?.items[0]).toMatchObject({ id: 'official-001', category: '年度报告' })
+    expect(disclosures.data?.items[1]).toMatchObject({ id: 'official-002', category: 'announcement' })
     expect(disclosures.provenance.upstreamSource).toBe('cninfo-public-disclosures')
     expect(constituents.data).toMatchObject({ asOf: '2026-08-28', returned: 1 })
     expect(constituents.data?.constituents[0]?.instrument).toMatchObject({ symbol: '600519', exchange: 'SSE' })

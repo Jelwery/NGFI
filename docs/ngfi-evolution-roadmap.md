@@ -248,7 +248,7 @@ UI 的判断标准不是“像 Bloomberg/TradingView”，而是用户能否在 
 2. 定稿 `InstrumentId`、capability provider interfaces、`SourceRef`、Evidence/Assumption/ModelRun schema。
 3. 把现有 yfinance 包适配到 capability registry，保持现有 12 个 tool 的外部名称兼容。
 4. 为 provider routing、fallback provenance、symbol translation 加 contract tests。
-5. 把当前 CNE6 的 14 条 warning 分类：预期稀疏窗口显式抑制或转质量标记；PSD warning 增加修复后残差/最小特征值断言，避免测试长期噪声化。
+5. CNE6 历史 14 条 warning 已分类处理：空切片/稀疏窗口改为有效计数及 `quality_flag + coverage`；协方差采样改为显式 PSD 特征根构造，记录修复幅度与最小特征值。离线 pytest 默认 `-W error`，不全局忽略 warning。本地验证 146 passed、2 skipped、0 warnings；真实数据 proxy 和 PIT 缺口仍显式保留。
 
 验收：现有 `pnpm check` 全绿；所有当前 E2E 输出不变或有迁移说明；新增 provider 不需要实现无关 capability；任何 fallback 都可在结果中看见。
 
@@ -488,7 +488,7 @@ NGFI 最值得坚持的是现有的可信内核：canonical observation metadata
 2. [NGFI Finance2DSH 设计与实施计划](https://github.com/Jelwery/NGFI/blob/5f9b30e7b60781c6ac93a8c9381dda6cd5a59c1f/docs/finance2dsh-plan.md)
 3. [NGFI 运行与测试说明](https://github.com/Jelwery/NGFI/blob/5f9b30e7b60781c6ac93a8c9381dda6cd5a59c1f/docs/running-and-testing.md)
 4. [NGFI canonical contracts](https://github.com/Jelwery/NGFI/blob/5f9b30e7b60781c6ac93a8c9381dda6cd5a59c1f/packages/finance-core/src/contracts.ts)
-5. [NGFI yfinance provider](https://github.com/Jelwery/NGFI/blob/5f9b30e7b60781c6ac93a8c9381dda6cd5a59c1f/packages/finance-provider-yfinance/src/index.ts)
+5. [NGFI yfinance provider](https://github.com/Jelwery/NGFI/blob/5f9b30e7b60781c6ac93a8c9381dda6cd5a59c1f/packages/finance-data-service/src/providers/yfinance/index.ts)
 6. [NGFI finance tool policy](https://github.com/Jelwery/NGFI/blob/5f9b30e7b60781c6ac93a8c9381dda6cd5a59c1f/packages/dsh-finance-bundle/src/policy.ts)
 7. [NGFI evaluations](https://github.com/Jelwery/NGFI/blob/5f9b30e7b60781c6ac93a8c9381dda6cd5a59c1f/evals/README.md)
 8. [dsh-trading 中文 README](https://github.com/zhu1090093659/dsh-trading/blob/31917e5abcdca060e65e1cc85dab6ba097fdb043/README_zh.md)

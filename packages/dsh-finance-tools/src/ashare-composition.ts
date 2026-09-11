@@ -8,17 +8,17 @@ import {
   ASTOCK_PROVIDER_ID,
   createAStockProvider,
   type AStockProviderOptions,
-} from '@finance2dsh/provider-astock'
+} from '@finance2dsh/data-service/providers/astock'
 import {
   CNE6_LOCAL_CAPABILITIES,
   createCne6LocalProvider,
   type Cne6LocalProviderOptions,
-} from '@finance2dsh/provider-cne6'
+} from '@finance2dsh/data-service/providers/cne6'
 import {
   createIfindOfficialProvider,
   IFIND_OFFICIAL_CAPABILITIES,
   IFIND_OFFICIAL_PROVIDER_ID,
-} from '@finance2dsh/provider-ifind'
+} from '@finance2dsh/data-service/providers/ifind'
 import {
   createTdxCommunityProvider,
   createTdxOfficialProvider,
@@ -26,13 +26,13 @@ import {
   TDX_COMMUNITY_PROVIDER_ID,
   TDX_OFFICIAL_CAPABILITIES,
   TDX_OFFICIAL_PROVIDER_ID,
-} from '@finance2dsh/provider-tdx'
+} from '@finance2dsh/data-service/providers/tdx'
 import {
   createTushareMcpProvider,
   resolveTushareEndpoint,
   TUSHARE_MCP_CAPABILITIES,
   type TushareMcpProvider,
-} from '@finance2dsh/provider-tushare-mcp'
+} from '@finance2dsh/data-service/providers/tushare-mcp'
 
 export const ASHARE_PROVIDER_IDS = [
   ASTOCK_PROVIDER_ID,

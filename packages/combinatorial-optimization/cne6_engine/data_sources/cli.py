@@ -64,6 +64,27 @@ def build_parser(today: date | None = None) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
 
+    acceptance = commands.add_parser(
+        "acceptance", help="inspect frozen data contracts or validate a candidate without publishing",
+    )
+    acceptance.add_argument(
+        "--contract", type=Path,
+        default=PACKAGE_ROOT.parents[1] / "config/equity-data-acceptance.json",
+    )
+    acceptance.add_argument("--candidate", type=Path)
+    acceptance.add_argument("--output", type=Path)
+
+    a2 = commands.add_parser("a2-audit", help="audit A2 sample evidence and report unfulfilled full-market/publication gates")
+    a2.add_argument("--data-root", type=Path, default=PACKAGE_ROOT.parents[1] / ".runtime/equity-data/a2")
+    a2.add_argument("--contract", type=Path, default=PACKAGE_ROOT.parents[1] / "config/equity-data-acceptance.json")
+    a2.add_argument("--candidate", type=Path, required=True)
+    a2.add_argument("--output", type=Path, required=True)
+
+    sample = commands.add_parser("sample", help="normalize acquired TuShare sample into diagnostic candidates without publishing")
+    sample.add_argument("--data-root", type=Path, default=PACKAGE_ROOT.parents[1] / ".runtime/equity-data/a2")
+    sample.add_argument("--contract", type=Path, default=PACKAGE_ROOT.parents[1] / "config/equity-data-acceptance.json")
+    sample.add_argument("--output", type=Path, required=True)
+
     probe_parser = commands.add_parser(
         "probe", help="print current East Money statement/dividend schemas",
     )
@@ -131,7 +152,32 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     try:
-        if args.command == "validate":
+        if args.command == "acceptance":
+            from cne6_engine.data_sources.acceptance import (
+                content_hash, inventory, strict_json, validate_candidate,
+            )
+            report = inventory(args.contract, PACKAGE_ROOT.parents[1])
+            if args.candidate is not None:
+                report["candidate"] = validate_candidate(
+                    args.candidate, strict_json(args.contract.read_text()),
+                    content_hash(args.contract),
+                )
+            if args.output is not None:
+                with args.output.open("x", encoding="utf-8") as stream:
+                    json.dump(report, stream, ensure_ascii=False, indent=2, allow_nan=False)
+                    stream.write("\n")
+        elif args.command == "a2-audit":
+            from cne6_engine.data_sources.a2_gate import audit_a2
+            report = audit_a2(args.data_root, args.candidate, args.contract, PACKAGE_ROOT.parents[1])
+            with args.output.open("x", encoding="utf-8") as stream:
+                json.dump(report, stream, ensure_ascii=False, indent=2, allow_nan=False)
+                stream.write("\n")
+            print(json.dumps({"status": report["status"], "readyForA3": report["readyForA3"], "output": str(args.output)}))
+            return 0 if report["status"] == "pass" else 2
+        elif args.command == "sample":
+            from cne6_engine.data_sources.sample import build_sample
+            report = build_sample(args.data_root, args.contract, args.output)
+        elif args.command == "validate":
             report = validate_assets(
                 args.data_root.resolve(),
                 expected_symbols=set(_symbols(args.symbols) or []),

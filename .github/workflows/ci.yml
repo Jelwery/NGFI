@@ -43,8 +43,8 @@ jobs:
           corepack enable pnpm
           pnpm install --frozen-lockfile
           uv sync --frozen
-          uv sync --project packages/quant-research --frozen
           uv sync --project packages/combinatorial-optimization --extra dev --frozen
+          uv sync --project packages/finance-data-service/providers/tdx --frozen
 
       - name: Run complete offline gate
         env:

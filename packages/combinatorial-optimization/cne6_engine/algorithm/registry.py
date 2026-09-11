@@ -1,5 +1,5 @@
 # cne6_engine/algorithm/registry.py
-"""Factor registry: 46 descriptors → 20+ level-2 factors → 9 level-1 styles.
+"""Factor registry: 42 implemented descriptors → 20+ level-2 factors → 9 level-1 styles.
 
 The hierarchy and descriptor parameters follow the CNE6 reference materials
 (调研报告 + barra_cne6_factor_reference.py).  Level-2 partitioning is an
@@ -86,7 +86,7 @@ DESCRIPTORS: dict[str, DescriptorSpec] = {
     # --- Quality → Earnings Quality ---
     "ABS": _d("ABS", "EarningsQuality", "Quality",
               ["total_assets", "total_liabilities", "cash",
-               "long_term_debt", "short_term_debt", "capex",
+               "long_term_debt", "short_term_debt",
                "depreciation_amortization"],
               note="LYR proxies MRQ; IBD≈LTD+STD"),
     "ACF": _d("ACF", "EarningsQuality", "Quality",
@@ -141,6 +141,20 @@ DESCRIPTORS: dict[str, DescriptorSpec] = {
     "DTOP": _d("DTOP", "DividendYield", "DividendYield",
                ["dividend_per_share", "close"]),
 }
+
+# Algorithm-level substitutions remain proxies even with a verified input source.
+# Source-specific EBIT, announcement-date and industry limitations are inherited
+# through required fields/available_date by compute_descriptors.
+DESCRIPTOR_PROXY_REASONS: dict[str, tuple[str, ...]] = {
+    **{name: ("annual_lyr_substitutes_mrq",) for name in
+       ("MLEV", "BLEV", "DTOA", "ABS", "ACF", "BTOP")},
+    **{name: ("annual_lyr_substitutes_ttm",) for name in
+       ("ATO", "GP", "GPM", "ROA", "ETOP", "CETOP", "EM")},
+    "DTOP": ("annual_dividend_substitutes_ttm",),
+    **{name: ("unpublished_analyst_formula_90_day_approximation",) for name in ("RRIBS", "EPIBSC", "EARNC")},
+}
+for _name in ("ABS", "EM"):
+    DESCRIPTOR_PROXY_REASONS[_name] += ("interest_bearing_debt_approximated_by_ltd_plus_std",)
 
 # Synthesized fields produced by the algorithm layer from contract fields.
 _SYNTHETIC_FIELDS = {

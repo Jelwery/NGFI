@@ -16,6 +16,8 @@ Known source limitations (v1):
 """
 from __future__ import annotations
 
+import hashlib
+import json
 import os
 from pathlib import Path
 from typing import Callable, Optional
@@ -30,6 +32,8 @@ from cne6_engine.data_sources.publication import (
 from cne6_engine.interfaces.contracts import (
     BenchmarkSeries,
     DataBundle,
+    DataQuality,
+    QualityRecord,
     FundamentalHistory,
     IndustryMembership,
     MarketData,
@@ -74,6 +78,9 @@ class SinaAdapter:
         self._snapshot_root = snapshot_root
         self._snapshot_id = snapshot_id
         self._snapshot_files = snapshot_files
+        self._field_quality: dict[str, QualityRecord] = {}
+        self._universe: dict = {}
+        self._fundamental_exclusions = 0
 
     @property
     def cache_identity(self) -> Optional[str]:
@@ -164,6 +171,7 @@ class SinaAdapter:
 
     def load_bundle(self, end_date: str) -> DataBundle:
         self._verify_snapshot_integrity()
+        self._field_quality = {}
         industry = self._load_industry()
         market = self._load_market(end_date, industry)
         fundamentals = self._load_fundamentals()
@@ -175,7 +183,10 @@ class SinaAdapter:
             fundamentals=fundamentals,
             industry=industry,
             analyst=None,
+            quality=self._quality(market, fundamentals, industry, benchmark),
             provenance={
+                "universe": self._universe,
+                "fundamental_exclusions": self._fundamental_exclusions,
                 "adapter": "sina",
                 "end_date": end_date,
                 "turnover_rate": "native East Money daily rate when present; "
@@ -194,6 +205,58 @@ class SinaAdapter:
         bundle.validate()
         self._verify_snapshot_integrity()
         return bundle
+
+    def _quality(self, market, fundamentals, industry, benchmark) -> DataQuality:
+        """Checksum verification is integrity, not independent provider verification."""
+        def record(frame, name, flag="unverified", reasons=("provider_not_verified",), pit=None):
+            col = frame[name]
+            count = int(col.is_finite().fill_null(False).sum()) if col.dtype.is_numeric() else int(col.is_not_null().sum())
+            return QualityRecord(flag if count else "missing", count / len(frame) if len(frame) else 0.0,
+                                 count, len(frame), reasons, pit)
+
+        for name, dtype in MARKET_SCHEMA.items():
+            if dtype == pl.Float64 and name not in self._field_quality:
+                self._field_quality[name] = record(market.frame, name)
+        for name, dtype in FUNDAMENTAL_SCHEMA.items():
+            if dtype == pl.Float64:
+                self._field_quality[name] = record(fundamentals.frame, name)
+        for name, reasons in {
+            "ebit": ("ebit_profit_total_plus_finance_expense",),
+            "depreciation_amortization": ("depreciation_amortization_may_have_missing_components",),
+            "dividend_per_share": ("annual_dividend_not_ttm_or_event_pit",),
+        }.items():
+            self._field_quality[name] = record(fundamentals.frame, name, "proxy", reasons, False if name == "dividend_per_share" else None)
+        self._field_quality["available_date"] = record(
+            fundamentals.frame, "available_date", "proxy",
+            ("announcement_date_may_be_next_year_may_1", "announcement_date_origin_not_preserved"), False,
+        )
+        self._field_quality["industry"] = record(
+            industry.frame, "industry", "proxy", ("current_industry_not_point_in_time",), False,
+        )
+        self._field_quality["benchmark_return"] = record(benchmark.frame, "daily_return")
+        for name in ("analyst_rating_change", "analyst_eps_forecast_change", "analyst_earnings_revision"):
+            self._field_quality[name] = QualityRecord("missing", 0.0, 0, len(market.codes), ("analyst_source_absent",), None)
+        config = {"adapter_version": 2, "min_listed_days": self.min_listed_days,
+                  "benchmark_symbol": self.benchmark_symbol, "benchmark_start": self.benchmark_start}
+        # Legacy mutable assets have no publication ID: fingerprint content, not paths.
+        digest = hashlib.sha256()
+        if self._snapshot_id:
+            digest.update(self._snapshot_id.encode())
+        else:
+            for path in (self.price_path, self.cap_snapshot_path, self.fundamentals_path,
+                         self.industry_path, self.benchmark_cache_path):
+                if Path(path).is_file():
+                    with open(path, "rb") as stream:
+                        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                            digest.update(chunk)
+        return DataQuality(
+            quality_flag="proxy", provider="sina_akshare_cached", provider_verified=False,
+            coverage=(len(market.codes) / self._universe["count"] if self._universe["count"] else 0.0),
+            point_in_time=False, source_version=digest.hexdigest(),
+            config_version=hashlib.sha256(json.dumps(config, sort_keys=True).encode()).hexdigest(),
+            reasons=("provider_not_verified", "historical_cap_from_current_snapshot", "current_industry_not_point_in_time"),
+            field_records=dict(self._field_quality),
+        )
 
     def _verify_snapshot_integrity(self) -> None:
         if self._snapshot_root is None or self._snapshot_id is None:
@@ -215,10 +278,19 @@ class SinaAdapter:
             raise RuntimeError(f"price asset empty: {self.price_path}")
 
         price = price.filter(pl.col("date") <= end_date)
+        original_codes = sorted(price["code"].unique().to_list())
         price = self._filter_min_listed(price)
-
+        listed_codes = set(price["code"].unique().to_list())
         industry_codes = industry.frame.select("code")
         price = price.join(industry_codes, on="code", how="semi")
+        kept_codes = set(price["code"].unique().to_list())
+        self._universe = {
+            "codes": original_codes, "count": len(original_codes),
+            "exclusions": {
+                **{code: "insufficient_listing_history" for code in original_codes if code not in listed_codes},
+                **{code: "missing_industry" for code in listed_codes - kept_codes},
+            },
+        }
 
         snapshot = pl.read_parquet(self.cap_snapshot_path).filter(
             (pl.col("close") > 0) & (pl.col("total_market_cap") > 0)
@@ -247,6 +319,17 @@ class SinaAdapter:
             .select(list(MARKET_SCHEMA))
             .sort(["code", "date"])
         )
+        for name, reasons in {
+            "total_market_cap": ("historical_shares_from_current_cap_divided_by_current_price",),
+            "float_market_cap": ("historical_shares_from_current_cap_divided_by_current_price", "float_cap_equals_total_cap"),
+            "amount": ("traded_amount_origin_not_verified",),
+            "turnover_rate": ("native_turnover_or_amount_divided_by_proxy_cap",),
+        }.items():
+            count = int(market[name].is_finite().fill_null(False).sum())
+            self._field_quality[name] = QualityRecord(
+                "proxy" if count else "missing", count / len(market) if len(market) else 0.0,
+                count, len(market), reasons, False if "cap" in name or name == "turnover_rate" else None,
+            )
         return MarketData(frame=market)
 
     def _filter_min_listed(self, price: pl.DataFrame) -> pl.DataFrame:
@@ -279,9 +362,8 @@ class SinaAdapter:
         ])
         # Drop rows violating the no-look-ahead invariant rather than crash.
         bad = raw.filter(pl.col("available_date") < pl.col("report_date"))
+        self._fundamental_exclusions = bad.height
         if bad.height:
-            print(f"  dropping {bad.height} fundamental rows with "
-                  "available_date < report_date")
             raw = raw.filter(pl.col("available_date") >= pl.col("report_date"))
 
         frame = raw.select(list(FUNDAMENTAL_SCHEMA)).sort(["code", "report_date"])

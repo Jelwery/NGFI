@@ -26,9 +26,8 @@ def visible_annuals(
 
     Columns carry a `_rn` rank: 1 = most recent visible report.
     """
-    vis = fundamentals.frame.filter(
-        (pl.col("available_date") <= date)
-        & (pl.col("report_date").str.slice(5, 5) == "12-31")
+    vis = fundamentals.visible_periods(date).filter(
+        pl.col("report_date").str.slice(5, 5) == "12-31"
     )
     if vis.is_empty():
         return vis.head(0)
@@ -71,10 +70,10 @@ def _series_matrix(
     if annuals.is_empty():
         return np.full((n, 0), np.nan), np.zeros(n, dtype=np.int64)
     sub = annuals.filter(pl.col("code").is_in(codes))
+    if sub.is_empty():
+        return np.full((n, 0), np.nan), np.zeros(n, dtype=np.int64)
     max_rn = int(sub["_rn"].max())
     matrix = np.full((n, max_rn), np.nan)
-    if sub.is_empty():
-        return matrix, np.zeros(n, dtype=np.int64)
     enc = sub.with_columns(
         pl.col("code").replace_strict(
             {c: i for i, c in enumerate(codes)},
@@ -158,7 +157,7 @@ def fundamental_field_coverage(
     n = len(codes)
     for field in fields:
         col = latest.select(field).to_series()
-        non_null = col.len() - col.null_count()
+        non_null = int(col.is_finite().fill_null(False).sum())
         coverage[field] = float(non_null) / n if n else 0.0
     return coverage
 
@@ -172,8 +171,8 @@ def compute_fundamental_descriptors(
     """All fundamental descriptors for one date. Returns name → (N,) array.
 
     ``close`` follows the DTOP convention (previous-month-end close).
-    ``total_cap_prev`` is the T−1 market cap (MLEV convention); falls back to
-    the current cap when None.
+    ``total_cap_prev`` is the T−1 market cap (MLEV convention); None means
+    unavailable, never a substitution with today's cap.
     """
     n = len(codes)
     result: dict[str, np.ndarray] = {}
@@ -224,7 +223,7 @@ def compute_fundamental_descriptors(
     cfi = col("investment_cashflow")
     dps = col("dividend_per_share")
 
-    me_prev = total_cap if total_cap_prev is None else total_cap_prev
+    me_prev = np.full(n, np.nan) if total_cap_prev is None else total_cap_prev
 
     # Ratios from the latest visible annual report.
     result["BTOP"] = _ratio(parent_equity, total_cap)

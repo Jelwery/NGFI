@@ -9,18 +9,13 @@
         "dependencies": "production (--no-dev)"
       },
       {
-        "path": "packages/combinatorial-optimization",
-        "project": "cne6-engine",
-        "dependencies": "production (--no-dev)"
-      },
-      {
-        "path": "packages/finance-provider-tdx",
+        "path": "packages/finance-data-service/providers/tdx",
         "project": "finance2dsh-tdx-runner",
         "dependencies": "production (--no-dev)"
       },
       {
-        "path": "packages/quant-research",
-        "project": "ngfi-quant-research",
+        "path": "packages/combinatorial-optimization",
+        "project": "cne6-engine",
         "dependencies": "production (--no-dev)"
       }
     ]
@@ -2834,6 +2829,13 @@
     },
     {
       "ecosystem": "pypi",
+      "name": "clarabel",
+      "version": "0.11.1",
+      "license": "Apache-2.0",
+      "project": "cne6-engine"
+    },
+    {
+      "ecosystem": "pypi",
       "name": "click",
       "version": "8.5.0",
       "license": "BSD-3-Clause",
@@ -2845,6 +2847,13 @@
       "version": "8.5.0",
       "license": "BSD-3-Clause",
       "project": "finance2dsh-yfinance-runner"
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "cloudpickle",
+      "version": "3.1.2",
+      "license": "BSD-3-Clause",
+      "project": "cne6-engine"
     },
     {
       "ecosystem": "pypi",
@@ -2887,6 +2896,13 @@
     },
     {
       "ecosystem": "pypi",
+      "name": "cvxpy",
+      "version": "1.9.2",
+      "license": "Apache-2.0",
+      "project": "cne6-engine"
+    },
+    {
+      "ecosystem": "pypi",
       "name": "decorator",
       "version": "5.3.1",
       "license": "BSD-2-Clause",
@@ -2919,6 +2935,13 @@
       "version": "0.16.0",
       "license": "MIT",
       "project": "finance2dsh-yfinance-runner"
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "highspy",
+      "version": "1.15.1",
+      "license": "MIT",
+      "project": "cne6-engine"
     },
     {
       "ecosystem": "pypi",
@@ -2957,6 +2980,20 @@
     },
     {
       "ecosystem": "pypi",
+      "name": "jinja2",
+      "version": "3.1.6",
+      "license": "BSD-3-Clause",
+      "project": "cne6-engine"
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "joblib",
+      "version": "1.6.0",
+      "license": "BSD-3-Clause",
+      "project": "cne6-engine"
+    },
+    {
+      "ecosystem": "pypi",
       "name": "jsonpath",
       "version": "0.82.2",
       "license": "MIT",
@@ -2973,6 +3010,13 @@
       "ecosystem": "pypi",
       "name": "lxml",
       "version": "6.1.2",
+      "license": "BSD-3-Clause",
+      "project": "cne6-engine"
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "markupsafe",
+      "version": "3.0.3",
       "license": "BSD-3-Clause",
       "project": "cne6-engine"
     },
@@ -3056,6 +3100,13 @@
       "version": "3.1.5",
       "license": "MIT",
       "project": "finance2dsh-yfinance-runner"
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "osqp",
+      "version": "1.1.3",
+      "license": "Apache-2.0",
+      "project": "cne6-engine"
     },
     {
       "ecosystem": "pypi",
@@ -3231,6 +3282,13 @@
     },
     {
       "ecosystem": "pypi",
+      "name": "qdldl",
+      "version": "0.1.9.post1",
+      "license": "Apache-2.0",
+      "project": "cne6-engine"
+    },
+    {
+      "ecosystem": "pypi",
       "name": "requests",
       "version": "2.34.2",
       "license": "Apache-2.0",
@@ -3259,6 +3317,20 @@
       "license": "BSD-3-Clause",
       "project": "cne6-engine",
       "marker": "python_full_version >= '3.12'"
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "scs",
+      "version": "3.3.1",
+      "license": "MIT",
+      "project": "cne6-engine"
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "setuptools",
+      "version": "84.0.0",
+      "license": "MIT",
+      "project": "cne6-engine"
     },
     {
       "ecosystem": "pypi",
@@ -3301,6 +3373,13 @@
       "version": "2.9.2",
       "license": "MIT",
       "project": "finance2dsh-yfinance-runner"
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "sparsediffpy",
+      "version": "0.3.0",
+      "license": "Apache-2.0",
+      "project": "cne6-engine"
     },
     {
       "ecosystem": "pypi",

@@ -146,6 +146,7 @@ def build_portfolio_risk_snapshot(
     pipeline_result: dict[str, Any],
     *,
     model_version: str | None = None,
+    available_at: str | None = None,
     reconciliation_tolerance: float = DEFAULT_RECONCILIATION_TOLERANCE,
     condition_warning: float = DEFAULT_CONDITION_WARNING,
 ) -> dict[str, Any]:
@@ -220,7 +221,49 @@ def build_portfolio_risk_snapshot(
         reconciliation_tolerance=reconciliation_tolerance,
         condition_warning=condition_warning,
     )
+    availability = available_at or meta.get("available_at")
+    if availability is not None:
+        from datetime import datetime
+        parsed = datetime.fromisoformat(availability.replace("Z", "+00:00"))
+        close = datetime.fromisoformat(meta["end_date"] + "T15:00:00+08:00")
+        if parsed.tzinfo is None or parsed < close:
+            raise Cne6PortfolioSnapshotError("model availability must include timezone and not precede its final market close")
     provenance = meta.get("provenance")
+    data_quality = meta.get("data_quality", {})
+    source_quality = data_quality.get("source_quality", {
+        "quality_flag": "unverified", "coverage": None,
+        "provider_verified": False, "reasons": ["source_quality_not_supplied"],
+    })
+    descriptor_quality = data_quality.get("descriptor_quality", {})
+    original_count = data_quality.get("original_universe", {}).get("count", security_count)
+    if type(original_count) is not int or original_count < security_count:
+        raise Cne6PortfolioSnapshotError("original universe count cannot be smaller than surviving securities")
+    coverage = {
+        "universeCount": original_count,
+        "exposureCount": int(np.isfinite(exposures).all(axis=1).sum()),
+        "specificRiskCount": int((np.isfinite(specific_risk) & (specific_risk > 0)).sum()),
+        "numerator": security_count, "denominator": original_count,
+        "coverage": security_count / original_count if original_count else 0.0,
+        "exclusions": data_quality.get("exclusions", {}),
+    }
+    proxy_flags = set(source_quality.get("reasons", []))
+    for record in source_quality.get("field_records", {}).values():
+        if record.get("quality_flag") != "good":
+            proxy_flags.update(record.get("reasons", []))
+    for record in descriptor_quality.values():
+        if record.get("quality_flag") != "good":
+            proxy_flags.update(record.get("reasons", []))
+    synthesis = data_quality.get("synthesis", {})
+    proxy_flags.update(synthesis.get("mapping_quality", {}).get("reasons", []))
+    proxy_flags.update(data_quality.get("factor_returns", {}).get("reasons", []))
+    if any(synthesis.get("fill_rates", {}).values()):
+        proxy_flags.add("descriptor_median_imputation")
+    if synthesis.get("cap_fallback", {}).get("quality_flag") == "imputed":
+        proxy_flags.add("market_cap_imputation")
+    if any(record.get("quality_flag") != "good" for record in synthesis.get("orthogonalization", {}).values()):
+        proxy_flags.add("orthogonalization_incomplete")
+    source_quality = {**source_quality, "status": "warning" if proxy_flags or source_quality.get("quality_flag") != "good" else "ok",
+                      "proxyFlags": sorted(proxy_flags)}
     identity = {
         "model": MODEL_NAME,
         "modelVersion": resolved_version,
@@ -229,12 +272,14 @@ def build_portfolio_risk_snapshot(
         "securities": securities,
         "factorCovariance": factor_cov.tolist(),
         "stockCovariance": stock_cov.tolist(),
+        "availableAt": availability,
         "pipeline": {
             "nDays": meta.get("n_days"),
             "lookbackDays": meta.get("lookback_days"),
             "factorCovarianceParameters": meta.get("factor_cov_kwargs"),
             "specificRiskParameters": meta.get("specific_risk_kwargs"),
             "provenance": provenance,
+            "dataQuality": data_quality,
         },
     }
     return {
@@ -242,17 +287,18 @@ def build_portfolio_risk_snapshot(
         "model": MODEL_NAME,
         "modelVersion": resolved_version,
         "asOf": meta["end_date"],
+        "availableAt": availability,
         "currency": "CNY",
         "covariancePeriod": "daily",
         "factors": factors,
         "securities": securities,
         "factorCovariance": factor_cov.tolist(),
         "stockCovariance": stock_cov.tolist(),
-        "coverage": {
-            "universeCount": security_count,
-            "exposureCount": int(np.isfinite(exposures).all(axis=1).sum()),
-            "specificRiskCount": int((np.isfinite(specific_risk) & (specific_risk > 0)).sum()),
-        },
+        "coverage": coverage,
+        "sourceQuality": source_quality,
+        "descriptorQuality": descriptor_quality,
+        "dataQuality": data_quality,
+
         "inputHash": _stable_hash(identity),
         "quality": quality,
     }

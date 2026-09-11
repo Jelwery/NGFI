@@ -499,7 +499,7 @@ skill-creator 要求的测试 workspace 按 iteration 组织，运行产物不�
 
 2026-08-31 在项目隔离 runtime、DSH `0.1.1-rc.2`、`trae-official / GPT-5.6-Sol / xhigh` 下完成：
 
-- `pnpm check` 通过：4 个 TypeScript package 构建和 typecheck 成功；11 个 Vitest 文件、50 个测试通过；CNE6 129 passed、2 skipped；runtime prepare 与 headless/Web profile dump 均成功。CNE6 的 14 条 warning 是现有 synthetic 数值路径中的 empty-slice/协方差告警，没有测试失败。
+- `pnpm check` 通过：4 个 TypeScript package 构建和 typecheck 成功；11 个 Vitest 文件、50 个测试通过；CNE6 129 passed、2 skipped；runtime prepare 与 headless/Web profile dump 均成功。当时 CNE6 有 14 条 synthetic empty-slice/协方差 warning。后续整合已按两类关闭：稀疏计算使用显式有效计数及质量标记；协方差采样使用 PSD 特征根与数值断言。当前离线套件以 `-W error` 验证，146 passed、2 skipped、0 warnings；历史计数不再作为可忽略告警基线。
 - `pnpm test:live:yfinance` 通过 4/4：真实 AAPL reference/market、fundamentals、estimates，以及新增 behavior market evidence adapter。
 - `pnpm test:e2e` 通过：真实模型加载 `ticker-snapshot`，调用 `finance_security_reference` 与 `finance_market_data`；Web profile 在动态 loopback 端口返回 HTTP 200。
 - 独立行为 smoke 以 JSON trace 完成，工具顺序包含 `skill`、`finance_behavior_reference(topic=market-aggregation)`、`finance_behavior_market_evidence(ticker=AAPL, benchmark=SPY, window=60)`，随后补充证券识别；所有工具无 error，turn reason 为 `completed`。回答明确分开市场事实、FOMO 候选机制、竞争解释、缺失证据和验证指标，没有给买卖指令。

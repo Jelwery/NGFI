@@ -17,4 +17,8 @@ Use this Skill only in the `strategy-research` preset. Strategy formulas, valida
 6. Use `finance_signal_outcome` to append revisions. `unfillable`, `expired`, and `unable` keep all return fields null. Calibration is evidence-only and stays `insufficient` below its declared sample threshold.
 7. `finance_strategy_promotion` accepts only research-tier evidence. It can recommend candidate/shadow status but cannot mutate the registry or execute a trade.
 
+For daily portfolio simulation, supply target schedules known before the execution open, explicit PIT trading status, lagged ADV, raw prices and corporate-action events. Require actual CSI300/CSI800 series; metadata alone is not a benchmark. Read industry/style/residual-selection attribution together with cash, cost and trading-timing effects and coverage.
+
+Use `finance_strategy_backtest(tier=walk-forward)` in a research case with `workspace_id`, `case_id` and `expected_revision`. Register explicit candidate weights/thresholds, matched candidate-return dates, train/test folds, purge/label horizon, dataset/code versions and seed. Training selects parameters; each frozen test fold runs once. Repeating an identical registered request returns its recorded result; changing parameters creates another visible experiment. Candidate returns must already come from frozen cost-aware portfolio runs, not invented observations.
+
 Report exact data windows, hashes, cost/execution semantics, IS/OOS separation, sample counts, unavailable metrics and every rejection. Never turn missing data into zero or statistical evidence into a guaranteed return.

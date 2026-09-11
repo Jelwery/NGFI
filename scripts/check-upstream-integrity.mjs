@@ -6,7 +6,7 @@ import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)))
-const snapshot = resolve(root, 'packages/finance-provider-astock/upstream/upstream.lock.json')
+const snapshot = resolve(root, 'packages/finance-data-service/providers/astock/upstream/upstream.lock.json')
 
 if (!existsSync(snapshot)) {
   process.stdout.write('upstream integrity: no vendored a-stock snapshot in this phase\n')

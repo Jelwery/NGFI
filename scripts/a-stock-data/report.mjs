@@ -9,9 +9,9 @@ const THIS_DIR = dirname(fileURLToPath(import.meta.url))
 const DEFAULT_ROOT = resolve(THIS_DIR, '../..')
 const MANIFEST_TYPES = Object.freeze(['lock', 'capability', 'source'])
 const MANIFEST_PATHS = Object.freeze({
-  lock: 'packages/finance-provider-astock/upstream/upstream.lock.json',
-  capability: 'packages/finance-provider-astock/upstream/capability-manifest.json',
-  source: 'packages/finance-provider-astock/upstream/source-manifest.json',
+  lock: 'packages/finance-data-service/providers/astock/upstream/upstream.lock.json',
+  capability: 'packages/finance-data-service/providers/astock/upstream/capability-manifest.json',
+  source: 'packages/finance-data-service/providers/astock/upstream/source-manifest.json',
 })
 const DIRECT_FILENAMES = Object.freeze({
   lock: 'upstream.lock.json',

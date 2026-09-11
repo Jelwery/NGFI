@@ -13,7 +13,7 @@ import {
   type FinanceDataProvider,
   type RelativeMetric,
 } from '@finance2dsh/core'
-import { createYFinanceProvider } from '@finance2dsh/provider-yfinance'
+import { createYFinanceProvider } from '@finance2dsh/data-service/providers/yfinance'
 import { createBehaviorReferenceTool } from './behavior-reference.js'
 import { createBehaviorMarketEvidenceTool } from './behavior-market-evidence.js'
 import { createBehaviorTradeAuditTool } from './behavior-trade-audit.js'
@@ -323,16 +323,16 @@ export function createAllFinanceTools(
 export function createGovernedFinanceTools(options: { runtimeRoot: string; quantProjectRoot: string; adversarialExecutor?: import('@finance2dsh/research-workflow').AdversarialChatExecutor }): ToolDefinition[] {
   return [
     ...createResearchTools({ runtimeRoot: options.runtimeRoot, ...(options.adversarialExecutor === undefined ? {} : { adversarialExecutor: options.adversarialExecutor }) }),
-    ...createStrategyTools({ quantProjectRoot: options.quantProjectRoot }),
+    ...createStrategyTools({ quantProjectRoot: options.quantProjectRoot, runtimeRoot: options.runtimeRoot }),
     ...createSignalTools({ runtimeRoot: options.runtimeRoot }),
-    ...createPortfolioTools({ runtimeRoot: options.runtimeRoot }),
+    ...createPortfolioTools({ runtimeRoot: options.runtimeRoot, quantProjectRoot: options.quantProjectRoot }),
   ]
 }
 
 function findQuantProjectRoot(): string {
   let current = dirname(fileURLToPath(import.meta.url))
   while (true) {
-    const candidate = join(current, 'packages', 'quant-research', 'pyproject.toml')
+    const candidate = join(current, 'packages', 'combinatorial-optimization', 'pyproject.toml')
     if (existsSync(candidate)) return dirname(candidate)
     const parent = dirname(current)
     if (parent === current) throw new Error('unable to locate the bundled quant-research project')

@@ -11,7 +11,9 @@
       "import": "./lib/index.js"
     }
   },
-  "files": ["lib"],
+  "files": [
+    "lib"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "clean": "rm -rf lib",
@@ -26,12 +28,6 @@
     "@deepseek-ai/dsh-tools": "0.1.1-rc.2",
     "@finance2dsh/core": "workspace:*",
     "@finance2dsh/data-service": "workspace:*",
-    "@finance2dsh/provider-astock": "workspace:*",
-    "@finance2dsh/provider-cne6": "workspace:*",
-    "@finance2dsh/provider-ifind": "workspace:*",
-    "@finance2dsh/provider-tdx": "workspace:*",
-    "@finance2dsh/provider-tushare-mcp": "workspace:*",
-    "@finance2dsh/provider-yfinance": "workspace:*",
     "@finance2dsh/portfolio-risk": "workspace:*",
     "@finance2dsh/research-audit": "workspace:*",
     "@finance2dsh/research-core": "workspace:*",

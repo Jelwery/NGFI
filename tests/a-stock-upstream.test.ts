@@ -21,8 +21,8 @@ import {
 
 const execFile = promisify(execFileCallback)
 const ROOT = process.cwd()
-const UPSTREAM = join(ROOT, 'packages/finance-provider-astock/upstream')
-const GENERATED = join(ROOT, 'packages/finance-provider-astock/python/generated')
+const UPSTREAM = join(ROOT, 'packages/finance-data-service/providers/astock/upstream')
+const GENERATED = join(ROOT, 'packages/finance-data-service/providers/astock/python/generated')
 const LOCK_PATH = join(UPSTREAM, 'upstream.lock.json')
 const SKILL_PATH = join(UPSTREAM, 'SKILL.md')
 const CAPABILITY_PATH = join(UPSTREAM, 'capability-manifest.json')
@@ -401,7 +401,7 @@ describe('a-stock-data immutable snapshot', () => {
 
     await expect(execFile('python3', [
       '-c',
-      'import ast,pathlib; ast.parse(pathlib.Path("packages/finance-provider-astock/python/generated/astock_upstream.py").read_text(encoding="utf-8"))',
+      'import ast,pathlib; ast.parse(pathlib.Path("packages/finance-data-service/providers/astock/python/generated/astock_upstream.py").read_text(encoding="utf-8"))',
     ], { cwd: ROOT, env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1' } })).resolves.toMatchObject({ stderr: '' })
   })
 })

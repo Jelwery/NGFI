@@ -60,7 +60,9 @@ def test_build_portfolio_risk_snapshot_projects_pipeline_without_mutation() -> N
     }
     assert snapshot["coverage"] == {
         "universeCount": 2, "exposureCount": 2, "specificRiskCount": 2,
+        "numerator": 2, "denominator": 2, "coverage": 1.0, "exclusions": {},
     }
+    assert snapshot["sourceQuality"]["quality_flag"] == "unverified"
     assert snapshot["quality"]["status"] == "ok"
     assert snapshot["quality"]["stockReconciliationMaxError"] == pytest.approx(0.0)
     assert snapshot["inputHash"].startswith("sha256:")

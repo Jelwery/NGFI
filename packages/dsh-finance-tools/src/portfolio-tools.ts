@@ -1,5 +1,3 @@
-import { createHash } from 'node:crypto'
-import { readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { canonicalJson, evidenceId, modelRunId, sha256, type ModelRun, type Evidence, type JsonObject } from '@finance2dsh/research-core'
 import { ResearchWorkspace } from '@finance2dsh/research-workspace'
@@ -13,7 +11,7 @@ import {
   type HoldingsImportContext,
   type HoldingsStore,
 } from '@finance2dsh/portfolio-risk'
-import { atomicJsonWrite, containedPath, ensurePlainDirectory, quantCodeIdentity, readJsonFile, requireRuntimeId, strictTool, withExclusiveLock } from './runtime-store.js'
+import { atomicJsonWrite, containedPath, ensurePlainDirectory, quantCodeIdentity, readContentAddressedJson, readJsonFile, requireRuntimeId, strictTool, withExclusiveLock } from './runtime-store.js'
 
 export const PORTFOLIO_TOOL_NAMES = [
   'finance_holdings',
@@ -154,10 +152,11 @@ function optimizationTool(options: PortfolioToolOptions, name: 'finance_portfoli
         const ref = requiredText(value, 'artifact')
         if (!/^artifacts\/[a-zA-Z0-9_./-]+\.json$/.test(ref) || ref.split('/').includes('..') || !state.fileHashes[ref]) throw new TypeError('artifact must be a registered case JSON file')
         const path = containedPath(store.casePath(caseId), ref)
-        const parsed = object(readJsonFile(path, null), 'artifact JSON')
-        const hash = `sha256:${createHash('sha256').update(readFileSync(path)).digest('hex')}`
-        if (hash !== state.fileHashes[ref]) throw new Error('artifact hash changed during read')
-        return parsed
+        // Content-addressed read: chunked, byte-capped, symlink-guarded, and the
+        // hash must match the registered case hash exactly before the value is used.
+        const read = readContentAddressedJson(path, state.fileHashes[ref] as `sha256:${string}`)
+        if (Array.isArray(read.value)) throw new TypeError('artifact must be a JSON object')
+        return read.value as Record<string, unknown>
       }
       if (name === 'finance_rebalance_plan') {
         if (args.input !== undefined || args.input_artifact !== undefined || args.mandate_artifact !== undefined) throw new TypeError('rebalance plan accepts only a saved OptimizationRun, not replacement inputs')

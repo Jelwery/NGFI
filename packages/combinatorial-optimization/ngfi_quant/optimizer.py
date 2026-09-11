@@ -147,7 +147,7 @@ def _prepare(value: Any) -> dict:
         raise ValueError("assets must be a nonempty list")
     assets = []
     for row in rows:
-        row = _object(row, "instrument price priceAvailableAt quantity sellableQuantity industry advNotional advAvailableAt canBuy canSell statusAvailableAt previousClose limitRate", "score scoreAvailableAt evidenceRefs scoreReason", label="asset")
+        row = _object(row, "instrument price priceAvailableAt quantity sellableQuantity industry advNotional advAvailableAt canBuy canSell statusAvailableAt previousClose limitRate", "score scoreAvailableAt evidenceRefs scoreReason lotSize", label="asset")
         instrument = instrument_from_contract(row["instrument"])
         if instrument.asset_type != "equity":
             raise ValueError("assets must be A-share equities")
@@ -185,10 +185,17 @@ def _prepare(value: Any) -> dict:
                 raise ValueError(f"{label} must be a nonnegative integer")
         if row["sellableQuantity"] > row["quantity"]:
             raise ValueError("sellableQuantity exceeds quantity")
+        # Effective-dated board lot: 100 is the current main-board default, but it
+        # is supplied per asset so other boards/periods can declare their own lot.
+        # Held odd shares (quantity not a multiple of lotSize) stay exact; only
+        # trade increments must be a multiple of the lot.
+        lot = row.get("lotSize", 100)
+        if type(lot) is not int or lot <= 0:
+            raise ValueError("lotSize must be a positive integer")
         _text(row["industry"], "industry")
         _boolean(row["canBuy"], "canBuy")
         _boolean(row["canSell"], "canSell")
-        assets.append({**row, "key": instrument.key})
+        assets.append({**row, "key": instrument.key, "lotSize": lot})
     assets.sort(key=lambda item: item["key"])
     keys = [row["key"] for row in assets]
     if len(set(keys)) != len(keys):
@@ -381,7 +388,7 @@ def _prepare(value: Any) -> dict:
                 quantities=quantities, current=prices * quantities / nav, nav=nav, cash=cash,
                 cost=cost, bars=trade_bars, can_buy=can_buy, can_sell=can_sell, domain_ages=domain_ages,
                 scored_indices=scored_indices, cost_aversion=cost_aversion,
-                buy_rate=buy_rate, sell_rate=sell_rate,
+                buy_rate=buy_rate, sell_rate=sell_rate, lots=np.array([row["lotSize"] for row in assets], dtype=np.int64),
                 tolerance=tolerance, coverage={"assetCount": n, "coveredCount": n, "ratio": coverage, "missingKeys": []})
 
 
@@ -451,11 +458,12 @@ def _diagnostics(context: dict, q: np.ndarray) -> tuple[list[dict], float, list[
     for i, key in enumerate(context["keys"]):
         asset = context["assets"][i]
         delta = int(q[i] - asset["quantity"])
+        lot = int(context["lots"][i])
         bound(f"weight:{key}", w[i], context["lower"][i], context["upper"][i])
         bound(f"quantity:{key}", q[i], 0, 2**53 - 1, True)
         bound(f"sellable:{key}", max(0, -delta), 0, asset["sellableQuantity"], True)
         bound(f"participation:{key}", abs(delta) * asset["price"] / asset["advNotional"], 0, context["mandate"]["maxParticipation"])
-        bound(f"boardLot:{key}", abs(delta) % 100, 0, 0, True)
+        bound(f"boardLot:{key}", abs(delta) % lot, 0, 0, True)
         if not context["can_buy"][i]:
             bound(f"noBuy:{key}", delta, -2**53, 0, True)
         if not context["can_sell"][i]:
@@ -472,16 +480,19 @@ def _diagnostics(context: dict, q: np.ndarray) -> tuple[list[dict], float, list[
 
 def _repair(context: dict, continuous: np.ndarray) -> tuple[np.ndarray, list[dict], float, list[dict]]:
     current = context["quantities"]
+    lots = context["lots"]
     desired_delta = continuous * context["nav"] / context["prices"] - current
-    # Round trade increments, not total quantities: frozen odd-share holdings stay exact.
-    q = current + np.trunc(desired_delta / 100).astype(np.int64) * 100
+    # Round trade increments to each asset's lot, not total quantities: frozen odd
+    # or non-lot holdings stay exact.
+    q = current + (np.trunc(desired_delta / lots)).astype(np.int64) * lots
     for i, row in enumerate(context["assets"]):
+        lot = int(lots[i])
         if not context["can_buy"][i]:
             q[i] = min(q[i], current[i])
         if not context["can_sell"][i]:
             q[i] = max(q[i], current[i])
-        q[i] = max(q[i], current[i] - row["sellableQuantity"] // 100 * 100)
-        max_trade = math.floor(row["advNotional"] * context["mandate"]["maxParticipation"] / row["price"] / 100) * 100
+        q[i] = max(q[i], current[i] - row["sellableQuantity"] // lot * lot)
+        max_trade = math.floor(row["advNotional"] * context["mandate"]["maxParticipation"] / row["price"] / lot) * lot
         q[i] = np.clip(q[i], max(0, current[i] - max_trade), current[i] + max_trade)
     def evaluate(candidate: np.ndarray):
         diagnostics, cash, trades = _diagnostics(context, candidate)
@@ -497,7 +508,8 @@ def _repair(context: dict, continuous: np.ndarray) -> tuple[np.ndarray, list[dic
             break
         best = None
         for i in range(len(q)):
-            for step in (-100, 100):
+            lot = int(lots[i])
+            for step in (-lot, lot):
                 candidate = q.copy()
                 candidate[i] += step
                 if tuple(candidate) in visited or candidate[i] < 0:
@@ -517,6 +529,51 @@ def _repair(context: dict, continuous: np.ndarray) -> tuple[np.ndarray, list[dic
         _, q, (rank, diagnostics, cash, trades) = best
         visited.add(tuple(q))
     return q, diagnostics, cash, trades
+
+
+def _lot_oracle(context: dict) -> dict | None:
+    """Independent brute-force feasible-solution search on a small problem.
+
+    Enumerates the lot-multiple trade grid for up to a handful of assets to report
+    a feasible-solution discovery rate and utility gap versus the coordinate
+    repair. This is a test/diagnostic oracle, not a production integer solver: it
+    is only computed when the search space is provably small.
+    """
+    current = context["quantities"]
+    lots = context["lots"]
+    ranges = []
+    total = 1
+    for i, asset in enumerate(context["assets"]):
+        lot = int(lots[i])
+        max_trade = math.floor(asset["advNotional"] * context["mandate"]["maxParticipation"] / asset["price"] / lot)
+        down = min(max_trade, asset["sellableQuantity"] // lot) if context["can_sell"][i] else 0
+        up = max_trade if context["can_buy"][i] else 0
+        steps = list(range(-down, up + 1))
+        ranges.append((i, lot, steps))
+        total *= len(steps)
+        if total > 20000:
+            return None
+    best = None
+    feasible = 0
+    def recurse(index: int, q: np.ndarray) -> None:
+        nonlocal best, feasible
+        if index == len(ranges):
+            diagnostics, _cash, _trades = _diagnostics(context, q)
+            if all(row["satisfied"] for row in diagnostics):
+                feasible += 1
+                objective = _objective(context, q * context["prices"] / context["nav"])
+                if best is None or objective < best:
+                    best = objective
+            return
+        i, lot, steps = ranges[index]
+        for step in steps:
+            nxt = q.copy()
+            nxt[i] = current[i] + step * lot
+            if nxt[i] < 0:
+                continue
+            recurse(index + 1, nxt)
+    recurse(0, current.copy())
+    return {"evaluated": total, "feasibleCount": feasible, "bestObjective": best}
 
 
 def optimize_portfolio(input: dict) -> dict:
@@ -607,9 +664,23 @@ def optimize_portfolio(input: dict) -> dict:
                                 "risk": _risk(context, continuous)}
         q, diagnostics, cash, trades = _repair(context, continuous)
         result["constraintDiagnostics"] = diagnostics
+        # Independent small-problem oracle: separates a genuine integer infeasibility
+        # from a search miss. Only computed when the lot grid is provably small.
+        oracle = _lot_oracle(context)
+        if oracle is not None:
+            result["lotOracle"] = {**oracle, "kind": "brute-force-enumeration"}
         failures = [row["constraint"] for row in diagnostics if not row["satisfied"]]
         if failures:
-            result["rejectionReasons"] = ["discrete repair failed hard constraints: " + ",".join(failures)]
+            # Distinguish "coordinate search found no feasible integer plan" from
+            # "the oracle proved none exists". Never claim integer infeasibility
+            # from a local-search miss alone.
+            if oracle is not None and oracle["feasibleCount"] == 0:
+                reason = "integer-infeasible (enumerated): no lot-multiple plan satisfies hard constraints"
+            elif oracle is not None:
+                reason = "discrete repair search miss: oracle found a feasible plan; failed constraints: " + ",".join(failures)
+            else:
+                reason = "discrete repair failed hard constraints (search space too large to enumerate): " + ",".join(failures)
+            result["rejectionReasons"] = [reason]
         else:
             repaired_w = q * context["prices"] / context["nav"]
             costs = money(sum(trade["fees"]["total"] + trade["slippage"] for trade in trades))
@@ -623,10 +694,11 @@ def optimize_portfolio(input: dict) -> dict:
                                   "trades": trades, "cash": cash, "cashWeight": cash / context["nav"],
                                   "pretradeNav": context["nav"], "posttradeNav": money(cash + float(q @ context["prices"])),
                                   "totalCosts": costs, "turnover": float(np.abs(repaired_w - context["current"]).sum() / 2),
+                                  "lotSizes": dict(zip(context["keys"], context["lots"].tolist())),
                                   "costApproximation": {"surrogateWeight": surrogate_repaired, "settledWeight": settled_weight,
                                                         "settledCosts": costs, "gapWeight": settled_weight - surrogate_repaired,
                                                         "note": "surrogate omits fixed minimum commission and board-lot rounding"},
-                                  "repairMethod": "deterministic-100-share-coordinate-repair", "integerOptimal": False}
+                                  "repairMethod": "deterministic-effective-lot-coordinate-repair", "integerOptimal": False}
             result["risk"] = _risk(context, repaired_w)
     except (ValueError, TypeError, KeyError, OverflowError) as exc:
         result["rejectionReasons"].append(str(exc))

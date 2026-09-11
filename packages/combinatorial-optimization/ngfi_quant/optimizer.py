@@ -102,7 +102,7 @@ def _prepare(value: Any) -> dict:
     if stable_hash({key: item for key, item in data.items() if key != "inputHash"}) != data["inputHash"]:
         raise ValueError("inputHash does not match canonical input content")
     as_of = _time(data["asOf"], "asOf")
-    mandate = _object(data["mandate"], "schemaVersion id version minWeight maxWeight weightBounds cashMin cashMax riskAversion turnoverPenalty turnoverLimit maxParticipation industryBands styleBands qualityPolicy tolerance", label="mandate")
+    mandate = _object(data["mandate"], "schemaVersion id version minWeight maxWeight weightBounds cashMin cashMax riskAversion turnoverPenalty turnoverLimit maxParticipation industryBands styleBands qualityPolicy tolerance", "costAversion", label="mandate")
     if mandate["schemaVersion"] != SCHEMA_VERSION:
         raise ValueError("unsupported mandate.schemaVersion")
     _text(mandate["id"], "mandate.id")
@@ -113,6 +113,10 @@ def _prepare(value: Any) -> dict:
         raise ValueError("mandate lower bound exceeds upper bound")
     _number(mandate["riskAversion"], "riskAversion", 0)
     _number(mandate["turnoverPenalty"], "turnoverPenalty", 0)
+    # The continuous transaction-cost surrogate is a convex approximation whose
+    # scale is a calibrated preference weight, not a claim that a rank point pays
+    # a fixed number of basis points. It defaults to 0 (no objective change).
+    cost_aversion = _number(mandate.get("costAversion", 0), "costAversion", 0)
     tolerance = _number(mandate["tolerance"], "tolerance", 1e-10, 1e-4)
     policy = _object(mandate["qualityPolicy"], "maxAgeDays minCoverage maxConditionNumber maxAsymmetry maxReconciliationError allowedProxyFlags allowWarnings", "maxAgeDaysByDomain", label="qualityPolicy")
     age = _number(policy["maxAgeDays"], "maxAgeDays", 0, 366)
@@ -356,6 +360,13 @@ def _prepare(value: Any) -> dict:
     if nav <= 0:
         raise ValueError("pretrade NAV must be positive")
     cost = _cost(data["costModel"])
+    # Convex per-unit surrogate rates for a fraction-of-NAV weight change, split
+    # by side because stamp duty applies to sells only. The fixed minimum
+    # commission and board-lot/integer effects are deliberately excluded here
+    # (non-convex); the execution kernel settles them exactly and the reported
+    # approximation gap makes the difference explicit.
+    buy_rate = cost.commission_rate + cost.transfer_fee_rate + cost.slippage_rate
+    sell_rate = cost.commission_rate + cost.transfer_fee_rate + cost.stamp_duty_rate + cost.slippage_rate
     trade_bars = [AShareBar(as_of.astimezone(timezone.utc).date().isoformat(), instrument_from_contract(row["instrument"]), data["asOf"],
                             row["price"], None, None, row["price"], row["previousClose"], False, row["limitRate"],
                             row["statusAvailableAt"], row["canBuy"], row["canSell"]) for row in assets]
@@ -369,7 +380,8 @@ def _prepare(value: Any) -> dict:
                 factors=factors, b=b, lower=lower, upper=upper, bands=bands, prices=prices,
                 quantities=quantities, current=prices * quantities / nav, nav=nav, cash=cash,
                 cost=cost, bars=trade_bars, can_buy=can_buy, can_sell=can_sell, domain_ages=domain_ages,
-                scored_indices=scored_indices,
+                scored_indices=scored_indices, cost_aversion=cost_aversion,
+                buy_rate=buy_rate, sell_rate=sell_rate,
                 tolerance=tolerance, coverage={"assetCount": n, "coveredCount": n, "ratio": coverage, "missingKeys": []})
 
 
@@ -387,11 +399,22 @@ def _risk(context: dict, w: np.ndarray) -> dict:
                                         for kind in ("country", "industry", "style")}}
 
 
+def _cost_surrogate(context: dict, w: np.ndarray) -> float:
+    # Convex piecewise-linear proportional cost on the weight change: buys and
+    # sells carry different rates. Excludes the fixed minimum commission and
+    # board-lot rounding, which the execution kernel settles exactly.
+    delta = w - context["current"]
+    buys = np.clip(delta, 0, None)
+    sells = np.clip(-delta, 0, None)
+    return float(context["buy_rate"] * buys.sum() + context["sell_rate"] * sells.sum())
+
+
 def _objective(context: dict, w: np.ndarray) -> float:
     mandate = context["mandate"]
     alpha = context["alpha"]
     return float(mandate["riskAversion"] * _risk(context, w)["activeVariance"] - alpha @ w
-                 + mandate["turnoverPenalty"] * np.abs(w - context["current"]).sum() / 2)
+                 + mandate["turnoverPenalty"] * np.abs(w - context["current"]).sum() / 2
+                 + context["cost_aversion"] * _cost_surrogate(context, w))
 
 
 def _ledger(context: dict, q: np.ndarray) -> tuple[float, list[dict], list[str]]:
@@ -544,7 +567,11 @@ def optimize_portfolio(input: dict) -> dict:
         # Factor form avoids constructing an N x N covariance in the solver.
         risk = cp.quad_form(context["x"].T @ active, cp.psd_wrap(context["f"])) + cp.sum_squares(cp.multiply(context["s"], active))
         alpha = context["alpha"]
-        objective = context["mandate"]["riskAversion"] * risk - alpha @ w + context["mandate"]["turnoverPenalty"] * turnover
+        # Convex continuous cost surrogate: pos(delta) is buys, pos(-delta) sells.
+        cost_surrogate = context["buy_rate"] * cp.sum(cp.pos(delta)) + context["sell_rate"] * cp.sum(cp.pos(-delta))
+        objective = (context["mandate"]["riskAversion"] * risk - alpha @ w
+                     + context["mandate"]["turnoverPenalty"] * turnover
+                     + context["cost_aversion"] * cost_surrogate)
         problem = cp.Problem(cp.Minimize(objective), constraints)
         try:
             problem.solve(solver=cp.OSQP, eps_abs=min(1e-8, context["tolerance"] / 10), eps_rel=min(1e-8, context["tolerance"] / 10),
@@ -573,6 +600,10 @@ def optimize_portfolio(input: dict) -> dict:
                                 "alpha": dict(zip(context["keys"], context["alpha"].tolist())),
                                 "scoringPool": scored_keys, "unscoredReasons": unscored,
                                 "weightBasis": "pretrade-nav", "turnoverDefinition": "0.5*sum(abs(w-currentWeight))",
+                                "costModel": {"aversion": context["cost_aversion"],
+                                              "buyRate": context["buy_rate"], "sellRate": context["sell_rate"],
+                                              "surrogateCostWeight": _cost_surrogate(context, continuous),
+                                              "surrogateExcludes": "fixed-minimum-commission;board-lot-rounding"},
                                 "risk": _risk(context, continuous)}
         q, diagnostics, cash, trades = _repair(context, continuous)
         result["constraintDiagnostics"] = diagnostics
@@ -582,11 +613,19 @@ def optimize_portfolio(input: dict) -> dict:
         else:
             repaired_w = q * context["prices"] / context["nav"]
             costs = money(sum(trade["fees"]["total"] + trade["slippage"] for trade in trades))
+            # Make the convex-approximation gap explicit: surrogate cost weight vs
+            # settled fees+slippage as a fraction of NAV. The surrogate omits the
+            # fixed minimum commission and integer effects by construction.
+            surrogate_repaired = _cost_surrogate(context, repaired_w)
+            settled_weight = costs / context["nav"]
             result["status"] = "ok"
             result["repaired"] = {"quantities": dict(zip(context["keys"], q.tolist())), "weights": dict(zip(context["keys"], repaired_w.tolist())),
                                   "trades": trades, "cash": cash, "cashWeight": cash / context["nav"],
                                   "pretradeNav": context["nav"], "posttradeNav": money(cash + float(q @ context["prices"])),
                                   "totalCosts": costs, "turnover": float(np.abs(repaired_w - context["current"]).sum() / 2),
+                                  "costApproximation": {"surrogateWeight": surrogate_repaired, "settledWeight": settled_weight,
+                                                        "settledCosts": costs, "gapWeight": settled_weight - surrogate_repaired,
+                                                        "note": "surrogate omits fixed minimum commission and board-lot rounding"},
                                   "repairMethod": "deterministic-100-share-coordinate-repair", "integerOptimal": False}
             result["risk"] = _risk(context, repaired_w)
     except (ValueError, TypeError, KeyError, OverflowError) as exc:

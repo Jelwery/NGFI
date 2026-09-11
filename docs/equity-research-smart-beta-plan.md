@@ -151,7 +151,9 @@ A1 与 A3 的纯契约设计可交叉讨论，但代码实施一次只推进一�
 
 > 进度（2026-09-11，工程升级，非策略准入）：A3 按工作包推进，一次只改一项主行为。**第 1 包已完成：分域 freshness**。`optimize_portfolio` 的 `mandate.qualityPolicy` 新增可选 `maxAgeDaysByDomain`（`price`/`tradingStatus`/`risk`/`research`/`holdings`/`benchmark`），未指定的域回退到全局 `maxAgeDays`；价格/ADV 按 price 域、交易状态按 tradingStatus 域、riskSnapshot 按 risk 域、score 按 research 域、现金与持仓按 holdings 域、基准按 benchmark 域分别做 PIT 校验，不再用单一天数套住年报与日行情。结果新增 `freshnessPolicy` 字段回显生效窗口。未知域或越界天数 fail-closed。新增 3 项 optimizer 测试（默认回退、研究窗与价格窗分离、未知域/越界拒绝），quant 46 项通过。A2 实质门禁仍 blocked，本包不改变该结论。
 >
-> **第 2 包已完成：缺分持仓/基准分离**。资产 `score` 变为可选：有分资产携带 `scoreAvailableAt`+`evidenceRefs` 并进入排名池；无分资产必须给出 `scoreReason`、alpha 恒为 0，且**不改变有分资产的 rank 端点**（rank 只在申报评分池内计算）。基准成分即便无研究评分仍进入主动风险与约束，不被过滤重归一；持仓账户约束照常施加。结果新增 `scoringPool` 与 `unscoredReasons` 字段。DSH `finance_portfolio_optimize` 同步：无分资产不再要求 evidence，改为校验 `scoreReason`。新增 2 项 optimizer 测试（无分持仓不污染排名、字段形状 fail-closed），quant 48 项通过；TS `portfolio-tools` 4 项通过。A2 实质门禁仍 blocked，本包不改变该结论。后续包（连续成本、PortfolioStateSnapshot、整手 oracle、内容寻址 artifact）尚未开始。
+> **第 2 包已完成：缺分持仓/基准分离**。资产 `score` 变为可选：有分资产携带 `scoreAvailableAt`+`evidenceRefs` 并进入排名池；无分资产必须给出 `scoreReason`、alpha 恒为 0，且**不改变有分资产的 rank 端点**（rank 只在申报评分池内计算）。基准成分即便无研究评分仍进入主动风险与约束，不被过滤重归一；持仓账户约束照常施加。结果新增 `scoringPool` 与 `unscoredReasons` 字段。DSH `finance_portfolio_optimize` 同步：无分资产不再要求 evidence，改为校验 `scoreReason`。新增 2 项 optimizer 测试（无分持仓不污染排名、字段形状 fail-closed），quant 48 项通过；TS `portfolio-tools` 4 项通过。A2 实质门禁仍 blocked，本包不改变该结论。
+>
+> **第 3 包已完成：连续成交成本纳入目标**。`mandate` 新增可选 `costAversion`（默认 0，即不改变目标）。目标函数增加凸的连续成本代理：对权重变化 `delta` 按买卖分别用 `buyRate=佣金+过户+滑点`、`sellRate=佣金+过户+印花税+滑点` 作分段线性惩罚（`pos(delta)`/`pos(-delta)`）。**代理刻意排除固定最低佣金与整手取整**（非凸），由 execution 内核精算，`repaired.costApproximation` 显式报告 `surrogateWeight`/`settledWeight`/`gapWeight`。`continuous.costModel` 回显 aversion/费率/代理成本权重。硬约束语义不变，默认无松弛。新增 2 项 optimizer 测试（默认关闭且高 aversion 压缩买入权重并报告近似差、负值 fail-closed），quant 50 项通过。A2 实质门禁仍 blocked，本包不改变该结论。后续包（PortfolioStateSnapshot 一体确认、整手 oracle、内容寻址 artifact）尚未开始。
 
 #### A3.1 输入与状态契约
 

@@ -72,6 +72,7 @@ export {
   createAshareFinanceTools,
   type AshareToolBackend,
 } from './ashare-tools.js'
+export { readContentAddressedJson, type ContentAddressedRead } from './runtime-store.js'
 
 const JSON_OUTPUT = {
   schema: { type: 'json' as const },

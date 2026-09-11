@@ -135,6 +135,39 @@ describe('holdings import contracts', () => {
     const confirmed = store.confirm(staged.revision, staged.snapshot!.snapshotHash)
     expect(confirmed.snapshot?.snapshotHash).toBe(staged.snapshot?.snapshotHash)
   })
+
+  it('confirms cash, valuation, and sellable quantities as one account-state unit', () => {
+    const accountState = { cash: 1500.5, cashAvailableAt: '2026-09-05T08:00:00Z', valuationAt: '2026-09-05T08:00:00Z' }
+    const withState = importHoldingsJson(JSON.stringify([
+      { ...positions[0], sellableQuantity: 20 }, { ...positions[1], sellableQuantity: 40 },
+    ]), { ...context, accountState })
+    expect(withState.status).toBe('ready')
+    if (withState.status !== 'ready') return
+    expect(withState.accountState).toEqual(accountState)
+    expect(withState.positions[0]?.sellableQuantity).toBe(20)
+    // Cash and sellable quantities change the snapshot hash: they are part of the
+    // confirmed unit, not free inputs a later step can override.
+    const store = new InMemoryHoldingsStore()
+    const staged = store.stage(withState, 0)
+    expect(staged.snapshot?.snapshotHash).not.toBe(readyImport().inputHash)
+    const bumped = importHoldingsJson(JSON.stringify([
+      { ...positions[0], sellableQuantity: 20 }, { ...positions[1], sellableQuantity: 40 },
+    ]), { ...context, accountState: { ...accountState, cash: 1600 } })
+    const otherStore = new InMemoryHoldingsStore()
+    const otherStaged = (bumped.status === 'ready') ? otherStore.stage(bumped, 0) : null
+    expect(otherStaged?.snapshot?.snapshotHash).not.toBe(staged.snapshot?.snapshotHash)
+  })
+
+  it('rejects invalid account state and sellable quantities that exceed holdings', () => {
+    expect(importHoldingsJson(JSON.stringify([{ ...positions[0], sellableQuantity: 999 }]), context))
+      .toMatchObject({ status: 'invalid', errors: expect.arrayContaining([expect.objectContaining({ field: 'sellableQuantity' })]) })
+    expect(() => importHoldingsJson(JSON.stringify([positions[0]]), {
+      ...context, accountState: { cash: -1, cashAvailableAt: '2026-09-05T08:00:00Z', valuationAt: '2026-09-05T08:00:00Z' },
+    })).toThrow(/accountState.cash/u)
+    expect(() => importHoldingsJson(JSON.stringify([positions[0]]), {
+      ...context, accountState: { cash: 1, cashAvailableAt: 'not-a-date', valuationAt: '2026-09-05T08:00:00Z' },
+    })).toThrow(/accountState.cashAvailableAt/u)
+  })
 })
 
 describe('staged and confirmed holdings store', () => {

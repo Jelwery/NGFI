@@ -12,11 +12,28 @@ export interface HoldingPositionInput {
   readonly currency: string
   readonly account?: string
   readonly name?: string
+  /** T+1 available-to-sell quantity; when present it must satisfy 0 <= value <= quantity. */
+  readonly sellableQuantity?: number
 }
 
 export interface HoldingPosition extends HoldingPositionInput {
   readonly id: ContentHash
   readonly account: string
+}
+
+/**
+ * Account-level state confirmed together with the positions as one unit. Cash,
+ * its availability, and the valuation timestamp are hashed into the snapshot so
+ * a downstream optimizer cannot confirm only quantities and then receive free
+ * cash or sellable quantities from a separate input.
+ */
+export interface PortfolioAccountState {
+  /** Base-currency cash, cent precision, non-negative. */
+  readonly cash: number
+  /** When the cash figure became known/available. */
+  readonly cashAvailableAt: string
+  /** When the whole account state (positions + cash) was valued. */
+  readonly valuationAt: string
 }
 
 export type HoldingsImportIssueCode =
@@ -41,6 +58,7 @@ interface HoldingsImportBase {
   readonly portfolioId: string
   readonly asOf: string
   readonly baseCurrency: string
+  readonly accountState?: PortfolioAccountState
   readonly inputHash: ContentHash
 }
 
@@ -63,6 +81,7 @@ export interface HoldingsSnapshot {
   readonly portfolioId: string
   readonly asOf: string
   readonly baseCurrency: string
+  readonly accountState?: PortfolioAccountState
   readonly positions: readonly HoldingPosition[]
   readonly totalMarketValue: number
   readonly inputHash: ContentHash

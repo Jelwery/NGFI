@@ -1,7 +1,7 @@
 import { canonicalInstrumentId } from '@finance2dsh/core'
 import { canonicalJson, sha256, type ContentHash } from '@finance2dsh/research-core'
 
-import type { HoldingPosition, HoldingPositionInput, HoldingsSnapshotStatus } from './contracts.js'
+import type { HoldingPosition, HoldingPositionInput, HoldingsSnapshotStatus, PortfolioAccountState } from './contracts.js'
 
 export { canonicalJson }
 
@@ -30,6 +30,7 @@ export function holdingsSnapshotHash(input: {
   readonly portfolioId: string
   readonly asOf: string
   readonly baseCurrency: string
+  readonly accountState?: PortfolioAccountState
   readonly inputHash: ContentHash
   readonly positions: readonly HoldingPosition[]
   readonly status?: HoldingsSnapshotStatus
@@ -38,6 +39,9 @@ export function holdingsSnapshotHash(input: {
     portfolioId: input.portfolioId,
     asOf: input.asOf,
     baseCurrency: input.baseCurrency,
+    // Cash and sellable quantities are hashed with the positions so that the
+    // whole account state is confirmed as one unit, not quantity alone.
+    ...(input.accountState === undefined ? {} : { accountState: input.accountState }),
     positions: [...input.positions]
       .sort((left, right) => left.id.localeCompare(right.id))
       .map(position => ({
@@ -48,6 +52,7 @@ export function holdingsSnapshotHash(input: {
         currency: position.currency,
         account: position.account,
         ...(position.name === undefined ? {} : { name: position.name }),
+        ...(position.sellableQuantity === undefined ? {} : { sellableQuantity: position.sellableQuantity }),
       })),
   })
 }

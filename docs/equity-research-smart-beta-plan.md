@@ -153,7 +153,9 @@ A1 与 A3 的纯契约设计可交叉讨论，但代码实施一次只推进一�
 >
 > **第 2 包已完成：缺分持仓/基准分离**。资产 `score` 变为可选：有分资产携带 `scoreAvailableAt`+`evidenceRefs` 并进入排名池；无分资产必须给出 `scoreReason`、alpha 恒为 0，且**不改变有分资产的 rank 端点**（rank 只在申报评分池内计算）。基准成分即便无研究评分仍进入主动风险与约束，不被过滤重归一；持仓账户约束照常施加。结果新增 `scoringPool` 与 `unscoredReasons` 字段。DSH `finance_portfolio_optimize` 同步：无分资产不再要求 evidence，改为校验 `scoreReason`。新增 2 项 optimizer 测试（无分持仓不污染排名、字段形状 fail-closed），quant 48 项通过；TS `portfolio-tools` 4 项通过。A2 实质门禁仍 blocked，本包不改变该结论。
 >
-> **第 3 包已完成：连续成交成本纳入目标**。`mandate` 新增可选 `costAversion`（默认 0，即不改变目标）。目标函数增加凸的连续成本代理：对权重变化 `delta` 按买卖分别用 `buyRate=佣金+过户+滑点`、`sellRate=佣金+过户+印花税+滑点` 作分段线性惩罚（`pos(delta)`/`pos(-delta)`）。**代理刻意排除固定最低佣金与整手取整**（非凸），由 execution 内核精算，`repaired.costApproximation` 显式报告 `surrogateWeight`/`settledWeight`/`gapWeight`。`continuous.costModel` 回显 aversion/费率/代理成本权重。硬约束语义不变，默认无松弛。新增 2 项 optimizer 测试（默认关闭且高 aversion 压缩买入权重并报告近似差、负值 fail-closed），quant 50 项通过。A2 实质门禁仍 blocked，本包不改变该结论。后续包（PortfolioStateSnapshot 一体确认、整手 oracle、内容寻址 artifact）尚未开始。
+> **第 3 包已完成：连续成交成本纳入目标**。`mandate` 新增可选 `costAversion`（默认 0，即不改变目标）。目标函数增加凸的连续成本代理：对权重变化 `delta` 按买卖分别用 `buyRate=佣金+过户+滑点`、`sellRate=佣金+过户+印花税+滑点` 作分段线性惩罚（`pos(delta)`/`pos(-delta)`）。**代理刻意排除固定最低佣金与整手取整**（非凸），由 execution 内核精算，`repaired.costApproximation` 显式报告 `surrogateWeight`/`settledWeight`/`gapWeight`。`continuous.costModel` 回显 aversion/费率/代理成本权重。硬约束语义不变，默认无松弛。新增 2 项 optimizer 测试（默认关闭且高 aversion 压缩买入权重并报告近似差、负值 fail-closed），quant 50 项通过。A2 实质门禁仍 blocked，本包不改变该结论。
+>
+> **第 4 包已完成：PortfolioStateSnapshot 一体确认**。`portfolio-risk` 的持仓快照新增可选 `accountState`（`cash`/`cashAvailableAt`/`valuationAt`）与逐持仓 `sellableQuantity`，并**一起纳入 `snapshotHash`**——现金、可卖数量与持仓数量作为同一个被确认单元，而非确认数量后由另一个输入随意补现金/可卖量。`finance_holdings` 新增 `account_state` 参数；`finance_portfolio_optimize` 在存在 `accountState` 时校验优化输入的 `cash`/`cashAvailableAt` 与每资产 `sellableQuantity` 与确认账户态完全一致，不一致即拒绝。导入侧对 `sellableQuantity` 越界（>quantity）、现金非负分精度、时间戳格式 fail-closed。新增 3 项 portfolio-risk 契约测试与 1 项 DSH 工具测试（账户态一体确认、越界/非法拒绝、现金不符拒绝）。TS 全量测试通过。A2 实质门禁仍 blocked，本包不改变该结论。后续包（整手 oracle、内容寻址 artifact）尚未开始。
 
 #### A3.1 输入与状态契约
 

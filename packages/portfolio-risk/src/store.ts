@@ -41,6 +41,7 @@ function createSnapshot(input: ReadyHoldingsImport, status: HoldingsSnapshotStat
     portfolioId: input.portfolioId,
     asOf: input.asOf,
     baseCurrency: input.baseCurrency,
+    ...(input.accountState === undefined ? {} : { accountState: input.accountState }),
     inputHash: input.inputHash,
     positions,
   }

@@ -143,13 +143,31 @@ def _prepare(value: Any) -> dict:
         raise ValueError("assets must be a nonempty list")
     assets = []
     for row in rows:
-        row = _object(row, "instrument score scoreAvailableAt evidenceRefs price priceAvailableAt quantity sellableQuantity industry advNotional advAvailableAt canBuy canSell statusAvailableAt previousClose limitRate", label="asset")
+        row = _object(row, "instrument price priceAvailableAt quantity sellableQuantity industry advNotional advAvailableAt canBuy canSell statusAvailableAt previousClose limitRate", "score scoreAvailableAt evidenceRefs scoreReason", label="asset")
         instrument = instrument_from_contract(row["instrument"])
         if instrument.asset_type != "equity":
             raise ValueError("assets must be A-share equities")
-        _number(row["score"], "score")
-        _strings(row["evidenceRefs"], "evidenceRefs", True)
-        for label, domain in (("scoreAvailableAt", "research"), ("priceAvailableAt", "price"),
+        # Research eligibility is separate from holding and tradability. A scored
+        # asset joins the ranking cross-section; an unscored asset carries an
+        # explicit reason, keeps alpha 0 and never changes other assets' ranks. A
+        # missing score is not an instruction to sell or to abandon a held/benchmark
+        # name; the account and benchmark still constrain the solution.
+        scored = "score" in row
+        if scored:
+            if "scoreReason" in row:
+                raise ValueError("asset must not carry both score and scoreReason")
+            if "scoreAvailableAt" not in row or "evidenceRefs" not in row:
+                raise ValueError("scored asset requires scoreAvailableAt and evidenceRefs")
+            _number(row["score"], "score")
+            _strings(row["evidenceRefs"], "evidenceRefs", True)
+            _pit(row["scoreAvailableAt"], as_of, domain_ages["research"], "scoreAvailableAt")
+        else:
+            if "scoreAvailableAt" in row or "evidenceRefs" in row:
+                raise ValueError("unscored asset must omit scoreAvailableAt and evidenceRefs")
+            if "scoreReason" not in row:
+                raise ValueError("unscored asset requires a scoreReason")
+            _text(row["scoreReason"], "scoreReason")
+        for label, domain in (("priceAvailableAt", "price"),
                               ("advAvailableAt", "price"), ("statusAvailableAt", "tradingStatus")):
             _pit(row[label], as_of, domain_ages[domain], label)
         for label in ("price", "previousClose", "advNotional"):
@@ -172,19 +190,26 @@ def _prepare(value: Any) -> dict:
     if len(set(keys)) != len(keys):
         raise ValueError("duplicate asset instrument")
     n = len(assets)
-    if n < 2:
+    scored_indices = [i for i, row in enumerate(assets) if "score" in row]
+    if len(scored_indices) < 2:
         raise ValueError("insufficient cross-section: at least two scored assets are required")
-    scores = np.array([row["score"] for row in assets], dtype=float)
-    ranks = np.empty(n, dtype=float)
+    # Ranks are computed only within the declared scoring pool; unscored held or
+    # benchmark names keep alpha 0 and do not shift the ranks of scored assets.
+    scores = np.array([assets[i]["score"] for i in scored_indices], dtype=float)
+    m = len(scored_indices)
+    pool_ranks = np.empty(m, dtype=float)
     order = np.argsort(scores, kind="stable")
     start = 0
-    while start < n:
+    while start < m:
         end = start + 1
-        while end < n and scores[order[end]] == scores[order[start]]:
+        while end < m and scores[order[end]] == scores[order[start]]:
             end += 1
-        ranks[order[start:end]] = (start + 1 + end) / 2
+        pool_ranks[order[start:end]] = (start + 1 + end) / 2
         start = end
-    alpha = 2 * (ranks - 1) / (n - 1) - 1
+    pool_alpha = 2 * (pool_ranks - 1) / (m - 1) - 1
+    alpha = np.zeros(n, dtype=float)
+    for slot, i in enumerate(scored_indices):
+        alpha[i] = pool_alpha[slot]
     snapshot = _object(data["riskSnapshot"], "schemaVersion model modelVersion asOf availableAt currency covariancePeriod factors securities factorCovariance quality sourceQuality", "stockCovariance coverage inputHash descriptorQuality dataQuality", "riskSnapshot")
     if snapshot["schemaVersion"] != "1" or snapshot["model"] != "CNE6" or snapshot["currency"] != "CNY" or snapshot["covariancePeriod"] != "daily":
         raise ValueError("riskSnapshot must be schema 1, daily CNE6 CNY")
@@ -344,6 +369,7 @@ def _prepare(value: Any) -> dict:
                 factors=factors, b=b, lower=lower, upper=upper, bands=bands, prices=prices,
                 quantities=quantities, current=prices * quantities / nav, nav=nav, cash=cash,
                 cost=cost, bars=trade_bars, can_buy=can_buy, can_sell=can_sell, domain_ages=domain_ages,
+                scored_indices=scored_indices,
                 tolerance=tolerance, coverage={"assetCount": n, "coveredCount": n, "ratio": coverage, "missingKeys": []})
 
 
@@ -538,10 +564,14 @@ def optimize_portfolio(input: dict) -> dict:
             raise ValueError("continuous solver primal residual exceeds tolerance")
         continuous = np.asarray(w.value).reshape(-1)
         result["solver"]["duals"] = {name: np.asarray(constraint.dual_value).tolist() for name, constraint in zip(constraint_names, constraints)}
+        scored_keys = [context["keys"][i] for i in context["scored_indices"]]
+        unscored = {context["keys"][i]: context["assets"][i]["scoreReason"]
+                    for i in range(len(context["keys"])) if i not in set(context["scored_indices"])}
         result["continuous"] = {"weights": dict(zip(context["keys"], continuous.tolist())),
                                 "cashWeightBeforeFees": float(1 - continuous.sum()), "objective": _objective(context, continuous),
-                                "alphaConvention": "average-tied-rank[-1,1];scale=1;not-expected-return",
+                                "alphaConvention": "average-tied-rank[-1,1];scale=1;not-expected-return;pool=scored-only",
                                 "alpha": dict(zip(context["keys"], context["alpha"].tolist())),
+                                "scoringPool": scored_keys, "unscoredReasons": unscored,
                                 "weightBasis": "pretrade-nav", "turnoverDefinition": "0.5*sum(abs(w-currentWeight))",
                                 "risk": _risk(context, continuous)}
         q, diagnostics, cash, trades = _repair(context, continuous)

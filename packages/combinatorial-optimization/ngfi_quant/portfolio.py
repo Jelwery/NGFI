@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+from collections.abc import Callable
 from datetime import datetime
 import math
 from statistics import fmean, stdev
 from typing import Any
 
 from .contracts import (
-    AShareBar, BacktestRequest, BacktestResult, CandidateSignal, EquityPoint, Instrument, Rejection, Trade,
+    AShareBar, BacktestRequest, BacktestResult, CandidateSignal, EquityPoint, Instrument, Rejection, TargetSchedule, Trade,
 )
 from .execution import affordable_board_lot, execution_block, execution_price, fill_order, money, validate_calendar
 from .hashing import stable_hash
@@ -206,13 +207,22 @@ def _attribution(day: str, previous_day: str, previous_nav: float | None, nav: f
             "method": "beginning-weight arithmetic active attribution; timing residual includes benchmark replication"}
 
 
-def run_research_backtest(request: BacktestRequest) -> BacktestResult:
+def run_research_backtest(request: BacktestRequest, *, policy: Callable[[str, dict], dict | None] | None = None,
+                          decision_times: dict[str, str] | None = None,
+                          open_times: dict[str, str] | None = None) -> BacktestResult:
+    if policy is not None:
+        if request.signals or request.target_schedules or not decision_times or set(decision_times) != set(request.calendar):
+            raise ValueError("sequential policy requires decision times and no precomputed signals or targets")
+        if open_times is None or set(open_times) != set(request.calendar):
+            raise ValueError("sequential policy requires explicit session opens")
+        if any(_stamp(decision_times[left]) >= _stamp(open_times[right]) for left, right in zip(request.calendar, request.calendar[1:])):
+            raise ValueError("decisions must precede the next execution open")
     calendar_index = validate_calendar(request.calendar)
     bars = _bar_map(request)
     if any(bar.price_basis != "raw" for bar in request.bars):
         raise ValueError("backtest requires raw prices; adjusted prices cannot be fills or marks")
     schedules, actions, benchmark_points, attribution_inputs = _daily_inputs(request, calendar_index)
-    strict_status = bool(request.target_schedules)
+    strict_status = bool(request.target_schedules) or policy is not None
     if request.benchmark_convention not in ("price", "total-return"):
         raise ValueError("benchmark convention must be price or total-return")
     from .contracts import require_date
@@ -242,9 +252,13 @@ def run_research_backtest(request: BacktestRequest) -> BacktestResult:
     daily_ledger, attribution_rows = [], []
     receivables: list[tuple[str, float]] = []
     instruments = {bar.instrument.key: bar.instrument for bar in request.bars}
+    pending = None
 
     for day_index, day in enumerate(request.calendar):
-        decision_at = f"{day}T09:30:00+08:00"
+        decision_at = open_times[day] if policy is not None else f"{day}T09:30:00+08:00"
+        frozen = pending
+        pending = None
+        order_records = []
         applicable_costs = [model for effective_date, model in request.cost_schedule if effective_date <= day]
         cost_model = applicable_costs[-1] if applicable_costs else request.cost_model
         starting_cash = cash + sum(amount for _, amount in receivables)
@@ -274,9 +288,14 @@ def run_research_backtest(request: BacktestRequest) -> BacktestResult:
                                    "payDate": pay_date, "quality_flag": "proxy" if action.cash_dividend and action.pay_date is None else "good", "splitRatio": action.split_ratio})
         target = schedules.get(day)
         targets: dict[str, int] = {}
+        if frozen is not None:
+            if actions.get(day):
+                raise ValueError("frozen orders crossing a corporate action require an explicit adjustment policy")
+            target = TargetSchedule(day, frozen["availableAt"], {})
+            targets = dict(frozen["quantities"])
         target_nav = cash + sum(amount for _, amount in receivables)
         missing_open = False
-        if target:
+        if target and frozen is None:
             for key, lots in positions.items():
                 bar = bars.get((day, key))
                 if bar is None or bar.open is None:
@@ -303,12 +322,15 @@ def run_research_backtest(request: BacktestRequest) -> BacktestResult:
             wanted = max(0, total - targets.get(key, total)) if target else sum(lot.shares for lot in eligible)
             sellable = sum(lot.shares for lot in eligible)
             quantity = min(wanted, sellable)
+            if frozen is not None:
+                quantity = min(quantity, frozen["capacity"][key])
+                quantity = quantity // frozen["lotSizes"][key] * frozen["lotSizes"][key]
             if wanted > sellable:
                 rejections.append(Rejection(lots[0].signal.observation_id, lots[0].signal.instrument, day, "sell", "t-plus-one"))
             if not quantity:
                 continue
             bar = bars.get((day, key))
-            reason = _participation_block(bar, quantity, request.max_participation, decision_at)
+            reason = None if frozen is not None else _participation_block(bar, quantity, request.max_participation, decision_at)
             fill, blocked = fill_order(bar, quantity, "sell", cost_model, decision_at=decision_at, require_status=strict_status)
             reason = reason or blocked
             if reason:
@@ -362,13 +384,16 @@ def run_research_backtest(request: BacktestRequest) -> BacktestResult:
                 continue
             assert bar is not None and bar.open is not None
             budget = cash if target else min(cash, request.portfolio.initial_capital * request.portfolio.allocation_fraction)
-            quantity = affordable_board_lot(budget, execution_price(bar.open, "buy", cost_model), request.portfolio.lot_size, cost_model)
+            lot_size = frozen["lotSizes"][key] if frozen is not None else request.portfolio.lot_size
+            quantity = affordable_board_lot(budget, execution_price(bar.open, "buy", cost_model), lot_size, cost_model)
             if desired is not None:
-                quantity = min(quantity, desired // request.portfolio.lot_size * request.portfolio.lot_size)
+                quantity = min(quantity, desired // lot_size * lot_size)
+            if frozen is not None:
+                quantity = min(quantity, frozen["capacity"][key])
             if quantity == 0:
                 rejections.append(Rejection(signal.observation_id, signal.instrument, day, "buy", "insufficient-cash"))
                 continue
-            reason = _participation_block(bar, quantity, request.max_participation, decision_at)
+            reason = None if frozen is not None else _participation_block(bar, quantity, request.max_participation, decision_at)
             fill, blocked = fill_order(bar, quantity, "buy", cost_model, decision_at=decision_at, require_status=strict_status)
             reason = reason or blocked
             if reason:
@@ -385,16 +410,58 @@ def run_research_backtest(request: BacktestRequest) -> BacktestResult:
             bar = bars.get((day, key))
             if bar is None or bar.close is None:
                 missing.append(key)
+            elif policy is not None and _stamp(bar.available_at) > _stamp(decision_times[day]):
+                raise ValueError("held security valuation is not PIT-visible")
             else:
                 marked += sum(lot.shares for lot in lots) * bar.close
         point = EquityPoint(day, None, "missing", f"missing valuation for {','.join(sorted(missing))}") if missing else EquityPoint(day, money(marked), "available")
         equity.append(point)
+        if frozen is not None:
+            for key, requested_target in targets.items():
+                delta = requested_target - starting_quantities.get(key, 0)
+                if delta == 0:
+                    continue
+                side = "buy" if delta > 0 else "sell"
+                filled = sum(fill["quantity"] for fill in fills if fill["instrument"] == instruments[key].to_contract() and fill["side"] == side)
+                reasons = [row.reason for row in rejections if row.date == day and row.instrument.key == key and row.side == side]
+                order_records.append({"date": day, "decisionDate": frozen["date"], "instrument": key, "side": side,
+                                      "requestedShares": abs(delta), "filledShares": filled,
+                                      "status": "filled" if filled == abs(delta) else ("partial" if filled else "rejected"),
+                                      "reason": reasons[-1] if reasons else (None if filled == abs(delta) else "capacity-or-cash"),
+                                      "unfilledPolicy": "expire"})
         daily_ledger.append({"date": day, "cash": cash, "receivableDividends": money(sum(amount for _, amount in receivables)), "quantities": {key: sum(lot.shares for lot in lots) for key, lots in sorted(positions.items())},
                              "sellableNextDay": {key: sum(lot.shares for lot in lots) for key, lots in sorted(positions.items())},
                              "fills": fills, "corporateActions": booked_actions, "costs": day_costs, "costModelHash": cost_model.hash,
                              "benchmarkConvention": request.benchmark_convention,
                              "targetStatus": "unavailable" if missing_open else ("processed" if target else "none"),
                              "targetQuantities": targets, "unfilledTargetDeltas": {key: quantity - sum(lot.shares for lot in positions.get(key, [])) for key, quantity in targets.items() if quantity != sum(lot.shares for lot in positions.get(key, []))}})
+        if policy is not None:
+            daily_ledger[-1]["orders"] = order_records
+            if point.value is None:
+                raise ValueError("sequential policy requires complete daily valuation")
+            account = {"cash": cash, "nav": point.value, "quantities": daily_ledger[-1]["quantities"],
+                       "sellableNextDay": daily_ledger[-1]["sellableNextDay"], "availableAt": decision_times[day]}
+            decision = policy(day, account)
+            if decision is not None:
+                daily_ledger[-1]["decision"] = decision
+                if decision.get("status") == "complete":
+                    if day_index == len(request.calendar) - 1:
+                        raise ValueError("decision requires a next execution session")
+                    targets_next = decision["quantities"]
+                    rules = decision["lotSizes"]
+                    capacity = decision["capacity"]
+                    if set(targets_next) != set(rules) or set(targets_next) != set(capacity) or set(targets_next) - set(instruments):
+                        raise ValueError("frozen quantities, lots and capacity must align")
+                    for key, quantity in targets_next.items():
+                        lot = rules[key]
+                        if type(quantity) is not int or quantity < 0 or type(lot) is not int or lot <= 0:
+                            raise ValueError("frozen quantities and lots must be nonnegative/positive integers")
+                        if (quantity - account["quantities"].get(key, 0)) % lot:
+                            raise ValueError("frozen trade increment violates the board lot")
+                        if type(capacity[key]) is not int or capacity[key] < 0 or capacity[key] % lot:
+                            raise ValueError("frozen capacity must be a nonnegative lot multiple")
+                    pending = {"date": day, "availableAt": decision_times[day], "quantities": dict(targets_next),
+                               "lotSizes": dict(rules), "capacity": dict(capacity)}
         if day_index:
             attribution_rows.append(_attribution(day, request.calendar[day_index - 1], equity[-2].value, point.value,
                                                   starting_cash, starting_quantities, bars, actions.get(day, []),

@@ -138,7 +138,7 @@ export function readFileSecure(root: string, relativePath: string): Buffer {
   const target = assertNoSymlink(root, relativePath)
   const flags = process.platform === 'win32'
     ? fs.constants.O_RDONLY
-    : fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW
+    : fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW | fs.constants.O_NONBLOCK
   let descriptor: number
   try {
     descriptor = fs.openSync(target, flags)
@@ -149,7 +149,20 @@ export function readFileSecure(root: string, relativePath: string): Buffer {
     throw error
   }
   try {
-    return fs.readFileSync(descriptor)
+    const limit = 128 * 1024 * 1024
+    const stat = fs.fstatSync(descriptor)
+    if (!stat.isFile() || stat.size > limit) throw new ResearchWorkspaceError('corrupt', 'Workspace file is not regular or exceeds 128 MiB')
+    const chunks: Buffer[] = []
+    const chunk = Buffer.allocUnsafe(64 * 1024)
+    let total = 0
+    for (;;) {
+      const count = fs.readSync(descriptor, chunk, 0, chunk.length, null)
+      if (!count) break
+      total += count
+      if (total > limit) throw new ResearchWorkspaceError('corrupt', 'Workspace file exceeds 128 MiB')
+      chunks.push(Buffer.from(chunk.subarray(0, count)))
+    }
+    return Buffer.concat(chunks)
   } finally {
     fs.closeSync(descriptor)
   }

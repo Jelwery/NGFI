@@ -21,4 +21,9 @@ from .factors import (
     handle_missing, information_coefficient, make_lineage, neutralize, split_factor_table, standardize, winsorize,
 )
 
+from .research_contracts import ResearchDataset, ResearchSpec
+from .factors.graph import build_panel, compute_factors, factor_catalog, forward_labels
+from .research_models import rolling_predict
+from .experiment import run_experiment as run_native_experiment
+
 __all__ = [name for name in globals() if not name.startswith("_")]

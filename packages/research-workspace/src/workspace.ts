@@ -570,6 +570,7 @@ export class ResearchWorkspace {
   ): ArtifactWriteResult {
     assertSafeRelativePath(relativeArtifactPath)
     const relativePath = `artifacts/${relativeArtifactPath}`
+    if (Buffer.byteLength(data) > 128 * 1024 * 1024) throw new ResearchWorkspaceError('invalid-input', 'Artifact exceeds 128 MiB')
     const hash = hashBytes(data)
     return this.mutate(caseId, expectedRevision, (directory, current) => {
       this.assertWritable(current)
@@ -662,6 +663,47 @@ export class ResearchWorkspace {
 
   casePath(caseId: string): string {
     return this.caseDirectory(caseId)
+  }
+
+  async withRunLock<T>(caseId: string, action: () => Promise<T>): Promise<T> {
+    assertCaseId(caseId)
+    const lock = assertNoSymlink(this.root, `${caseId}.quant.lock`, true)
+    let descriptor: number
+    try {
+      descriptor = fs.openSync(lock, fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_WRONLY, 0o600)
+    } catch (error) {
+      throw new ResearchWorkspaceError('locked', 'Research computation is locked; inspect stale locks before removing them', { cause: error })
+    }
+    const owned = fs.fstatSync(descriptor)
+    try {
+      fs.writeFileSync(descriptor, JSON.stringify({ pid: process.pid }))
+      return await action()
+    } finally {
+      fs.closeSync(descriptor)
+      try {
+        const current = fs.lstatSync(lock)
+        if (current.dev === owned.dev && current.ino === owned.ino) fs.unlinkSync(lock)
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+      }
+    }
+  }
+
+  listCases(): string[] {
+    return fs.readdirSync(this.root, { withFileTypes: true })
+      .filter(entry => /^case-[0-9a-f]{64}$/u.test(entry.name) && entry.isDirectory())
+      .map(entry => entry.name).sort()
+  }
+
+  readArtifact(caseId: string, relativePath: string, expectedHash: ContentHash): Buffer {
+    assertSafeRelativePath(relativePath)
+    if (!relativePath.startsWith('artifacts/')) throw new ResearchWorkspaceError('invalid-path', 'Expected an artifact path')
+    const directory = this.caseDirectory(caseId)
+    const file = validateCaseFile(parseJson(readFileSecure(directory, CASE_FILE), CASE_FILE))
+    if (file.fileHashes[relativePath] !== expectedHash) throw new ResearchWorkspaceError('corrupt', 'Artifact is not registered at the expected hash')
+    const bytes = readFileSecure(directory, relativePath)
+    if (hashBytes(bytes) !== expectedHash) throw new ResearchWorkspaceError('corrupt', 'Artifact content hash mismatch')
+    return bytes
   }
 
   private saveCollection<T extends { id: string }>(

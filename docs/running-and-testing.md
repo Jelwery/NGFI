@@ -133,6 +133,14 @@ pnpm data:upstream:sync -- --version v3.8.0
 - `tier=walk-forward` 预登记候选权重/阈值、数据/代码版本、种子、purge/标签期限与不重叠测试窗。训练选候选，测试一次；相同请求返回已登记结果，修改参数是新实验。回报输入应来自冻结含成本回测，协议不会证明调用方提供的收益血缘。
 - 大型输入可先登记 JSON artifact；当前计算桥输入/输出上限8MiB，应选择有界股票池或因子式协方差。CNE6 真数据全市场覆盖和实时源没有随离线测试自动验收。
 
+## 原生量化研究
+
+原生因子图、Ridge/HGB 与 mean-variance/top-k 已整合到同一个 `combinatorial-optimization` Python 项目，复用现有成交账本；CLI/DSH 共用 ResearchWorkspace，不恢复旧 `packages/quant-research`。使用 `pnpm quant:research --workspace alpha catalog`、`schema` 查询契约，`pnpm quant:demo` 运行明确合成示例。
+
+`finance_quant_research` 仅在 strategy-research preset 可见，写操作绑定 case/revision，数据和结果按 ID 查询。Agent 输入输出限 8MiB，计算 artifact 限 128MiB，子进程超时 120 秒，运行固定离线且不自动安装依赖。原生诊断目标不是 A3 确认账户计划；等权实验基准不是实际 CSI 指数。详细用法见 [原生量化研究](quant-research.md)。
+
+验证包括 `tests/quant-research-workflow.test.ts`、`tests/quant-workflow-integration.test.ts` 和量化目录的原生研究测试；`pnpm dependency:audit` 覆盖 Node 生产依赖及当前三个 Python 项目锁文件。实际逐包证据见 [合并计划](native-quant-research-merge-plan.md)。
+
 ## A0/A1 数据契约验收
 
 冻结配置为 `config/equity-data-acceptance.json`，执行证据与阻断项见 `docs/equity-data-a0-a1-acceptance.md`。`cne6_engine.data_sources.cli acceptance` 只做来源盘点及候选结构/完整性/时间校验，不发布数据、不切换 CURRENT、不把 schema pass 当作 A2 数据通过。可加 `--candidate /absolute/path` 校验 manifest + JSONL，或 `--output .runtime/新文件名.json` 保留盘点；已有输出不覆盖。

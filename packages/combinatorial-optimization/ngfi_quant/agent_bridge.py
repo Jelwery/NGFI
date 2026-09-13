@@ -126,6 +126,9 @@ def _promotion(value: dict[str, Any]) -> dict[str, Any]:
 
 
 def dispatch(operation: str, value: dict[str, Any]) -> Any:
+    if operation == "research-artifact":
+        from .research_bridge import artifact_computation
+        return artifact_computation(value)
     if operation == "research-backtest":
         return run_research_backtest(_backtest_request(value))
     if operation == "promotion":

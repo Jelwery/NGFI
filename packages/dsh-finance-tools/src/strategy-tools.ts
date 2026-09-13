@@ -1,5 +1,8 @@
 import { spawn } from 'node:child_process'
-import { resolve } from 'node:path'
+import { createHash } from 'node:crypto'
+import { mkdtempSync, rmSync, writeFileSync, realpathSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join, resolve } from 'node:path'
 import { defineTool, type ToolDefinition } from '@deepseek-ai/dsh-tools'
 import { ACCUMULATION_BREAKOUT_STRATEGY_V1 } from '@finance2dsh/strategy-accumulation-breakout'
 import {
@@ -13,7 +16,8 @@ import {
 import { INDICATOR_DEFINITIONS, computeIndicator, indicatorDefinition } from '@finance2dsh/technical-analysis'
 import { ResearchWorkspace } from '@finance2dsh/research-workspace'
 import { canonicalJson, evidenceId, modelRunId, sha256, type JsonObject as ResearchJsonObject, type ModelRun } from '@finance2dsh/research-core'
-import { containedPath, ensurePlainDirectory, quantCodeIdentity, requireRuntimeId, strictTool } from './runtime-store.js'
+import { runQuantResearch } from '@finance2dsh/research-workflow'
+import { containedPath, ensurePlainDirectory, quantCodeIdentity, readContentAddressedJson, requireRuntimeId, strictTool } from './runtime-store.js'
 
 const MAX_BRIDGE_BYTES = 8 * 1024 * 1024
 
@@ -21,6 +25,7 @@ export const STRATEGY_TOOL_NAMES = [
   'finance_strategy_registry',
   'finance_strategy_backtest',
   'finance_strategy_promotion',
+  'finance_quant_research',
 ] as const
 
 export interface StrategyToolOptions {
@@ -50,7 +55,8 @@ function strategyRegistry(): StrategyRegistry {
 }
 
 export async function quantBridge(
-  options: StrategyToolOptions, operation: 'research-backtest' | 'promotion' | 'portfolio-optimize' | 'rebalance-plan' | 'walk-forward', input: unknown, signal?: AbortSignal,
+  options: StrategyToolOptions, operation: 'research-backtest' | 'promotion' | 'portfolio-optimize' | 'rebalance-plan' | 'walk-forward' | 'research-artifact', input: unknown, signal?: AbortSignal,
+  transportRoot?: string,
 ) {
   if (signal?.aborted) throw new Error('quant computation aborted')
   const project = resolve(options.quantProjectRoot)
@@ -59,43 +65,83 @@ export async function quantBridge(
   const executable = options.uvExecutable ?? 'uv'
   const stdout = await new Promise<string>((resolveOutput, reject) => {
     const child = spawn(executable, ['run', '--project', project, '--frozen', '--offline', '--no-sync', '--no-env-file', '--no-config', 'python', '-m', 'ngfi_quant.agent_bridge', operation], {
-      cwd: project, stdio: ['pipe', 'pipe', 'pipe'],
+      cwd: project, stdio: ['pipe', 'pipe', 'pipe'], detached: process.platform !== 'win32',
       env: {
         PATH: process.env.PATH,
         UV_CACHE_DIR: process.env.UV_CACHE_DIR ?? resolve(project, '.uv-cache'),
         PYTHONDONTWRITEBYTECODE: '1',
+        NGFI_QUANT_TRANSPORT: transportRoot,
+        OPENBLAS_NUM_THREADS: '1', OMP_NUM_THREADS: '1', MKL_NUM_THREADS: '1',
       },
     })
     const output: Buffer[] = []
     const errors: Buffer[] = []
     let bytes = 0
-    const timeout = setTimeout(() => child.kill('SIGKILL'), 120_000)
+    const terminate = () => {
+      try {
+        if (process.platform !== 'win32' && child.pid !== undefined) process.kill(-child.pid, 'SIGKILL')
+        else child.kill('SIGKILL')
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ESRCH') reject(error)
+      }
+    }
+    let timedOut = false
+    const timeout = setTimeout(() => { timedOut = true; terminate() }, 120_000)
     child.stdout.on('data', (chunk: Buffer) => {
       bytes += chunk.length
-      if (bytes > MAX_BRIDGE_BYTES) child.kill('SIGKILL')
+      if (bytes > MAX_BRIDGE_BYTES) terminate()
       else output.push(chunk)
     })
     let errorBytes = 0
     child.stderr.on('data', (chunk: Buffer) => {
       errorBytes += chunk.length
-      if (errorBytes > MAX_BRIDGE_BYTES) child.kill('SIGKILL')
+      if (errorBytes > MAX_BRIDGE_BYTES) terminate()
       else errors.push(chunk)
     })
-    child.stdin.on('error', () => child.kill('SIGTERM'))
+    child.stdin.on('error', terminate)
     child.once('error', error => { clearTimeout(timeout); reject(error) })
-    child.once('exit', status => {
+    child.once('close', status => {
       clearTimeout(timeout)
       if (signal?.aborted) reject(new Error('quant computation aborted'))
+      else if (timedOut) reject(new Error('quant computation exceeded 120 seconds'))
       else if (bytes > MAX_BRIDGE_BYTES || errorBytes > MAX_BRIDGE_BYTES) reject(new Error('quant research output exceeds 8 MiB'))
       else if (status !== 0) reject(new Error(`quant research bridge failed: ${Buffer.concat(errors).toString('utf8').trim()}`))
       else resolveOutput(Buffer.concat(output).toString('utf8'))
     })
-    const abort = () => child.kill('SIGTERM')
+    const abort = terminate
     signal?.addEventListener('abort', abort, { once: true })
+    if (signal?.aborted) abort()
     child.once('close', () => signal?.removeEventListener('abort', abort))
     child.stdin.end(payload)
   })
   return JSON.parse(stdout) as unknown
+}
+
+export async function quantArtifactComputation(options: StrategyToolOptions, operation: string, input: ResearchJsonObject, signal?: AbortSignal): Promise<ResearchJsonObject> {
+  const payload = canonicalJson(input)
+  if (Buffer.byteLength(payload) > 128 * 1024 * 1024) throw new RangeError('Computation artifact exceeds 128 MiB')
+  const directory = mkdtempSync(join(realpathSync(tmpdir()), 'ngfi-quant-transport-'))
+  try {
+    writeFileSync(join(directory, 'input.json'), payload, { mode: 0o600, flag: 'wx' })
+    const inputHash = `sha256:${createHash('sha256').update(payload).digest('hex')}`
+    const receipt = object(await quantBridge(options, 'research-artifact', { operation, inputHash }, signal, directory), 'artifact receipt')
+    const result = readContentAddressedJson(join(directory, 'output.json'), receipt.hash as `sha256:${string}`, { maxBytes: 128 * 1024 * 1024 })
+    if (result.bytes !== receipt.bytes || Array.isArray(result.value)) throw new Error('Computation artifact receipt mismatch')
+    return result.value as ResearchJsonObject
+  } finally {
+    rmSync(directory, { recursive: true, force: true })
+  }
+}
+
+export async function executeQuantResearch(options: StrategyToolOptions, workspaceId: string, request: ResearchJsonObject, signal?: AbortSignal): Promise<ResearchJsonObject> {
+  if (request.action === 'catalog' || request.action === 'schema') {
+    if (Object.keys(request).some(key => key !== 'action')) throw new TypeError('Catalog and schema accept no additional parameters')
+    return quantArtifactComputation(options, request.action, {}, signal)
+  }
+  const root = containedPath(options.runtimeRoot ?? resolve(process.cwd(), '.runtime/finance-data'), 'research', requireRuntimeId(workspaceId, 'workspace_id'))
+  ensurePlainDirectory(root)
+  return runQuantResearch({ store: new ResearchWorkspace({ root }), identity: quantCodeIdentity(resolve(options.quantProjectRoot)),
+    compute: (operation, input, abort) => quantArtifactComputation(options, operation, input, abort) }, request, signal)
 }
 
 export function createStrategyTools(options: StrategyToolOptions): ToolDefinition[] {
@@ -230,6 +276,29 @@ export function createStrategyTools(options: StrategyToolOptions): ToolDefinitio
           throw new TypeError('promotion evidence requires a research-tier backtest; smoke is never eligible')
         }
         return jsonSafe(await quantBridge(options, 'promotion', input, exec.signal))
+      },
+    }),
+    defineTool({
+      name: 'finance_quant_research',
+      description: 'Inspect native factor/model schemas, import explicit PIT data, run a frozen diagnostic experiment, or query registered results. Uses the shared research workspace and execution ledger; not an A3 approved plan, automatic promotion, or live trading. Never invent data or timestamps.',
+      parameters: {
+        action: { type: 'string', enum: ['catalog', 'schema', 'import', 'run', 'get', 'list'], required: true },
+        workspace_id: { type: 'string' }, case_id: { type: 'string' }, expected_revision: { type: 'integer' },
+        dataset: { type: 'object', additionalProperties: true }, dataset_id: { type: 'string' },
+        spec: { type: 'object', additionalProperties: true }, run_id: { type: 'string' }, resume: { type: 'boolean' },
+        section: { type: 'string' }, offset: { type: 'integer' }, limit: { type: 'integer' },
+      },
+      output: JSON_OUTPUT, timeoutMs: 125_000, isConcurrencySafe: () => false,
+      async execute(args, exec) {
+        if (Buffer.byteLength(JSON.stringify(args)) > MAX_BRIDGE_BYTES) throw new RangeError('Agent input exceeds 8 MiB; import large data through the operator CLI')
+        const payload: Record<string, unknown> = { action: args.action }
+        for (const [source, target] of [['case_id', 'caseId'], ['expected_revision', 'expectedRevision'], ['dataset', 'dataset'],
+          ['dataset_id', 'datasetId'], ['spec', 'spec'], ['run_id', 'runId'], ['resume', 'resume'], ['section', 'section'], ['offset', 'offset'], ['limit', 'limit']] as const) {
+          if (args[source] !== undefined) payload[target] = args[source]
+        }
+        const result = await executeQuantResearch(options, ['catalog', 'schema'].includes(args.action) ? 'catalog' : requireRuntimeId(args.workspace_id, 'workspace_id'), payload as ResearchJsonObject, exec.signal)
+        if (Buffer.byteLength(JSON.stringify(result)) > MAX_BRIDGE_BYTES) throw new RangeError('Agent output exceeds 8 MiB; request a smaller section or page')
+        return jsonSafe(result)
       },
     }),
   ].map(strictTool)

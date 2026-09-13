@@ -221,16 +221,24 @@ def _prepare(value: Any) -> dict:
     alpha = np.zeros(n, dtype=float)
     for slot, i in enumerate(scored_indices):
         alpha[i] = pool_alpha[slot]
-    snapshot = _object(data["riskSnapshot"], "schemaVersion model modelVersion asOf availableAt currency covariancePeriod factors securities factorCovariance quality sourceQuality", "stockCovariance coverage inputHash descriptorQuality dataQuality", "riskSnapshot")
+    factors, factor_cov, x, s, coverage = validate_cne6_risk(data["riskSnapshot"], keys, as_of, domain_ages["risk"], policy)
+    names = [factor["name"] for factor in factors]
+    return _prepare_account(data, mandate, assets, keys, alpha, factors, names, factor_cov, x, s,
+                            domain_ages, scored_indices, cost_aversion, tolerance, coverage, cash, as_of)
+
+
+def validate_cne6_risk(value: Any, keys: list[str], as_of: datetime, max_age: float, policy: dict):
+    n = len(keys)
+    snapshot = _object(value, "schemaVersion model modelVersion asOf availableAt currency covariancePeriod factors securities factorCovariance quality sourceQuality", "stockCovariance coverage inputHash descriptorQuality dataQuality", "riskSnapshot")
     if snapshot["schemaVersion"] != "1" or snapshot["model"] != "CNE6" or snapshot["currency"] != "CNY" or snapshot["covariancePeriod"] != "daily":
         raise ValueError("riskSnapshot must be schema 1, daily CNE6 CNY")
     _text(snapshot["modelVersion"], "modelVersion")
-    _pit(snapshot["availableAt"], as_of, domain_ages["risk"], "riskSnapshot.availableAt")
+    _pit(snapshot["availableAt"], as_of, max_age, "riskSnapshot.availableAt")
     # The existing CNE6 producer has a date-valued asOf; availability is separate.
     model_time = snapshot["asOf"]
     if isinstance(model_time, str) and len(model_time) == 10:
         model_time += "T00:00:00+08:00"
-    _pit(model_time, as_of, domain_ages["risk"], "riskSnapshot.asOf")
+    _pit(model_time, as_of, max_age, "riskSnapshot.asOf")
     if "inputHash" in snapshot:
         require_hash(snapshot["inputHash"], "riskSnapshot.inputHash")
     quality = _object(snapshot["quality"], "status symmetric positiveSemidefinite maxAsymmetry minEigenvalue maxEigenvalue conditionNumber stockReconciliationMaxError issues", label="riskSnapshot.quality")
@@ -315,7 +323,12 @@ def _prepare(value: Any) -> dict:
         # No proxying or dropping held/buyable securities: every decision variable needs risk.
         raise ValueError(f"missing risk for assets (held risk cannot be omitted): {missing}")
     indices = [security_keys.index(key) for key in keys]
-    x, s = full_x[indices], full_s[indices]
+    return factors, factor_cov, full_x[indices], full_s[indices], coverage
+
+
+def _prepare_account(data, mandate, assets, keys, alpha, factors, names, factor_cov, x, s,
+                     domain_ages, scored_indices, cost_aversion, tolerance, coverage, cash, as_of):
+    n = len(keys)
     benchmark = _object(data["benchmark"], "instrument weights availableAt", label="benchmark")
     benchmark_instrument = instrument_from_contract(benchmark["instrument"])
     if benchmark_instrument.key not in ("CN:SSE:000300:index", "CN:SSE:000906:index"):
@@ -392,6 +405,11 @@ def _prepare(value: Any) -> dict:
                 tolerance=tolerance, coverage={"assetCount": n, "coveredCount": n, "ratio": coverage, "missingKeys": []})
 
 
+def half_turnover(weights, current):
+    delta = weights - current
+    return cp.norm1(delta) / 2 if isinstance(delta, cp.Expression) else float(np.abs(delta).sum() / 2)
+
+
 def _risk(context: dict, w: np.ndarray) -> dict:
     active = w - context["b"]
     exposure = context["x"].T @ active
@@ -417,6 +435,12 @@ def _cost_surrogate(context: dict, w: np.ndarray) -> float:
 
 
 def _objective(context: dict, w: np.ndarray) -> float:
+    if "researchSpec" in context:
+        spec = context["researchSpec"]
+        turnover = 2 * spec.turnover_penalty * half_turnover(w, context["current"])
+        if spec.method == "top-k":
+            return float(np.sum((w - context["researchTarget"]) ** 2) + turnover)
+        return float(spec.risk_aversion * w @ context["covariance"] @ w - context["alpha"] @ w + turnover)
     mandate = context["mandate"]
     alpha = context["alpha"]
     return float(mandate["riskAversion"] * _risk(context, w)["activeVariance"] - alpha @ w
@@ -548,11 +572,10 @@ def _lot_oracle(context: dict) -> dict | None:
         max_trade = math.floor(asset["advNotional"] * context["mandate"]["maxParticipation"] / asset["price"] / lot)
         down = min(max_trade, asset["sellableQuantity"] // lot) if context["can_sell"][i] else 0
         up = max_trade if context["can_buy"][i] else 0
-        steps = list(range(-down, up + 1))
-        ranges.append((i, lot, steps))
-        total *= len(steps)
+        total *= down + up + 1
         if total > 20000:
             return None
+        ranges.append((i, lot, range(-down, up + 1)))
     best = None
     feasible = 0
     def recurse(index: int, q: np.ndarray) -> None:
@@ -604,7 +627,7 @@ def optimize_portfolio(input: dict) -> dict:
         add("cashMin", 1 - cp.sum(w) >= context["mandate"]["cashMin"])
         add("cashMax", 1 - cp.sum(w) <= context["mandate"]["cashMax"])
         delta = w - context["current"]
-        turnover = cp.norm1(delta) / 2
+        turnover = half_turnover(w, context["current"])
         add("turnoverL1Half", turnover <= context["mandate"]["turnoverLimit"])
         for i, row in enumerate(context["assets"]):
             key = context["keys"][i]
@@ -704,6 +727,147 @@ def optimize_portfolio(input: dict) -> dict:
         result["rejectionReasons"].append(str(exc))
     result["hashes"]["result"] = stable_hash(result)
     return result
+
+
+def research_covariance(panel, index: int, spec) -> tuple[np.ndarray, dict]:
+    from .research_contracts import instant
+    decision_at = panel.dataset.calendar[index].decision_at
+    horizon = spec.model.horizon
+    if spec.risk.source == "cne6":
+        visible = [row for row in panel.dataset.cne6_models
+                   if isinstance(row.get("availableAt"), str) and instant(row["availableAt"]) <= instant(decision_at)]
+        if not visible:
+            raise ValueError("no PIT-visible CNE6 snapshot; no silent risk fallback")
+        snapshot = max(visible, key=lambda row: instant(row["availableAt"]))
+        policy = {"allowWarnings": spec.risk.allow_warnings, "allowedProxyFlags": spec.risk.allowed_proxy_flags,
+                  "minCoverage": spec.risk.min_coverage, "maxConditionNumber": spec.risk.max_condition_number,
+                  "maxAsymmetry": 1e-10, "maxReconciliationError": 1e-10}
+        _, factor, x, specific, _ = validate_cne6_risk(snapshot, panel.securities, instant(decision_at), spec.risk.max_age_days, policy)
+        from .contracts import require_date
+        require_date(snapshot["asOf"], "CNE6 asOf")
+        if instant(snapshot["availableAt"]) < instant(snapshot["asOf"] + "T15:00:00+08:00"):
+            raise ValueError("CNE6 publication must not precede final market close")
+        covariance = (x @ factor @ x.T + np.diag(specific ** 2)) * horizon
+        provenance = {"riskSource": "CNE6", "riskSnapshotHash": stable_hash(snapshot),
+                      "sourceQuality": snapshot["sourceQuality"], "coverage": snapshot.get("coverage")}
+    else:
+        from sklearn.covariance import LedoitWolf
+        close = panel.fields["close"].iloc[max(0, index - spec.optimizer.risk_lookback):index + 1]
+        returns = close.pct_change(fill_method=None).iloc[1:].to_numpy()
+        if returns.shape[0] < 5 or not np.isfinite(returns).all():
+            raise ValueError("risk covariance requires at least five complete PIT return rows")
+        covariance = LedoitWolf().fit(returns).covariance_ * horizon
+        provenance = {"riskSource": "LedoitWolf", "riskSnapshotHash": stable_hash(returns.tolist())}
+    return covariance, {**provenance, "horizonSessions": horizon, "purpose": "research-diagnostic",
+                        "scaling": "daily variance times horizon; ignores cross-session covariance"}
+
+
+def optimize_research_weights(securities, expected, covariance, current, eligible, industries, spec, *, frozen=None):
+    size = len(securities)
+    covariance = _matrix(np.asarray(covariance).tolist(), size, "covariance", 1e-10)
+    if not size or len(set(securities)) != size or len(industries) != size:
+        raise ValueError("invalid optimizer security/industry alignment")
+    for label, vector in (("expected", expected), ("current", current), ("eligible", eligible)):
+        if vector.shape != (size,) or not np.isfinite(vector).all():
+            raise ValueError(f"invalid {label} vector")
+    if (current < 0).any() or current.sum() > 1 + 1e-8:
+        raise ValueError("current weights must be long-only with nonnegative cash")
+    frozen = np.zeros(size, dtype=bool) if frozen is None else frozen
+    if eligible.dtype != bool or frozen.dtype != bool or frozen.shape != (size,):
+        raise ValueError("eligibility and frozen masks must be boolean and security-aligned")
+    if set(spec.industry_caps) - set(industries):
+        raise ValueError("industry caps name absent industries")
+    w = cp.Variable(size)
+    upper = np.where(eligible | frozen, spec.max_weight, 0.0)
+    turnover = half_turnover(w, current)
+    constraints = [w >= 0, w <= upper, cp.sum(w) <= 1 - spec.cash_reserve,
+                   turnover <= spec.max_turnover / 2]
+    if frozen.any():
+        constraints.append(w[frozen] == current[frozen])
+    for industry, cap in spec.industry_caps.items():
+        constraints.append(cp.sum(w[[i for i, name in enumerate(industries) if name == industry]]) <= cap)
+    selected = []
+    if spec.method == "top-k":
+        selected = sorted(np.flatnonzero(eligible & ~frozen), key=lambda i: (-expected[i], securities[i]))[:spec.top_k]
+        outside = np.ones(size, dtype=bool)
+        outside[selected] = False
+        outside &= ~frozen
+        if outside.any():
+            constraints.append(w[outside] == 0)
+        target = np.zeros(size)
+        target[frozen] = current[frozen]
+        if selected:
+            target[selected] = min(spec.max_weight, max(0, 1 - spec.cash_reserve - current[frozen].sum()) / len(selected))
+        objective = cp.Minimize(cp.sum_squares(w - target) + 2 * spec.turnover_penalty * turnover)
+    else:
+        objective = cp.Maximize(expected @ w - spec.risk_aversion * cp.quad_form(w, cp.psd_wrap(covariance))
+                                - 2 * spec.turnover_penalty * turnover)
+    problem = cp.Problem(objective, constraints)
+    try:
+        problem.solve(solver="CLARABEL", max_iter=200, tol_gap_abs=1e-9, tol_feas=1e-9, tol_gap_rel=1e-9)
+    except cp.error.SolverError:
+        return {"status": "failed", "reason": "solver-error", "weights": None}
+    if problem.status != cp.OPTIMAL or w.value is None:
+        return {"status": "failed", "reason": str(problem.status), "weights": None}
+    value = np.asarray(w.value)
+    violation = max(float(np.max(np.abs(constraint.violation()))) for constraint in constraints)
+    if not np.isfinite(value).all() or violation > 1e-7:
+        return {"status": "failed", "reason": "constraint-residual", "weights": None}
+    value = np.maximum(0, value)
+    return {"status": "complete", "weights": dict(zip(securities, value.tolist())),
+            "cashWeight": float(1 - value.sum()), "turnover": 2 * half_turnover(value, current),
+            "turnoverDefinition": "sum(abs(w-currentWeight))", "internalTurnoverLimit": spec.max_turnover / 2,
+            "internalTurnoverPenalty": 2 * spec.turnover_penalty,
+            "objectiveMode": "forecast-mean-variance" if spec.method == "mean-variance" else "constrained-top-k",
+            "selectedCandidates": [securities[i] for i in selected], "expectedReturn": float(expected @ value),
+            "variance": float(value @ covariance @ value), "covarianceHash": stable_hash(covariance.tolist()),
+            "maximumViolation": violation, "solver": "CLARABEL", "objective": float(problem.value),
+            "feasibilityScope": "continuous research target at decision time; not an A3 audited plan",
+            "promotionEligible": False}
+
+
+def plan_research_orders(panel, index: int, spec, account: dict, allocation: dict, expected, covariance) -> dict:
+    day = panel.dates[index]
+    keys = panel.securities
+    assets = [panel.bars[day, key] for key in keys]
+    quantities = np.array([account["quantities"].get(key, 0) for key in keys], dtype=np.int64)
+    prices = np.array([row.close for row in assets])
+    nav = account["nav"]
+    cost = AShareCostModel(commission_rate=spec.execution.commission_rate, minimum_commission=spec.execution.minimum_commission,
+                          stamp_duty_rate=spec.execution.stamp_duty_rate, transfer_fee_rate=spec.execution.transfer_fee_rate,
+                          slippage_rate=spec.execution.slippage_rate)
+    bars = [AShareBar(day, instrument_from_contract(row.instrument.json()), panel.dataset.calendar[index].decision_at,
+                     row.close, None, None, row.close, row.previous_close, row.suspended, row.limit_rate,
+                     row.status_available_at, row.eligible and not row.suspended, not row.suspended) for row in assets]
+    permissions = [[fill_order(bar, 100, side, cost, decision_at=panel.dataset.calendar[index].decision_at,
+                               require_status=True)[1] is None for bar in bars] for side in ("buy", "sell")]
+    upper = np.array([spec.optimizer.max_weight if row.eligible or quantities[i] else 0 for i, row in enumerate(assets)])
+    if spec.optimizer.method == "top-k":
+        upper = np.array([upper[i] if key in allocation["selectedCandidates"] or not permissions[1][i] else 0
+                          for i, key in enumerate(keys)])
+    context = {"researchSpec": spec.optimizer, "researchTarget": np.array([allocation["weights"].get(key, 0) for key in keys]),
+               "covariance": covariance, "alpha": expected, "keys": keys, "quantities": quantities,
+               "current": quantities * prices / nav, "prices": prices, "nav": nav, "cash": account["cash"],
+               "lots": np.array([row.lot_size for row in assets]), "bars": bars, "cost": cost,
+               "data": {"asOf": panel.dataset.calendar[index].decision_at}, "can_buy": permissions[0], "can_sell": permissions[1],
+               "lower": np.zeros(len(keys)), "upper": upper, "b": np.zeros(len(keys)), "tolerance": 1e-7,
+               "mandate": {"cashMin": spec.optimizer.cash_reserve, "cashMax": 1,
+                           "turnoverLimit": spec.optimizer.max_turnover / 2, "maxParticipation": spec.execution.max_participation},
+               "assets": [{"instrument": row.instrument.json(), "quantity": int(quantities[i]),
+                           "sellableQuantity": account["sellableNextDay"].get(keys[i], 0), "price": row.close,
+                           "advNotional": max(row.volume * row.close, 1e-12)} for i, row in enumerate(assets)],
+               "bands": [(f"industryCap.{industry}", np.array([float(row.industry == industry) for row in assets]), 0, cap)
+                         for industry, cap in spec.optimizer.industry_caps.items()]}
+    q, diagnostics, cash, trades = _repair(context, context["researchTarget"])
+    failures = [row["constraint"] for row in diagnostics if not row["satisfied"]]
+    oracle = _lot_oracle(context)
+    if failures:
+        reason = "integer-infeasible (enumerated)" if oracle and oracle["feasibleCount"] == 0 else (
+            "discrete repair search miss" if oracle else "discrete repair failed; too large to enumerate")
+        return {**allocation, "status": "failed", "reason": reason, "constraintDiagnostics": diagnostics, "lotOracle": oracle}
+    return {**allocation, "quantities": dict(zip(keys, q.tolist())), "constraintDiagnostics": diagnostics, "lotOracle": oracle,
+            "estimatedCash": cash, "estimatedTrades": trades, "accountSnapshotHash": stable_hash(account),
+            "feasibilityScope": "research target and lot plan at decision prices; future fills are not guaranteed"}
 
 
 def rebalance_plan(input: dict) -> dict:

@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
-import { closeSync, existsSync, lstatSync, mkdirSync, openSync, readFileSync, readSync, readdirSync, realpathSync, renameSync, unlinkSync, writeFileSync } from 'node:fs'
+import { closeSync, constants, existsSync, fstatSync, lstatSync, mkdirSync, openSync, readFileSync, readSync, readdirSync, realpathSync, renameSync, unlinkSync, writeFileSync } from 'node:fs'
 import { dirname, join, parse, resolve, sep } from 'node:path'
 import type { ToolDefinition } from '@deepseek-ai/dsh-tools'
 
@@ -83,16 +83,21 @@ export function readContentAddressedJson(
   options: { maxBytes?: number; schemaVersion?: string; maxRows?: number; rowsField?: string } = {},
 ): ContentAddressedRead {
   const maxBytes = options.maxBytes ?? 8 * 1024 * 1024
+  if (!Number.isSafeInteger(maxBytes) || maxBytes <= 0) throw new TypeError('maxBytes must be a positive integer')
+  if (!/^sha256:[0-9a-f]{64}$/u.test(expectedHash)) throw new TypeError('expectedHash must be a sha256 identity')
   if (!existsSync(path)) throw new TypeError(`content-addressed artifact is missing: ${path}`)
   const stat = lstatSync(path)
   if (stat.isSymbolicLink() || !stat.isFile()) throw new TypeError(`content-addressed artifact must be a regular file: ${path}`)
   if (stat.size > maxBytes) throw new RangeError(`content-addressed artifact exceeds ${maxBytes} bytes`)
   const digest = createHash('sha256')
-  const descriptor = openSync(path, 'r')
+  const descriptor = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK)
   const chunk = Buffer.allocUnsafe(64 * 1024)
   const collected: Buffer[] = []
   let total = 0
   try {
+    const opened = fstatSync(descriptor)
+    if (!opened.isFile()) throw new TypeError('content-addressed artifact must be a regular file')
+    if (opened.size > maxBytes) throw new RangeError(`content-addressed artifact exceeds ${maxBytes} bytes`)
     for (;;) {
       const read = readSync(descriptor, chunk, 0, chunk.length, null)
       if (read === 0) break

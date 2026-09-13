@@ -1,3 +1,3 @@
 name: Strategy Research
-description: 固定策略与指标研究、smoke/research 回测、信号生命周期、outcome revision 和 calibration。
+description: 固定策略、原生因子图与滚动模型研究、统一账本回测和不可变实验追溯；仅研究与 dry-run。
 order: 3

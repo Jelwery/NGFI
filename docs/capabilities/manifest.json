@@ -3,6 +3,21 @@
   "generatedAt": "2026-09-07",
   "capabilities": [
     {
+      "id": "quant.native-research-pipeline",
+      "category": "quant",
+      "ownerPackage": "packages/combinatorial-optimization",
+      "publicExports": ["ResearchDataset", "ResearchSpec", "build_panel", "compute_factors", "factor_catalog", "forward_labels", "rolling_predict", "run_native_experiment"],
+      "status": "agent-exposed",
+      "tools": ["finance_quant_research"],
+      "skills": ["strategy-research"],
+      "presets": ["strategy-research"],
+      "contractTests": ["packages/combinatorial-optimization/quant_tests/test_research_contracts.py", "packages/combinatorial-optimization/quant_tests/test_experiment.py", "tests/quant-research-workflow.test.ts", "tests/quant-workflow-integration.test.ts"],
+      "goldenFixtures": ["packages/combinatorial-optimization/quant_tests/test_target_backtest.py"],
+      "upstream": [{"project": "NGFI native quant research", "commit": "0676dcadb4cc9e3a64f8548daa34f929ef45deaf", "path": "packages/quant-research/ngfi_quant"}],
+      "safetyBoundaries": ["research-diagnostic only; promotionEligible=false", "fixed JSON factor graph; no arbitrary code, paths or providers", "one execution ledger and ResearchWorkspace", "A3 confirmed-account plans cannot be replaced by native targets"],
+      "knownLimitations": ["Dense bounded panels, raw prices without inferred corporate actions", "Equal-weight diagnostic benchmark is not CSI300/CSI800", "A2 and full A4 acceptance remain blocked", "Crashed process locks require operator inspection before recovery"]
+    },
+    {
       "id": "runtime.adversarial-session-adapter",
       "category": "runtime",
       "ownerPackage": "packages/dsh-finance-tools",

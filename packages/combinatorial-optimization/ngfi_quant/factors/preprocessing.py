@@ -64,6 +64,15 @@ def winsorize(table: FactorTable, *, lineage: FactorLineage, lower: float = 0.01
     return FactorTransformResult(FactorTable(tuple(output)), tuple(diagnostics), lineage)
 
 
+def standardize_values(values: list[float | None]) -> list[float | None]:
+    finite = [value for value in values if value is not None]
+    deviation = pstdev(finite) if len(finite) >= 2 else 0.0
+    if deviation == 0:
+        return [None] * len(values)
+    center = fmean(finite)
+    return [None if value is None else (value - center) / deviation for value in values]
+
+
 def standardize(table: FactorTable, *, lineage: FactorLineage) -> FactorTransformResult:
     output: list[FactorValue] = []
     diagnostics: list[TransformDiagnostic] = []
@@ -74,8 +83,8 @@ def standardize(table: FactorTable, *, lineage: FactorLineage) -> FactorTransfor
             output.extend(replace(row, value=None) for row in rows)
             diagnostics.append(TransformDiagnostic(day, factor, "insufficient", len(rows), 0, 0, "constant or undersized cross-section"))
             continue
-        center = fmean(values)
-        output.extend(replace(row, value=None if row.value is None else (row.value - center) / deviation) for row in rows)
+        transformed = standardize_values([row.value for row in rows])
+        output.extend(replace(row, value=value) for row, value in zip(rows, transformed))
         diagnostics.append(TransformDiagnostic(day, factor, "available", len(rows), len(values), len(values) / len(rows)))
     return FactorTransformResult(FactorTable(tuple(output)), tuple(diagnostics), lineage)
 

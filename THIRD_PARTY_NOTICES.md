@@ -41,3 +41,18 @@ The Apache-2.0 license for the software does not grant rights to third-party mar
 data, research reports, news, exchange files, or other content obtained through
 the endpoints described by the software. Users remain responsible for applicable
 provider terms, access rights, attribution, and redistribution restrictions.
+
+## Numerical Python distributions
+
+The reviewed pandas `3.0.5` wheel starts with the pandas BSD-3-Clause grant. Its
+concatenated Python notices discuss GPL compatibility, not a change to the pandas
+license. Preserve the entire wheel LICENSE, including bundled third-party notices.
+
+The reviewed SciPy `1.18.1` wheel licenses SciPy itself under BSD-3-Clause. Its
+LICENSE.txt additionally describes build-dependent bundled OpenBLAS (BSD-3-Clause),
+LAPACK (BSD-3-Clause-Open-MPI), GCC runtime libraries (GPL-3.0-or-later WITH
+GCC-exception-3.1), and libquadmath (LGPL-2.1-or-later). The primary-package entry in
+the dependency inventory does not replace these component licenses. Preserve the
+complete wheel notices and review source/relinking and exception obligations for
+the actual binary distribution before redistribution; this development check is
+not redistribution approval.

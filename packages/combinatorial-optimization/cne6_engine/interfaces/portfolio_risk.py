@@ -221,10 +221,19 @@ def build_portfolio_risk_snapshot(
         reconciliation_tolerance=reconciliation_tolerance,
         condition_warning=condition_warning,
     )
-    availability = available_at or meta.get("available_at")
+    from datetime import date, datetime
+    try:
+        model_date = date.fromisoformat(meta["end_date"])
+    except ValueError as error:
+        raise Cne6PortfolioSnapshotError("meta.end_date must be an ISO date") from error
+    if model_date.isoformat() != meta["end_date"]:
+        raise Cne6PortfolioSnapshotError("meta.end_date must be an ISO date")
+    availability = available_at if available_at is not None else meta.get("available_at")
     if availability is not None:
-        from datetime import datetime
-        parsed = datetime.fromisoformat(availability.replace("Z", "+00:00"))
+        try:
+            parsed = datetime.fromisoformat(availability.replace("Z", "+00:00"))
+        except (AttributeError, TypeError, ValueError) as error:
+            raise Cne6PortfolioSnapshotError("model availability must be a timestamp with timezone") from error
         close = datetime.fromisoformat(meta["end_date"] + "T15:00:00+08:00")
         if parsed.tzinfo is None or parsed < close:
             raise Cne6PortfolioSnapshotError("model availability must include timezone and not precede its final market close")

@@ -47,6 +47,8 @@ export {
 export {
   STRATEGY_TOOL_NAMES,
   createStrategyTools,
+  executeQuantResearch,
+  quantArtifactComputation,
   type StrategyToolOptions,
 } from './strategy-tools.js'
 export {

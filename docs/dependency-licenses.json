@@ -2744,6 +2744,13 @@
     },
     {
       "ecosystem": "pypi",
+      "name": "annotated-types",
+      "version": "0.8.0",
+      "license": "MIT",
+      "project": "cne6-engine"
+    },
+    {
+      "ecosystem": "pypi",
       "name": "anyio",
       "version": "4.15.1",
       "license": "MIT",
@@ -3051,6 +3058,13 @@
     },
     {
       "ecosystem": "pypi",
+      "name": "narwhals",
+      "version": "2.26.0",
+      "license": "MIT",
+      "project": "cne6-engine"
+    },
+    {
+      "ecosystem": "pypi",
       "name": "numba",
       "version": "0.67.0",
       "license": "BSD-3-Clause",
@@ -3112,22 +3126,25 @@
       "ecosystem": "pypi",
       "name": "pandas",
       "version": "3.0.5",
-      "license": "PSF-2.0",
-      "project": "cne6-engine"
+      "license": "BSD-3-Clause",
+      "project": "cne6-engine",
+      "review": "Installed wheel LICENSE starts with the pandas BSD-3-Clause grant; concatenated PSF notices explicitly state GPL-compatible does not mean GPL-licensed. Retain bundled notices."
     },
     {
       "ecosystem": "pypi",
       "name": "pandas",
       "version": "3.0.5",
-      "license": "PSF-2.0",
-      "project": "finance2dsh-tdx-runner"
+      "license": "BSD-3-Clause",
+      "project": "finance2dsh-tdx-runner",
+      "review": "Installed wheel LICENSE starts with the pandas BSD-3-Clause grant; concatenated PSF notices explicitly state GPL-compatible does not mean GPL-licensed. Retain bundled notices."
     },
     {
       "ecosystem": "pypi",
       "name": "pandas",
       "version": "3.0.5",
-      "license": "PSF-2.0",
-      "project": "finance2dsh-yfinance-runner"
+      "license": "BSD-3-Clause",
+      "project": "finance2dsh-yfinance-runner",
+      "review": "Installed wheel LICENSE starts with the pandas BSD-3-Clause grant; concatenated PSF notices explicitly state GPL-compatible does not mean GPL-licensed. Retain bundled notices."
     },
     {
       "ecosystem": "pypi",
@@ -3229,6 +3246,20 @@
     },
     {
       "ecosystem": "pypi",
+      "name": "pydantic-core",
+      "version": "2.46.5",
+      "license": "MIT",
+      "project": "cne6-engine"
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "pydantic",
+      "version": "2.13.5",
+      "license": "MIT",
+      "project": "cne6-engine"
+    },
+    {
+      "ecosystem": "pypi",
       "name": "pytdx",
       "version": "1.72",
       "license": "LicenseRef-pytdx-usage-notice",
@@ -3303,6 +3334,13 @@
     },
     {
       "ecosystem": "pypi",
+      "name": "scikit-learn",
+      "version": "1.9.1",
+      "license": "BSD-3-Clause",
+      "project": "cne6-engine"
+    },
+    {
+      "ecosystem": "pypi",
       "name": "scipy",
       "version": "1.17.1",
       "license": "BSD-3-Clause",
@@ -3316,7 +3354,8 @@
       "version": "1.18.1",
       "license": "BSD-3-Clause",
       "project": "cne6-engine",
-      "marker": "python_full_version >= '3.12'"
+      "marker": "python_full_version >= '3.12'",
+      "review": "Installed wheel LICENSE.txt lines 1-30 license SciPy under BSD-3-Clause. Bundled OpenBLAS/LAPACK and GCC-runtime-exception/libquadmath notices remain separate binary redistribution obligations; see THIRD_PARTY_NOTICES.md."
     },
     {
       "ecosystem": "pypi",
@@ -3404,6 +3443,13 @@
     },
     {
       "ecosystem": "pypi",
+      "name": "threadpoolctl",
+      "version": "3.6.0",
+      "license": "BSD-3-Clause",
+      "project": "cne6-engine"
+    },
+    {
+      "ecosystem": "pypi",
       "name": "tqdm",
       "version": "4.70.0",
       "license": "MPL-2.0",
@@ -3429,6 +3475,13 @@
       "version": "4.16.0",
       "license": "PSF-2.0",
       "project": "finance2dsh-yfinance-runner"
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "typing-inspection",
+      "version": "0.4.4",
+      "license": "MIT",
+      "project": "cne6-engine"
     },
     {
       "ecosystem": "pypi",

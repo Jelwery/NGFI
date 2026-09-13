@@ -1,6 +1,6 @@
 ---
 name: strategy-research
-description: Evaluate the fixed NGFI strategy catalog and technical indicators, run smoke or research-grade backtests, maintain signal lifecycle/outcome revisions, calibrate evidence, and evaluate evidence-only promotion criteria.
+description: Evaluate fixed strategies or native factor graphs and rolling models, run governed research experiments on the shared ledger, inspect immutable results, maintain signal evidence, and evaluate evidence-only promotion criteria.
 ---
 
 # Strategy Research
@@ -20,5 +20,9 @@ Use this Skill only in the `strategy-research` preset. Strategy formulas, valida
 For daily portfolio simulation, supply target schedules known before the execution open, explicit PIT trading status, lagged ADV, raw prices and corporate-action events. Require actual CSI300/CSI800 series; metadata alone is not a benchmark. Read industry/style/residual-selection attribution together with cash, cost and trading-timing effects and coverage.
 
 Use `finance_strategy_backtest(tier=walk-forward)` in a research case with `workspace_id`, `case_id` and `expected_revision`. Register explicit candidate weights/thresholds, matched candidate-return dates, train/test folds, purge/label horizon, dataset/code versions and seed. Training selects parameters; each frozen test fold runs once. Repeating an identical registered request returns its recorded result; changing parameters creates another visible experiment. Candidate returns must already come from frozen cost-aware portfolio runs, not invented observations.
+
+For native cross-sectional experiments, use `finance_quant_research`: inspect catalog/schema, import an explicit dataset, then run with workspace/case/revision and dataset ID. Read results by run ID and section; do not pass file paths, source code, URLs or model binaries. An interrupted run requires explicit resume of the same frozen registration.
+
+Native mean-variance/top-k outputs are diagnostic targets, not confirmed-account A3 plans. Preserve synthetic flags, explicit CNE6/Ledoit–Wolf choice, full-L1 turnover, next-open fixed quantities, partial/rejected fills, missing actual index benchmark and `promotionEligible=false`. Do not treat the equal-weight experiment benchmark as CSI300/800 or rolling diagnostics as unused-holdout approval. Large imports belong to the operator CLI, not the Agent payload.
 
 Report exact data windows, hashes, cost/execution semantics, IS/OOS separation, sample counts, unavailable metrics and every rejection. Never turn missing data into zero or statistical evidence into a guaranteed return.

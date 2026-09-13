@@ -11,6 +11,7 @@ NGFI 是一个基于 [DeepSeek Harness（DSH）](https://www.npmjs.com/package/@
 - 可按需加载的金融分析 Skills
 - 受控 research workspace、冻结 replay、报告 audit、thesis drift 与隔离式对抗审阅
 - 固定策略/指标、smoke 与 research backtest、信号 outcome/calibration 证据链
+- [原生量化研究](docs/quant-research.md)：版本化因子图、Ridge/HGB、mean-variance/top-k、统一成交账本与不可变实验；`pnpm quant:demo` 仅运行显式合成示例
 - staged-confirmed 持仓、CNE6 风险、rank α + OSQP 组合优化与 100 股整手 dry-run 调仓
 - 日频目标组合回测、现金/费用/滑点/T+1/公司行动、CSI300/800 基准与行业/风格/选股归因
 - 预登记权重/阈值候选的 walk-forward 与不可变 model-runs/evidence 审计

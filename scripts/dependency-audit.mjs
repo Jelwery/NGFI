@@ -34,6 +34,8 @@ const pythonLicenseOverrides = new Map(Object.entries({
   'akracer@0.0.14': { license: 'MIT', reason: 'Platform-conditional wheel license reviewed manually; package is not installed on this host.' },
   'colorama@0.4.6': { license: 'BSD-3-Clause', reason: 'Platform-conditional wheel license reviewed manually; package is not installed on this host.' },
   'numpy@2.4.6': { license: 'BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0', reason: 'Python-version-conditional release uses the same reviewed NumPy license family as the installed release.' },
+  'pandas@3.0.5': { license: 'BSD-3-Clause', reason: 'Installed wheel LICENSE starts with the pandas BSD-3-Clause grant; concatenated PSF notices explicitly state GPL-compatible does not mean GPL-licensed. Retain bundled notices.' },
+  'scipy@1.18.1': { license: 'BSD-3-Clause', reason: 'Installed wheel LICENSE.txt lines 1-30 license SciPy under BSD-3-Clause. Bundled OpenBLAS/LAPACK and GCC-runtime-exception/libquadmath notices remain separate binary redistribution obligations; see THIRD_PARTY_NOTICES.md.' },
   'peewee@4.4.0': { license: 'MIT', reason: 'The installed wheel LICENSE contains the standard MIT grant.' },
   'py-mini-racer@0.6.0': { license: 'ISC', reason: 'Platform-conditional package license reviewed manually; package is not installed on this host.' },
   'pytdx@1.72': { license: 'LicenseRef-pytdx-usage-notice', reason: 'Wheel and upstream repository omit an OSI license; the upstream usage notice was manually reviewed and must be re-reviewed on upgrade.' },
@@ -75,9 +77,10 @@ function packageKey(name, version) {
   return `${normalizeName(name)}@${version}`
 }
 
-function normalizeLegacyLicense(raw, classifiers) {
+export function normalizeLegacyLicense(raw, classifiers) {
   const text = raw.trim()
   const joined = `${text} ${classifiers.join(' ')}`
+  if (strongCopyleft.test(joined)) return joined.trim()
   if (/Mozilla Public License 2\.0|MPL-2\.0/iu.test(joined)) return 'MPL-2.0'
   if (/Python Software Foundation/iu.test(joined)) return 'PSF-2.0'
   if (/Apache/iu.test(joined)) return 'Apache-2.0'
@@ -97,7 +100,7 @@ function licenseAtoms(expression) {
     .filter(Boolean)
 }
 
-function validateLicense(entry) {
+export function validateLicense(entry) {
   const expression = entry.license
   if (!expression || /^(?:UNKNOWN|UNLICENSED)$/iu.test(expression)) {
     return `${entry.ecosystem}:${entry.name}@${entry.version} has ${expression || 'UNKNOWN'} license`

@@ -1,15 +1,20 @@
 import { spawnSync } from 'node:child_process'
-import { chmod, copyFile, lstat, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises'
+import { createHash } from 'node:crypto'
+import { chmod, copyFile, lstat, mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
+import { parse } from 'yaml'
 import {
   DATA_PROVIDER_SECRET_ENV,
   DEFAULT_MODEL,
   DEFAULT_PROVIDER,
+  MODEL_HUB_BASE_URL,
   PROJECT_ROOT,
   RESERVED_PORTS,
   RUNTIME_HOME,
+  TRAE_BASE_URL,
+  TRAE_MODEL,
   assertPortAvailable,
   prepareRuntime,
 } from '../src/runtime.js'
@@ -22,9 +27,20 @@ const originalEnvironment = {
   NGFI_LLM_PROVIDER: process.env.NGFI_LLM_PROVIDER,
   NGFI_LLM_MODEL: process.env.NGFI_LLM_MODEL,
   NGFI_LLM_BASE_URL: process.env.NGFI_LLM_BASE_URL,
+  NGFI_LLM_API: process.env.NGFI_LLM_API,
+  NGFI_CONTEXT_WINDOW: process.env.NGFI_CONTEXT_WINDOW,
+  NGFI_MAX_TOKENS: process.env.NGFI_MAX_TOKENS,
+  NGFI_REASONING_EFFORT: process.env.NGFI_REASONING_EFFORT,
   NGFI_AGENT_PRESET: process.env.NGFI_AGENT_PRESET,
   NGFI_API_KEY: process.env.NGFI_API_KEY,
   DEEPSEEK_API_KEY: process.env.DEEPSEEK_API_KEY,
+  DEEPSEEK_BASE_URL: process.env.DEEPSEEK_BASE_URL,
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+  ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
+  MODEL_HUB_API_KEY: process.env.MODEL_HUB_API_KEY,
+  TRAE_AUTH_PATH: process.env.TRAE_AUTH_PATH,
+  TRAECLI_HOME: process.env.TRAECLI_HOME,
+  TRAE_HOME: process.env.TRAE_HOME,
   ...Object.fromEntries([...DATA_PROVIDER_SECRET_ENV].map(name => [name, process.env[name]])),
 }
 
@@ -156,6 +172,131 @@ describe('isolated runtime', () => {
     expect(settings).not.toContain('test-only-placeholder')
   })
 
+  it('does not inherit model settings from a different project-env provider', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'ngfi-provider-switch-'))
+    const projectEnvPath = join(directory, '.env')
+    await writeFile(projectEnvPath, [
+      'NGFI_LLM_PROVIDER=deepseek-official',
+      'NGFI_LLM_MODEL=deepseek-v4-flash',
+      'NGFI_REASONING_EFFORT=high',
+      'DEEPSEEK_BASE_URL=https://deepseek.example/v1',
+      '',
+    ].join('\n'))
+    process.env.NGFI_LLM_PROVIDER = 'trae-official'
+    delete process.env.NGFI_LLM_MODEL
+    delete process.env.NGFI_REASONING_EFFORT
+    delete process.env.DEEPSEEK_BASE_URL
+
+    const runtime = await prepareRuntime({ projectEnvPath })
+    expect(runtime).toMatchObject({
+      provider: 'trae-official',
+      model: TRAE_MODEL.id,
+    })
+    const settings = await readFile(join(RUNTIME_HOME, 'settings.yaml'), 'utf8')
+    expect(settings).toContain(`model: ${JSON.stringify(TRAE_MODEL.id)}`)
+    expect(settings).toContain(`reasoningEffort: ${JSON.stringify(TRAE_MODEL.defaultReasoningEffort)}`)
+    expect(settings).not.toContain('deepseek.example')
+  })
+
+  it('materializes Model Hub with the reviewed endpoint and no invented reasoning support', async () => {
+    process.env.NGFI_LLM_PROVIDER = 'model-hub'
+    delete process.env.NGFI_LLM_MODEL
+    delete process.env.NGFI_REASONING_EFFORT
+    process.env.MODEL_HUB_API_KEY = 'test-only-placeholder'
+
+    const runtime = await prepareRuntime({ requireCredential: true })
+    expect(runtime).toMatchObject({
+      provider: 'model-hub',
+      model: 'gpt-5.6-terra',
+      credentialSource: 'process-environment',
+    })
+    const settings = await readFile(join(RUNTIME_HOME, 'settings.yaml'), 'utf8')
+    expect(settings).toContain(`baseURL: ${JSON.stringify(MODEL_HUB_BASE_URL)}`)
+    expect(settings).toContain('apiKeyEnv: MODEL_HUB_API_KEY')
+    expect(settings).toContain('api: openai-completions')
+    expect(settings).toContain('contextWindow: 262144')
+    expect(settings).toContain('maxTokens: 32768')
+    expect(settings).toContain('reasoningEfforts: false')
+    expect(settings).not.toContain('test-only-placeholder')
+    expect(settings).not.toContain('reasoningEffort:')
+  })
+
+  it('rejects missing or invalid Model Hub configuration without switching providers', async () => {
+    process.env.NGFI_LLM_PROVIDER = 'model-hub'
+    delete process.env.NGFI_LLM_MODEL
+    delete process.env.MODEL_HUB_API_KEY
+    delete process.env.NGFI_REASONING_EFFORT
+    await expect(prepareRuntime({ requireCredential: true })).rejects.toThrow(/MODEL_HUB_API_KEY/u)
+
+    process.env.MODEL_HUB_API_KEY = 'test-only-placeholder'
+    process.env.NGFI_REASONING_EFFORT = 'high'
+    await expect(prepareRuntime({ requireCredential: true })).rejects.toThrow(/must be unset for model-hub/u)
+
+    delete process.env.NGFI_REASONING_EFFORT
+    process.env.NGFI_CONTEXT_WINDOW = '0'
+    await expect(prepareRuntime({ requireCredential: true })).rejects.toThrow(/positive integer/u)
+
+    delete process.env.NGFI_CONTEXT_WINDOW
+    process.env.NGFI_LLM_BASE_URL = 'https://unexpected.example/v1'
+    await expect(prepareRuntime({ requireCredential: true })).rejects.toThrow(/statically pinned/u)
+  })
+
+  it('pins Trae to the reviewed Sol route and validates its auth file without modifying it', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'ngfi-trae-auth-'))
+    const authPath = join(directory, 'auth.json')
+    const auth = JSON.stringify({
+      auth_mode: 'trae',
+      trae: {
+        access_token: ['test', 'only', 'placeholder'].join('-'),
+        expires_at: '2099-01-01T00:00:00.000Z',
+      },
+    })
+    await writeFile(authPath, auth, { mode: 0o600 })
+    const before = await stat(authPath)
+    process.env.NGFI_LLM_PROVIDER = 'trae-official'
+    delete process.env.NGFI_LLM_MODEL
+    delete process.env.NGFI_REASONING_EFFORT
+    process.env.TRAE_AUTH_PATH = authPath
+
+    const runtime = await prepareRuntime({ requireCredential: true })
+    expect(runtime).toMatchObject({
+      provider: 'trae-official',
+      model: TRAE_MODEL.id,
+      credentialSource: 'trae-auth-file',
+    })
+    const settings = await readFile(join(RUNTIME_HOME, 'settings.yaml'), 'utf8')
+    const parsed = parse(settings) as {
+      'agent-default-model': { provider: string; model: string; reasoningEffort: string }
+      'llm-trae': { authPath: string; baseURL: string; models: Array<Record<string, unknown>> }
+    }
+    expect(settings).toContain(`baseURL: ${JSON.stringify(TRAE_BASE_URL)}`)
+    expect(settings).toContain(`authPath: ${JSON.stringify(authPath)}`)
+    expect(parsed['agent-default-model']).toEqual({
+      provider: 'trae-official',
+      model: TRAE_MODEL.id,
+      reasoningEffort: TRAE_MODEL.defaultReasoningEffort,
+    })
+    expect(parsed['llm-trae'].models).toEqual([TRAE_MODEL])
+    expect(settings).not.toContain(['test', 'only', 'placeholder'].join('-'))
+    expect(await readFile(authPath, 'utf8')).toBe(auth)
+    expect((await stat(authPath)).mtimeMs).toBe(before.mtimeMs)
+  })
+
+  it('rejects missing Trae auth and unreviewed Trae routes', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'ngfi-trae-missing-'))
+    process.env.NGFI_LLM_PROVIDER = 'trae-official'
+    delete process.env.NGFI_REASONING_EFFORT
+    process.env.TRAE_AUTH_PATH = join(directory, 'missing-auth.json')
+    await expect(prepareRuntime({ requireCredential: true })).rejects.toThrow(/failed to read TRAE authentication/u)
+
+    process.env.NGFI_LLM_MODEL = 'unreviewed-model'
+    await expect(prepareRuntime()).rejects.toThrow(/routes are statically pinned/u)
+
+    process.env.NGFI_LLM_MODEL = TRAE_MODEL.id
+    process.env.NGFI_REASONING_EFFORT = 'max'
+    await expect(prepareRuntime()).rejects.toThrow(/Unsupported NGFI_REASONING_EFFORT for Trae/u)
+  })
+
   it('rejects an OpenAI-compatible provider without an absolute HTTP endpoint', async () => {
     process.env.NGFI_LLM_PROVIDER = 'openai-compatible'
     process.env.NGFI_LLM_MODEL = 'example-model'
@@ -175,6 +316,18 @@ describe('isolated runtime', () => {
     expect([...RESERVED_PORTS]).toEqual([3080, 3090])
     await expect(assertPortAvailable(3080)).rejects.toThrow(/reserved/)
     await expect(assertPortAvailable(3090)).rejects.toThrow(/reserved/)
+  })
+
+  it('pins the verified vendored Trae adapter and its license byte for byte', async () => {
+    const expected = {
+      'index.js': 'b7771324e0181d7f6d7a252f14b9008f31aa472a13b73fe2355da6282f82766e',
+      'upstream-package.json': '4141672a3b5289110c75b5fcebd85cf4916e86d8b794d2d1be8526a23ca3c7a1',
+      LICENSE: 'ebb4f09972aee8608be255debaf78451a68e95c290f55c240dec2ecfa16ea6be',
+    }
+    for (const [file, digest] of Object.entries(expected)) {
+      const content = await readFile(join(PROJECT_ROOT, 'packages/dsh-finance-bundle/vendor/trae', file))
+      expect(createHash('sha256').update(content).digest('hex'), file).toBe(digest)
+    }
   })
 })
 

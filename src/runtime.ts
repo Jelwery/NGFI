@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process'
 import { chmod, cp, lstat, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { createServer } from 'node:net'
+import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -25,7 +26,47 @@ const CREDENTIAL_ENV_BY_PROVIDER = {
   openai: 'OPENAI_API_KEY',
   anthropic: 'ANTHROPIC_API_KEY',
   'openai-compatible': 'NGFI_API_KEY',
+  'model-hub': 'MODEL_HUB_API_KEY',
+  'trae-official': null,
 } as const
+const PROVIDER_SCOPED_PROJECT_ENV = new Set([
+  'NGFI_LLM_MODEL',
+  'NGFI_LLM_BASE_URL',
+  'NGFI_LLM_API',
+  'NGFI_CONTEXT_WINDOW',
+  'NGFI_MAX_TOKENS',
+  'NGFI_REASONING_EFFORT',
+  'DEEPSEEK_BASE_URL',
+])
+
+export const MODEL_HUB_BASE_URL = 'https://aidp-i18ntt-sg.tiktok-row.net/api/modelhub/online/unified/v1'
+export const TRAE_BASE_URL = 'https://copilot-cn.bytedance.net'
+export const TRAE_MODEL = {
+  id: 'GPT-5.6-Sol',
+  configName: 'gpt-5.6-sol',
+  backendModel: 'gpt-5.6-sol__dev',
+  name: 'GPT-5.6-Sol',
+  contextWindow: 272000,
+  maxTokens: 32000,
+  reasoningEfforts: ['low', 'medium', 'high', 'xhigh'],
+  defaultReasoningEffort: 'xhigh',
+} as const
+
+function traeAuthPath(environment: NodeJS.ProcessEnv): string {
+  const explicit = environment.TRAE_AUTH_PATH?.trim()
+  const traeCliHome = environment.TRAECLI_HOME?.trim()
+  const traeHome = environment.TRAE_HOME?.trim()
+  for (const [name, value] of [
+    ['TRAE_AUTH_PATH', explicit], ['TRAECLI_HOME', traeCliHome], ['TRAE_HOME', traeHome],
+  ] as const) {
+    if (value !== undefined && /[\u0000-\u001f\u007f]/u.test(value)) {
+      throw new Error(`${name} contains invalid characters`)
+    }
+  }
+  return resolve(explicit
+    || (traeCliHome ? join(traeCliHome, 'auth.json')
+      : join(traeHome || join(homedir(), '.trae'), 'cli', 'auth.json')))
+}
 
 export const DATA_PROVIDER_SECRET_ENV = new Set([
   'TUSHARE_TOKEN',
@@ -47,7 +88,7 @@ export interface PreparedRuntime {
   environment: NodeJS.ProcessEnv
   provider: SupportedProvider
   model: string
-  credentialSource: 'process-environment' | 'project-env' | 'not-required'
+  credentialSource: 'process-environment' | 'project-env' | 'trae-auth-file' | 'not-required'
   cleanup(): Promise<void>
 }
 
@@ -113,12 +154,18 @@ async function projectEnvironment(
   const fromFile = new Set<string>()
   try {
     const values = parseDotEnv(await readFile(projectEnvPath, 'utf8'))
+    const processProvider = process.env.NGFI_LLM_PROVIDER?.trim()
+    const projectProvider = values.get('NGFI_LLM_PROVIDER')?.trim()
     for (const [key, value] of values) {
       if (DATA_PROVIDER_SECRET_ENV.has(key)) {
         throw new Error(
           `A-share data secret ${key} is not allowed in the project .env; `
           + 'use the process environment or .runtime/secrets/a-share-data.env (mode 0600)',
         )
+      }
+      if (processProvider && projectProvider && processProvider !== projectProvider
+        && PROVIDER_SCOPED_PROJECT_ENV.has(key)) {
+        continue
       }
       if (environment[key] === undefined) {
         environment[key] = value
@@ -140,8 +187,8 @@ function requiredText(environment: NodeJS.ProcessEnv, name: string, fallback: st
 
 function resolveProvider(environment: NodeJS.ProcessEnv): SupportedProvider {
   const provider = requiredText(environment, 'NGFI_LLM_PROVIDER', DEFAULT_PROVIDER)
-  if (!(provider in CREDENTIAL_ENV_BY_PROVIDER)) {
-    throw new Error(`Unsupported NGFI_LLM_PROVIDER: ${provider}. Use deepseek-official, openai, anthropic, or openai-compatible.`)
+  if (!Object.hasOwn(CREDENTIAL_ENV_BY_PROVIDER, provider)) {
+    throw new Error(`Unsupported NGFI_LLM_PROVIDER: ${provider}. Use ${Object.keys(CREDENTIAL_ENV_BY_PROVIDER).join(', ')}.`)
   }
   return provider as SupportedProvider
 }
@@ -161,15 +208,38 @@ function validateBaseUrl(environment: NodeJS.ProcessEnv, provider: SupportedProv
   }
 }
 
+function rejectFixedProviderOverrides(environment: NodeJS.ProcessEnv, provider: SupportedProvider): void {
+  const forbidden = provider === 'model-hub'
+    ? ['NGFI_LLM_BASE_URL', 'NGFI_LLM_API']
+    : provider === 'trae-official'
+      ? ['NGFI_LLM_BASE_URL', 'NGFI_LLM_API', 'DEEPSEEK_BASE_URL']
+      : []
+  for (const name of forbidden) {
+    if (environment[name]?.trim()) throw new Error(`${name} is not supported for ${provider}; the endpoint is statically pinned`)
+  }
+}
+
 function defaultModelFor(provider: SupportedProvider): string {
   if (provider === 'deepseek-official') return DEFAULT_MODEL
   if (provider === 'openai') return 'gpt-5'
   if (provider === 'anthropic') return 'claude-sonnet-4-5'
+  if (provider === 'trae-official') return TRAE_MODEL.id
+  if (provider === 'model-hub') return 'gpt-5.6-terra'
   return ''
 }
 
 function runtimeSettings(environment: NodeJS.ProcessEnv, provider: SupportedProvider, model: string): string[] {
-  const reasoningEffort = environment.NGFI_REASONING_EFFORT?.trim()
+  const reasoningEffort = requiredText(environment, 'NGFI_REASONING_EFFORT',
+    provider === 'trae-official' ? TRAE_MODEL.defaultReasoningEffort : '')
+  if (provider === 'trae-official') {
+    if (model !== TRAE_MODEL.id) throw new Error(`Unsupported Trae model: use ${TRAE_MODEL.id}; routes are statically pinned`)
+    if (!(TRAE_MODEL.reasoningEfforts as readonly string[]).includes(reasoningEffort)) {
+      throw new Error(`Unsupported NGFI_REASONING_EFFORT for Trae: use ${TRAE_MODEL.reasoningEfforts.join(', ')}`)
+    }
+  }
+  if (provider === 'model-hub' && reasoningEffort) {
+    throw new Error('NGFI_REASONING_EFFORT must be unset for model-hub; reasoning support is not declared')
+  }
   const lines = [
     'agent-default-model:',
     `  provider: ${JSON.stringify(provider)}`,
@@ -183,6 +253,32 @@ function runtimeSettings(environment: NodeJS.ProcessEnv, provider: SupportedProv
       ...(environment.DEEPSEEK_BASE_URL?.trim()
         ? [`  baseURL: ${JSON.stringify(environment.DEEPSEEK_BASE_URL.trim())}`]
         : []),
+    )
+  } else if (provider === 'trae-official') {
+    lines.push(
+      'llm-trae:',
+      `  baseURL: ${JSON.stringify(TRAE_BASE_URL)}`,
+      `  authPath: ${JSON.stringify(traeAuthPath(environment))}`,
+      '  streamIdleTimeoutMs: 300000',
+      `  maxTokens: ${TRAE_MODEL.maxTokens}`,
+      `  models: ${JSON.stringify([TRAE_MODEL])}`,
+    )
+  } else if (provider === 'model-hub') {
+    lines.push(
+      'llm-pi-ai:',
+      '  streamIdleTimeoutMs: 300000',
+      '  providers:',
+      '    model-hub:',
+      '      displayName: Model Hub',
+      '      apiKeyEnv: MODEL_HUB_API_KEY',
+      '      api: openai-completions',
+      `      baseURL: ${JSON.stringify(MODEL_HUB_BASE_URL)}`,
+      '      models:',
+      `        - id: ${JSON.stringify(model)}`,
+      `          name: ${JSON.stringify(model)}`,
+      `          contextWindow: ${requiredPositiveInteger(environment, 'NGFI_CONTEXT_WINDOW', 262144)}`,
+      `          maxTokens: ${requiredPositiveInteger(environment, 'NGFI_MAX_TOKENS', 32768)}`,
+      '          reasoningEfforts: false',
     )
   } else if (provider === 'openai' || provider === 'anthropic') {
     lines.push(
@@ -286,11 +382,18 @@ export async function prepareRuntime(
   }
   if (model === '') throw new Error('NGFI_LLM_MODEL is required for the openai-compatible provider')
   validateBaseUrl(loaded.environment, provider)
+  rejectFixedProviderOverrides(loaded.environment, provider)
+  const settings = runtimeSettings(loaded.environment, provider, model)
 
   const credentialName = CREDENTIAL_ENV_BY_PROVIDER[provider]
-  const credential = loaded.environment[credentialName]?.trim()
-  if ((options.requireCredential ?? false) && !credential) {
-    throw new Error(`Missing ${credentialName}. Copy .env.example to .env and configure the selected provider.`)
+  const credential = credentialName === null ? undefined : loaded.environment[credentialName]?.trim()
+  if (options.requireCredential ?? false) {
+    if (provider === 'trae-official') {
+      const { readTraeAuthHeader } = await import('@finance2dsh/dsh-bundle/trae')
+      await readTraeAuthHeader(traeAuthPath(loaded.environment))
+    } else if (!credential) {
+      throw new Error(`Missing ${credentialName}. Copy .env.example to .env and configure the selected provider.`)
+    }
   }
 
   await mkdir(RUNTIME_HOME, { recursive: true, mode: 0o700 })
@@ -301,7 +404,6 @@ export async function prepareRuntime(
   await rm(presets, { recursive: true, force: true })
   await cp(join(PROJECT_ROOT, 'generated', 'agent-presets'), presets, { recursive: true })
 
-  const settings = runtimeSettings(loaded.environment, provider, model)
   await writeFile(join(RUNTIME_HOME, 'settings.yaml'), settings.join('\n'), { encoding: 'utf8', mode: 0o600 })
   await chmod(join(RUNTIME_HOME, 'settings.yaml'), 0o600)
 
@@ -315,9 +417,11 @@ export async function prepareRuntime(
     NGFI_LLM_MODEL: model,
     NGFI_AGENT_PRESET: preset,
   }
-  const credentialSource = credential
-    ? (loaded.fromFile.has(credentialName) ? 'project-env' : 'process-environment')
-    : 'not-required'
+  const credentialSource = provider === 'trae-official'
+    ? ((options.requireCredential ?? false) ? 'trae-auth-file' : 'not-required')
+    : credential
+      ? (credentialName !== null && loaded.fromFile.has(credentialName) ? 'project-env' : 'process-environment')
+      : 'not-required'
   return {
     home: RUNTIME_HOME,
     environment,

@@ -49,6 +49,24 @@ pnpm test:runtime
 
 默认 preset 仍是 `finance-analyst`。设置 `NGFI_AGENT_PRESET` 为 `company-research`、`strategy-research` 或 `portfolio-risk` 可在 headless/Web profile 中选择职责隔离的治理 preset；其他值会在 runtime prepare 时拒绝。所有 preset 共享现有 20 个基础金融工具，但只增加职责所需的 research、strategy/signal 或 portfolio tools。
 
+Web profile 会启用 preset 所需的全局 `skill` 服务；这不会绕过 preset 的工具 allowlist，也不会改变只读 sandbox 或 approval policy。
+
+## 可选模型后端
+
+默认仍为 `deepseek-official / deepseek-v4-flash`，既有 OpenAI、Anthropic 与通用 OpenAI-compatible 配置继续有效。新增入口必须显式选择，不做自动切换或失败降级：
+
+```bash
+# 复用当前 Trae CLI 登录；默认 GPT-5.6-Sol / xhigh
+NGFI_LLM_PROVIDER=trae-official pnpm ask -- "..."
+
+# Model Hub unified API；不声明 reasoning 支持
+NGFI_LLM_PROVIDER=model-hub MODEL_HUB_API_KEY=... pnpm ask -- "..."
+```
+
+TraeX 认证默认只读 `~/.trae/cli/auth.json`，也遵循 `TRAECLI_HOME` / `TRAE_HOME`，必要时可用 `TRAE_AUTH_PATH` 指向已有文件。NGFI 不复制、不刷新该文件；缺失、无效或过期时显式失败。Trae 模型固定为 `GPT-5.6-Sol`，只接受 `low`、`medium`、`high` 或 `xhigh`，默认 `xhigh`。
+
+Model Hub 固定使用已验证的 unified endpoint、`openai-completions` 和默认 `gpt-5.6-terra`；可用 `NGFI_CONTEXT_WINDOW` / `NGFI_MAX_TOKENS` 做正整数覆盖。不要设置 `NGFI_REASONING_EFFORT`。Key 仅从进程环境或被忽略的项目 `.env` 读取，生成配置只记录 `MODEL_HUB_API_KEY` 这个变量名。
+
 ## 测试责任
 
 | 层级 | 位置 | 默认门禁 |
@@ -104,7 +122,7 @@ probe 按 source rate group 顺序执行；每个 capability 的全部 variant �
 
 不要用此命令读取或打印 secret 文件内容。除 iWenCai 外的 59 项不需要用户 credential；TDX official、iFinD 和 TuShare 是可选增强源，不是 60 项公开能力的前置条件。
 
-真实模型凭据仅从进程环境或被 Git 忽略的仓库根 `.env` 读取，绝不写入 generated preset、profile、日志或 `.runtime/settings.yaml`。
+真实模型 API Key 仅从进程环境或被 Git 忽略的仓库根 `.env` 读取；TraeX 则只读已有登录文件。任何秘密值都不得写入 generated preset、profile、日志或 `.runtime/settings.yaml`。
 
 ### 固定上游与同步
 

@@ -76,10 +76,16 @@ pnpm web
 | OpenAI | `openai` | `OPENAI_API_KEY` | `gpt-5` |
 | Anthropic | `anthropic` | `ANTHROPIC_API_KEY` | `claude-sonnet-4-5` |
 | OpenAI-compatible endpoint | `openai-compatible` | `NGFI_API_KEY` | 必须设置 `NGFI_LLM_MODEL` |
+| TraeX 已登录账号 | `trae-official` | 既有 Trae auth 文件（只读） | `GPT-5.6-Sol` / `xhigh` |
+| Model Hub unified API | `model-hub` | `MODEL_HUB_API_KEY` | `gpt-5.6-terra` |
 
 OpenAI-compatible endpoint 还必须配置 `NGFI_LLM_BASE_URL`。协议默认是 `openai-completions`，可通过 `NGFI_LLM_API` 修改；上下文窗口和最大输出 token 可分别通过 `NGFI_CONTEXT_WINDOW` 与 `NGFI_MAX_TOKENS` 设置。完整模板见 [`.env.example`](.env.example)。
 
 如需使用 DeepSeek-compatible gateway，可在保留 `deepseek-official` provider 的同时设置 `DEEPSEEK_BASE_URL`。
+
+TraeX 是显式可选项：选择 `trae-official` 后，运行时只读取当前 Trae CLI 登录（默认 `~/.trae/cli/auth.json`，也遵循 `TRAECLI_HOME` / `TRAE_HOME`，可用 `TRAE_AUTH_PATH` 显式指定），不会复制、写回或自动续期凭据。该入口固定到已验证的 `GPT-5.6-Sol` 静态路由，默认 `xhigh`；其他模型会被拒绝，模型请求期间也不做在线发现。登录缺失、无效或过期时请先独立运行 `traecli login`。
+
+Model Hub 也是显式可选项：设置 `NGFI_LLM_PROVIDER=model-hub` 和 `MODEL_HUB_API_KEY` 即可使用统一 API 的 `gpt-5.6-terra`。运行时固定使用已验证的 unified endpoint 与 `openai-completions` 协议，不在 settings 中写入 Key，也不声明该路由支持 reasoning；因此 `NGFI_REASONING_EFFORT` 必须留空。两种新增后端都不会触发自动切换或失败降级，默认后端仍是 DeepSeek。
 
 ## A 股数据契约
 
@@ -165,7 +171,7 @@ chmod 600 .runtime/secrets/a-share-data.env
 - `finance-headless`：一次性运行任务并返回最终结果
 - `finance-dev`：启动 DSH Web UI
 
-两者默认挂载 `finance-analyst`，也可通过 `NGFI_AGENT_PRESET` 选择三个治理 preset；项目 Skills、`@finance2dsh/dsh-bundle` 和 20 个基础金融工具保持一致，profile 只改变交互界面/runner。两者都使用只读 sandbox。运行时 materialize 到仓库内的 `.runtime/`，不会读写用户的全局 DSH home。
+两者默认挂载 `finance-analyst`，也可通过 `NGFI_AGENT_PRESET` 选择三个治理 preset；项目 Skills、`@finance2dsh/dsh-bundle` 和 20 个基础金融工具保持一致，profile 只改变交互界面/runner。Web profile 全局启用 preset 依赖的 `skill` 工具，但每个 preset 的 allowlist 仍决定实际可见工具。两者都使用只读 sandbox。运行时 materialize 到仓库内的 `.runtime/`；只有显式选择 TraeX 时会只读访问既有 Trae auth 文件。
 
 主要目录：
 

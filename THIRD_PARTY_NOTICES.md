@@ -1,5 +1,13 @@
 # Third-Party Notices
 
+## @ad/dsh-llm-trae-plugin
+
+NGFI includes a fixed, verified snapshot of `@ad/dsh-llm-trae-plugin`
+`0.1.3-local.1` under `packages/dsh-finance-bundle/vendor/trae`. The adapter is
+licensed under MIT; its license text and detailed source commit and hashes are
+retained beside the vendored code. NGFI adds only a TypeScript declaration and
+runtime composition around that snapshot.
+
 ## a-stock-data
 
 NGFI includes portions of **a-stock-data**, authored and maintained by Simon Lin.

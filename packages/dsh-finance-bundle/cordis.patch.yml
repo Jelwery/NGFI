@@ -1,3 +1,12 @@
 - insert:
     - id: finance-tools
       name: '@finance2dsh/dsh-tools'
+    - id: llm-trae
+      name: '@finance2dsh/dsh-bundle/trae'
+      disabled: !!js process.env.NGFI_LLM_PROVIDER !== 'trae-official'
+
+- id: llm-deepseek
+  disabled: !!js process.env.NGFI_LLM_PROVIDER !== 'deepseek-official'
+
+- id: llm-pi-ai
+  disabled: !!js "!['openai', 'anthropic', 'openai-compatible', 'model-hub'].includes(process.env.NGFI_LLM_PROVIDER)"

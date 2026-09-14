@@ -144,6 +144,7 @@ describe('DSH finance composition', () => {
     expect(output).toContain("default: !!js process.env.NGFI_AGENT_PRESET || 'finance-analyst'")
     expect(output).not.toContain('@deepseek-ai/dsh-mcp-client')
     expect(output).toMatch(/id: tool-web[\s\S]*?disabled: true/u)
+    expect(output).toMatch(/id: tool-skill[\s\S]*?disabled: false/u)
     expect(FINANCE_TOOL_ALLOWLIST).not.toContain('web_search')
     expect(FINANCE_TOOL_ALLOWLIST).not.toContain('web_fetch')
   }, 30_000)

@@ -19,6 +19,9 @@
     roots: []
     includeUserRoot: true
 
+- id: tool-skill
+  disabled: false
+
 - id: ui-settings-plugin-inventory
   disabled: true
 

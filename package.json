@@ -62,6 +62,7 @@
     "test:e2e:model": "tsx src/e2e.ts",
     "test:e2e:ashare": "NGFI_E2E_ASHARE=1 tsx src/e2e.ts",
     "test:e2e:web": "tsx src/web-smoke.ts",
+    "test:e2e:web:model": "tsx src/web-e2e.ts",
     "check": "node scripts/check-worktree-clean.mjs --record && pnpm run check:static && pnpm run build && pnpm run typecheck && pnpm run test:ts && pnpm run test:python && pnpm run test:cne6 && pnpm run test:skills && pnpm run test:runtime && node scripts/check-worktree-clean.mjs --verify"
   },
   "dependencies": {

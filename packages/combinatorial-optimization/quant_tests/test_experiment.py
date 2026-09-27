@@ -48,3 +48,45 @@ class ExperimentTest(unittest.TestCase):
         self.assertEqual(normal["status"], "complete")
         self.assertNotEqual(normal["id"], costly["id"])
         self.assertGreater(costly["backtest"]["metrics"]["fees"], normal["backtest"]["metrics"]["fees"])
+
+    def test_v3_actual_benchmark_and_return_observations_reach_the_ledger(self):
+        raw, config = demo_input()
+        legacy = ResearchDataset.model_validate(raw).json()
+        self.assertNotIn("benchmark", legacy)
+        self.assertNotIn("modelExplanation", ResearchSpec.model_validate(config).json())
+        raw["schemaVersion"] = config["schemaVersion"] = "3"
+        raw["benchmark"] = {"instrument": "CN:SSE:000300:index", "convention": "price",
+            "sourceHash": stable_hash("fixture-index"), "points": [
+                {"date": row["date"], "value": 100.0, "availableAt": row["decisionAt"]} for row in raw["calendar"]]}
+        prices = {}
+        for bar in raw["bars"]:
+            instrument = bar["instrument"]
+            key = f'{instrument["market"]}:{instrument["exchange"]}:{instrument["symbol"]}:equity'
+            prices[bar["date"], key] = bar["close"]
+        securities = sorted({key for _, key in prices})
+        raw["returnAttribution"] = [
+            {"date": day["date"], "previousDate": previous["date"],
+             "weightsAvailableAt": previous["decisionAt"], "factorReturnsAvailableAt": day["decisionAt"],
+             "modelHash": stable_hash("fixture-model"), "sourceHash": stable_hash("fixture-returns"),
+             "benchmarkWeights": {key: 1 / len(securities) for key in securities},
+             "exposures": {key: {"COUNTRY": 1.0} for key in securities}, "factorKinds": {"COUNTRY": "country"},
+             "factorReturns": {"COUNTRY": 0.0}, "industries": {key: "fixture" for key in securities},
+             "specificReturns": {key: prices[day["date"], key] / prices[previous["date"], key] - 1 for key in securities}}
+            for previous, day in zip(raw["calendar"], raw["calendar"][1:])]
+        dataset = ResearchDataset.model_validate(raw)
+        result = run_experiment(dataset, ResearchSpec.model_validate(config))
+        self.assertEqual(result["summary"]["actualBenchmarkStatus"], "available")
+        self.assertEqual(result["summary"]["returnAttributionStatus"], "complete")
+        self.assertEqual(result["returnAttribution"]["linked"]["status"], "available")
+        self.assertFalse(result["promotionEligible"])
+        self.assertEqual(result["summary"]["strategyValidationStatus"], "blocked")
+        for name, digest in result["artifactHashes"].items():
+            self.assertEqual(stable_hash(result[name]), digest)
+        bad = deepcopy(raw)
+        bad["returnAttribution"][0]["weightsAvailableAt"] = bad["calendar"][1]["decisionAt"]
+        with self.assertRaisesRegex(ValueError, "future-available"):
+            ResearchDataset.model_validate(bad)
+        bad = deepcopy(raw)
+        bad["schemaVersion"] = "2"
+        with self.assertRaisesRegex(ValueError, "schemaVersion 3"):
+            ResearchDataset.model_validate(bad)

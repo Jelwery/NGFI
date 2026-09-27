@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Annotated, Literal
 from zoneinfo import ZoneInfo
 
-from pydantic import BaseModel, ConfigDict, Field, FiniteFloat, model_validator
+from pydantic import BaseModel, ConfigDict, Field, FiniteFloat, model_serializer, model_validator
 from pydantic.alias_generators import to_camel
 
 from .contracts import instrument_from_key, require_date, require_timestamp
@@ -103,8 +103,51 @@ class ResearchBar(Contract):
         return self
 
 
+class ResearchBenchmarkPoint(Contract):
+    date: str
+    value: Positive
+    available_at: str
+
+
+class ResearchBenchmark(Contract):
+    instrument: Literal["CN:SSE:000300:index", "CN:SSE:000906:index"]
+    convention: Literal["price", "total-return"]
+    source_hash: str = Field(pattern=r"^sha256:[a-f0-9]{64}$")
+    points: list[ResearchBenchmarkPoint] = Field(min_length=2, max_length=10000)
+
+
+class ReturnAttributionObservation(Contract):
+    date: str
+    previous_date: str
+    weights_available_at: str
+    factor_returns_available_at: str
+    model_hash: str = Field(pattern=r"^sha256:[a-f0-9]{64}$")
+    source_hash: str = Field(pattern=r"^sha256:[a-f0-9]{64}$")
+    return_convention: Literal["close-to-close-total-return"] = "close-to-close-total-return"
+    benchmark_weights: dict[str, Fraction]
+    exposures: dict[str, dict[str, FiniteFloat]]
+    factor_kinds: dict[str, Literal["country", "industry", "style"]]
+    factor_returns: dict[str, FiniteFloat]
+    specific_returns: dict[str, FiniteFloat]
+    industries: dict[str, str]
+
+    @model_validator(mode="after")
+    def valid(self):
+        from .contracts import AttributionDay
+        AttributionDay(self.date, self.weights_available_at, self.benchmark_weights, self.exposures,
+                       self.factor_kinds, self.factor_returns, self.factor_returns_available_at)
+        require_date(self.previous_date, "previousDate")
+        if self.previous_date >= self.date or not self.factor_kinds:
+            raise ValueError("return attribution requires a prior date and factors")
+        if set(self.specific_returns) != set(self.exposures) or set(self.industries) != set(self.exposures):
+            raise ValueError("specific returns and industries must cover exactly the exposure universe")
+        if not set(self.benchmark_weights) <= set(self.exposures) or any(not name.strip() for name in self.industries.values()):
+            raise ValueError("benchmark coverage or industry classification is missing")
+        return self
+
+
 class ResearchDataset(Contract):
-    schema_version: Literal["2"] = "2"
+    schema_version: Literal["2", "3"] = "2"
     snapshot_id: str = Field(min_length=1, max_length=160)
     as_of: str
     provenance: str = Field(min_length=1, max_length=2000)
@@ -114,6 +157,16 @@ class ResearchDataset(Contract):
     calendar: list[Session] = Field(min_length=4, max_length=10000)
     bars: list[ResearchBar] = Field(min_length=4, max_length=200000)
     cne6_models: list[dict] = Field(default_factory=list, max_length=1000)
+    benchmark: ResearchBenchmark | None = None
+    return_attribution: list[ReturnAttributionObservation] = Field(default_factory=list, max_length=10000)
+
+    @model_serializer(mode="wrap")
+    def serialize_version(self, handler):
+        value = handler(self)
+        if self.schema_version == "2":
+            for key in ("benchmark", "returnAttribution", "return_attribution"):
+                value.pop(key, None)
+        return value
 
     @model_validator(mode="after")
     def valid(self):
@@ -145,6 +198,28 @@ class ResearchDataset(Contract):
             for left, right in zip(dates, dates[1:]):
                 if abs(by_key[right, security].previous_close - by_key[left, security].close) > 0.011:
                     raise ValueError("unexplained previousClose discontinuity; corporate actions are not supported")
+        if self.schema_version == "2" and (self.benchmark is not None or self.return_attribution):
+            raise ValueError("benchmark and returnAttribution require dataset schemaVersion 3")
+        if self.return_attribution and self.benchmark is None:
+            raise ValueError("return attribution requires an actual benchmark")
+        benchmark_dates = set()
+        for point in self.benchmark.points if self.benchmark else []:
+            if point.date not in sessions or point.date in benchmark_dates:
+                raise ValueError("duplicate or out-of-calendar benchmark point")
+            benchmark_dates.add(point.date)
+            if not instant(sessions[point.date].close_at) <= instant(point.available_at) <= cutoff:
+                raise ValueError("benchmark availability is invalid")
+        attribution_dates = set()
+        for row in self.return_attribution:
+            if row.date not in sessions or row.date in attribution_dates or dates.index(row.date) == 0 or dates[dates.index(row.date) - 1] != row.previous_date:
+                raise ValueError("attribution requires unique adjacent trading dates")
+            attribution_dates.add(row.date)
+            if instant(row.weights_available_at) > instant(sessions[row.previous_date].decision_at):
+                raise ValueError("attribution beginning exposures/weights are future-available")
+            if not instant(sessions[row.date].close_at) <= instant(row.factor_returns_available_at) <= cutoff:
+                raise ValueError("attribution factor return availability is invalid")
+            if not set(row.exposures) <= securities:
+                raise ValueError("attribution universe is outside the price panel")
         self.bars = sorted(self.bars, key=lambda row: (row.date, row.instrument.key))
         return self
 
@@ -164,11 +239,27 @@ class FactorTransform(Contract):
 class FactorDefinition(Contract):
     id: Identifier
     version: str = Field(default="1", pattern=r"^[0-9]+(?:\.[0-9]+){0,2}$")
+    semantics_version: Literal["2", "3"] = "2"
+    field_units: dict[str, Literal["price", "shares", "currency", "dimensionless"]] = Field(default_factory=dict)
     description: str = ""
     inputs: dict[Identifier, str] = Field(min_length=1, max_length=16)
     nodes: list[FactorNode] = Field(max_length=64)
     output: str
     transforms: list[FactorTransform] = Field(default_factory=list, max_length=4)
+
+    @model_validator(mode="after")
+    def valid_semantics(self):
+        if self.semantics_version == "2" and self.field_units:
+            raise ValueError("fieldUnits requires factor semanticsVersion 3")
+        return self
+
+    @model_serializer(mode="wrap")
+    def serialize_version(self, handler):
+        value = handler(self)
+        if self.semantics_version == "2":
+            for key in ("semanticsVersion", "fieldUnits", "semantics_version", "field_units"):
+                value.pop(key, None)
+        return value
 
 
 class ModelSpec(Contract):
@@ -218,8 +309,24 @@ class ExecutionSpec(Contract):
     slippage_rate: Annotated[FiniteFloat, Field(ge=0, lt=0.1)] = 0.0005
 
 
+class ModelExplanationSpec(Contract):
+    groups: dict[Identifier, list[Identifier]] = Field(min_length=1, max_length=16)
+    methods: list[Literal["within-date-permutation", "training-mean-ablation"]] = Field(min_length=1, max_length=2)
+    repeats: int = Field(default=3, ge=1, le=10)
+    seed: int = Field(default=0, ge=0, le=2147483647)
+
+    @model_validator(mode="after")
+    def valid(self):
+        names = [name for group in self.groups.values() for name in group]
+        if not names or any(not group for group in self.groups.values()) or len(names) != len(set(names)):
+            raise ValueError("explanation groups must be nonempty and disjoint")
+        if len(self.methods) != len(set(self.methods)):
+            raise ValueError("duplicate explanation methods")
+        return self
+
+
 class ResearchSpec(Contract):
-    schema_version: Literal["2"] = "2"
+    schema_version: Literal["2", "3"] = "2"
     purpose: Literal["research-diagnostic"] = "research-diagnostic"
     start_date: str
     end_date: str
@@ -228,6 +335,25 @@ class ResearchSpec(Contract):
     risk: RiskPolicy
     optimizer: OptimizerSpec = Field(default_factory=OptimizerSpec)
     execution: ExecutionSpec = Field(default_factory=ExecutionSpec)
+    model_explanation: ModelExplanationSpec | None = None
+    training_start_date: str | None = None
+    model_features: list[Identifier] | None = Field(default=None, min_length=1, max_length=32)
+
+    @property
+    def feature_names(self) -> list[str]:
+        return self.model_features if self.model_features is not None else [factor.id for factor in self.factors]
+
+    @model_serializer(mode="wrap")
+    def serialize_version(self, handler):
+        value = handler(self)
+        if self.schema_version == "2":
+            value.pop("modelExplanation", None)
+            value.pop("model_explanation", None)
+            value.pop("trainingStartDate", None)
+            value.pop("training_start_date", None)
+            value.pop("modelFeatures", None)
+            value.pop("model_features", None)
+        return value
 
     @model_validator(mode="after")
     def valid(self):
@@ -237,6 +363,20 @@ class ResearchSpec(Contract):
             raise ValueError("endDate must not precede startDate")
         if len({item.id for item in self.factors}) != len(self.factors):
             raise ValueError("duplicate factor names")
+        if self.model_features is not None:
+            if self.schema_version != "3":
+                raise ValueError("modelFeatures requires schemaVersion 3")
+            if len(set(self.model_features)) != len(self.model_features) or not set(self.model_features) <= {factor.id for factor in self.factors}:
+                raise ValueError("modelFeatures must contain unique declared factor names")
+        if self.training_start_date is not None:
+            require_date(self.training_start_date, "trainingStartDate")
+            if self.schema_version != "3" or self.training_start_date >= self.start_date:
+                raise ValueError("trainingStartDate requires v3 and must precede startDate")
+        if self.model_explanation:
+            if self.schema_version != "3":
+                raise ValueError("modelExplanation requires spec schemaVersion 3")
+            if not {name for group in self.model_explanation.groups.values() for name in group} <= set(self.feature_names):
+                raise ValueError("explanation group contains unknown factors")
         from .execution import money
         if money(self.execution.initial_capital) != self.execution.initial_capital:
             raise ValueError("initialCapital must have cent precision")

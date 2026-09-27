@@ -76,3 +76,60 @@ class ResearchModelsTest(unittest.TestCase):
         self.assertEqual(result["rmse"], 0)
         self.assertEqual(result["meanRankIc"], 1)
         self.assertIsNone(result["daily"][1]["rankIc"])
+
+    def test_v3_ridge_contributions_reconcile_after_preprocessing(self):
+        raw, config = demo_input()
+        config["schemaVersion"] = "3"
+        result = self.run_model(raw, config)
+        self.assertTrue(result["attribution"]["rows"])
+        for row in result["attribution"]["rows"]:
+            with self.subTest(date=row["date"], instrument=row["instrument"]):
+                prediction = result["predictions"][row["date"]]["values"][row["instrument"]]
+                self.assertAlmostEqual(row["intercept"] + sum(row["contributions"].values()), prediction, places=12)
+                self.assertLess(abs(row["reconciliationError"]), 1e-10)
+
+    def test_v3_model_features_exclude_computational_dependencies(self):
+        raw, config = demo_input()
+        parent = config["factors"][0]
+        child = {"id": "child", "inputs": {"x": f"factor:{parent['id']}"},
+                 "nodes": [{"id": "n", "op": "NEGATE", "inputs": ["x"]}], "output": "n"}
+        config.update(schemaVersion="3", factors=[parent, child], modelFeatures=["child"])
+        result = self.run_model(raw, config)
+        self.assertTrue(all(fold["features"] == ["child"] for fold in result["folds"]))
+        self.assertTrue(all(set(row["contributions"]) == {"child"} for row in result["attribution"]["rows"]))
+        self.assertEqual(result, self.run_model(raw, config))
+        for features in ([], ["child", "child"], ["absent"]):
+            with self.subTest(features=features), self.assertRaises(ValueError):
+                ResearchSpec.model_validate({**config, "modelFeatures": features})
+        with self.assertRaisesRegex(ValueError, "schemaVersion 3"):
+            ResearchSpec.model_validate({**config, "schemaVersion": "2"})
+        with self.assertRaisesRegex(ValueError, "unknown factors"):
+            ResearchSpec.model_validate({**config, "modelExplanation": {
+                "groups": {"dependency": [parent["id"]]}, "methods": ["training-mean-ablation"]}})
+        legacy = ResearchSpec.model_validate(demo_input()[1]).json()
+        self.assertNotIn("modelFeatures", legacy)
+
+    def test_v3_group_diagnostics_are_registered_and_label_mature(self):
+        raw, config = demo_input()
+        config.update(schemaVersion="3", modelExplanation={
+            "groups": {"all": [factor["id"] for factor in config["factors"]]},
+            "methods": ["within-date-permutation", "training-mean-ablation"], "repeats": 2, "seed": 17})
+        config["model"].update(kind="hist-gradient-boosting", maxIter=3)
+        result = self.run_model(raw, config)
+        self.assertEqual(result, self.run_model(raw, config))
+        rows = result["attribution"]["groupDiagnostics"]
+        self.assertTrue(any(row["predictionRmseChange"] > 0 for row in rows))
+        for row in rows:
+            with self.subTest(date=row["date"], method=row["method"]):
+                self.assertIsNotNone(row["modelId"])
+                if row["date"] == config["endDate"]:
+                    self.assertEqual(row["labelSamples"], 0)
+                    self.assertIsNone(row["mseIncrease"])
+        bad = deepcopy(config)
+        bad["modelExplanation"]["groups"]["unknown"] = ["absent"]
+        with self.assertRaisesRegex(ValueError, "unknown factors"):
+            ResearchSpec.model_validate(bad)
+        bad = deepcopy(config)
+        bad["schemaVersion"] = "2"
+        with self.assertRaisesRegex(ValueError, "schemaVersion 3"):
+            ResearchSpec.model_validate(bad)

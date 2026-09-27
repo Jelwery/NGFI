@@ -308,6 +308,25 @@ class AttributionDay:
                 require_finite(value, "factor exposure")
 
 
+@dataclass(frozen=True)
+class ReturnAttributionDay(AttributionDay):
+    previous_date: str
+    model_hash: str
+    source_hash: str
+    specific_returns: dict[str, float]
+    industries: dict[str, str]
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        require_date(self.previous_date, "attribution.previous_date")
+        require_hash(self.model_hash, "attribution.model_hash")
+        require_hash(self.source_hash, "attribution.source_hash")
+        if self.previous_date >= self.date or set(self.specific_returns) != set(self.exposures) or set(self.industries) != set(self.exposures):
+            raise ValueError("invalid return attribution dates or coverage")
+        for value in self.specific_returns.values():
+            require_finite(value, "specific return")
+
+
 def instrument_from_key(value: str) -> Instrument:
     if not isinstance(value, str) or len(value.split(":")) != 4:
         raise ValueError("instrument must be a canonical market:exchange:symbol:assetType key")
@@ -349,6 +368,7 @@ class BacktestRequest:
     max_participation: float | None = None
     cost_schedule: tuple[tuple[str, AShareCostModel], ...] = ()
     benchmark_convention: Literal["price", "total-return"] = "price"
+    attribution_method: Literal["legacy-v2", "ledger-v3"] = "legacy-v2"
 
 
 RejectionReason = Literal[

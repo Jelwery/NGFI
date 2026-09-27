@@ -1,12 +1,16 @@
 import { canonicalJson, evidenceId, modelRunId, researchRunId, sha256, type ContentHash, type JsonObject, type ModelRun } from '@finance2dsh/research-core'
-import { ResearchWorkspace, type ResearchCaseState } from '@finance2dsh/research-workspace'
+import { ResearchDomain, ResearchWorkspace, type ResearchCaseState } from '@finance2dsh/research-workspace'
+import { FACTOR_ACTIONS, factorEvaluationStage, runFactorResearch } from './factor-research.js'
+import { researchRiskAttribution } from './research-risk.js'
 
-export type QuantComputation = (operation: 'catalog' | 'schema' | 'validate-dataset' | 'validate-spec' | 'run', input: JsonObject, signal?: AbortSignal) => Promise<JsonObject>
+export type QuantComputation = (operation: 'catalog' | 'schema' | 'validate-dataset' | 'validate-spec' | 'run' | 'factor-catalog' | 'factor-register' | 'factor-derive' | 'validate-evaluation' | 'factor-evaluate' | 'style-explain', input: JsonObject, signal?: AbortSignal) => Promise<JsonObject>
 export interface QuantResearchOptions {
   store: ResearchWorkspace
   compute: QuantComputation
   identity: JsonObject
   now?: () => Date
+  researchDomainRoot?: string
+  researchWorkspaces?: readonly ResearchWorkspace[]
 }
 
 const HASH = /^sha256:[0-9a-f]{64}$/u
@@ -26,6 +30,34 @@ function revision(state: ResearchCaseState, expected: unknown): void {
 }
 
 export async function runQuantResearch(options: QuantResearchOptions, request: JsonObject, signal?: AbortSignal): Promise<JsonObject> {
+  if (request.action === 'factor-evaluate') factorEvaluationStage(request)
+  if (request.action === 'factor-evaluate' && options.researchDomainRoot) {
+    const domain = new ResearchDomain(options.researchDomainRoot)
+    for (const store of options.researchWorkspaces ?? [options.store]) {
+      for (const caseId of store.listCases()) {
+        const state = store.open(caseId)
+        for (const run of state.modelRuns.filter(row => row.model === 'quant-registration' && row.parameters.evaluationId === undefined)) {
+          const datasetRun = state.modelRuns.find(row => row.model === 'quant-dataset' && row.parameters.datasetId === run.parameters.datasetId)
+          if (!datasetRun) throw new Error('Historical experiment dataset is missing')
+          const data = record(JSON.parse(store.readArtifact(caseId, String(datasetRun.parameters.artifact),
+            hash(datasetRun.parameters.artifactHash, 'artifact hash')).toString('utf8')), 'historical dataset')
+          const bars = data.bars as JsonObject[]
+          const dates = bars.map(row => String(row.date)).sort()
+          const securities = [...new Set(bars.map(row => {
+            const instrument = record(row.instrument, 'instrument')
+            return `${instrument.market}:${instrument.exchange}:${instrument.symbol}:${instrument.assetType}`
+          }))].sort()
+          domain.observe(sha256({ workspace: store.root, caseId, requestHash: run.parameters.requestHash! }),
+            { market: 'CN', securities, start: dates[0]!, end: dates.at(-1)! })
+        }
+      }
+    }
+  }
+  if ((FACTOR_ACTIONS as readonly unknown[]).includes(request.action)) {
+    const execute = () => runFactorResearch(options, request, signal)
+    return typeof request.caseId === 'string' && !['factor-get', 'factor-compare'].includes(String(request.action))
+      ? options.store.withRunLock(request.caseId, execute) : execute()
+  }
   if ((request.action === 'run' || request.action === 'import') && typeof request.caseId === 'string') {
     return options.store.withRunLock(request.caseId, () => dispatchQuantResearch(options, request, signal))
   }
@@ -38,8 +70,9 @@ async function dispatchQuantResearch(options: QuantResearchOptions, request: Jso
   const allowed: Record<string, string[]> = {
     catalog: ['action'], schema: ['action'],
     import: ['action', 'dataset', 'caseId', 'expectedRevision'],
-    run: ['action', 'caseId', 'expectedRevision', 'datasetId', 'spec', 'resume'],
+    run: ['action', 'caseId', 'expectedRevision', 'datasetId', 'spec', 'resume', 'evaluationId'],
     get: ['action', 'caseId', 'runId', 'section', 'offset', 'limit'], list: ['action'],
+    attribute: ['action', 'caseId', 'runId', 'kind', 'section', 'offset', 'limit'],
   }
   if (typeof action !== 'string' || !allowed[action] || Object.keys(request).some(key => !allowed[action]!.includes(key))) throw new TypeError('Unknown research action or parameters')
   if (action === 'catalog' || action === 'schema') return options.compute(action, {}, signal)
@@ -85,13 +118,29 @@ async function dispatchQuantResearch(options: QuantResearchOptions, request: Jso
   const caseId = request.caseId
   state = store.open(caseId)
   if (action === 'get') return getResult(store, state, request)
+  if (action === 'attribute') return getAttribution(store, state, request)
   revision(state, request.expectedRevision)
   const datasetId = hash(request.datasetId, 'datasetId')
   const datasetRun = state.modelRuns.find(run => run.model === 'quant-dataset' && run.parameters.datasetId === datasetId)
   if (!datasetRun) throw new Error('Dataset is not registered in this case')
   const validated = await options.compute('validate-spec', { spec: record(request.spec, 'spec') }, signal)
   const spec = record(validated.spec, 'validated spec')
-  const key = sha256({ datasetId, spec, identity: options.identity })
+  const evaluation = request.evaluationId === undefined ? undefined : state.modelRuns.find(run =>
+    run.model === 'quant-factor-evaluation' && run.parameters.evaluationId === request.evaluationId && run.parameters.datasetId === datasetId)
+  if (request.evaluationId !== undefined) {
+    if (!evaluation || !options.researchDomainRoot) throw new Error('Registered experiment requires its evaluation and shared research domain')
+    const frozen = record(evaluation.parameters.registration, 'evaluation registration')
+    if (canonicalJson(frozen.experimentSpec) !== canonicalJson(spec)) throw new Error('Experiment differs from the preregistered experimentSpec')
+    const selected = state.modelRuns.find(run => run.model === 'quant-factor-result' && run.parameters.evaluationId === request.evaluationId &&
+      run.parameters.action === 'factor-evaluate' && run.parameters.stage === 'development')
+    if (!selected) throw new Error('Registered experiment requires a stored development selection')
+    const development = record(JSON.parse(store.readArtifact(caseId, String(selected.parameters.artifact),
+      hash(selected.parameters.artifactHash, 'artifact hash')).toString('utf8')), 'development')
+    const names = record(development.selection, 'selection').selected as string[]
+    const features = (spec.modelFeatures ?? (spec.factors as JsonObject[]).map(factor => String(factor.id))) as string[]
+    if (!features.every(name => names.includes(name))) throw new Error('Experiment includes candidates outside the frozen selection')
+  }
+  const key = sha256({ datasetId, spec, identity: options.identity, ...(evaluation ? { evaluationId: request.evaluationId! } : {}) })
   const existing = state.modelRuns.find(run => run.model === 'quant-experiment' && run.parameters.requestHash === key)
   if (existing) {
     const savedRegistration = state.modelRuns.find(run => run.model === 'quant-registration' && run.parameters.requestHash === key)!
@@ -111,7 +160,8 @@ async function dispatchQuantResearch(options: QuantResearchOptions, request: Jso
     const latest = Math.max(0, ...state.runManifests.map(run => Date.parse(run.startedAt)))
     const createdAt = new Date(Math.max(Date.parse(now()), latest + 1)).toISOString()
     const content: Omit<ModelRun, 'id'> = { model: 'quant-registration', version: '2', createdAt,
-      inputRefs: [{ kind: 'model-run', id: datasetRun.id }], parameters: { requestHash: key, datasetId, spec, identity: options.identity },
+      inputRefs: [{ kind: 'model-run', id: datasetRun.id }, ...(evaluation ? [{ kind: 'model-run' as const, id: evaluation.id }] : [])],
+      parameters: { requestHash: key, datasetId, spec, identity: options.identity, ...(evaluation ? { evaluationId: request.evaluationId! } : {}) },
       output: { status: 'ok', value: { status: 'registered', promotionEligible: false } }, warnings: [] }
     registration = { id: modelRunId(content), ...content }
     store.saveModelRun(caseId, state.revision, registration)
@@ -127,6 +177,21 @@ async function dispatchQuantResearch(options: QuantResearchOptions, request: Jso
   }
   const dataset = record(JSON.parse(store.readArtifact(caseId, String(datasetRun.parameters.artifact), hash(datasetRun.parameters.artifactHash, 'artifact hash')).toString('utf8')), 'dataset')
   if (sha256(dataset) !== datasetId) throw new Error('Dataset identity changed after registration')
+  if (evaluation) {
+    new ResearchDomain(options.researchDomainRoot!).consume(hash(evaluation.parameters.owner, 'evaluation owner'))
+  } else if (options.researchDomainRoot) {
+    // Legacy experiments inspect the entire supplied panel, so reserve it conservatively.
+    const bars = dataset.bars as JsonObject[]
+    const dates = bars.map(bar => String(bar.date)).sort()
+    const securities = [...new Set(bars.map(bar => {
+      const instrument = record(bar.instrument, 'instrument')
+      return `${instrument.market}:${instrument.exchange}:${instrument.symbol}:${instrument.assetType}`
+    }))].sort()
+    const domain = new ResearchDomain(options.researchDomainRoot)
+    const owner = sha256({ workspace: store.root, caseId, requestHash: key })
+    domain.reserve(owner, { market: 'CN', securities, start: dates[0]!, end: dates.at(-1)! }, [])
+    domain.consume(owner)
+  }
   try {
     signal?.throwIfAborted()
     const result = await options.compute('run', { dataset, spec }, signal)
@@ -135,11 +200,16 @@ async function dispatchQuantResearch(options: QuantResearchOptions, request: Jso
     for (const [name, digest] of Object.entries(contentHashes)) {
       if (sha256(result[name]) !== digest) throw new Error(`Computation artifact mismatch: ${name}`)
     }
-    const sections: JsonObject = { summary: record(result.summary, 'summary'), spec, models: result.models!, predictions: result.predictions!, factors: result.factors!,
+    let sections: JsonObject = { summary: record(result.summary, 'summary'), spec, models: result.models!, predictions: result.predictions!, factors: result.factors!,
       diagnostics: result.diagnostics!, correlations: result.correlations!, modelDiagnostics: result.modelDiagnostics!,
       equity: record(result.backtest, 'backtest').equity!, orders: record(result.backtest, 'backtest').orders!,
       fills: record(result.backtest, 'backtest').fills!, decisions: record(result.backtest, 'backtest').decisions!, benchmark: result.benchmark!,
       backtest: result.backtest!, computation: { id: result.id!, datasetHash: result.datasetHash!, specHash: result.specHash!, engine: result.engine!, artifactHashes: contentHashes } }
+    if (spec.schemaVersion === '3') {
+      sections = { ...sections, modelAttribution: record(result.modelAttribution, 'model attribution'),
+        returnAttribution: record(result.returnAttribution, 'return attribution'),
+        riskAttribution: researchRiskAttribution(dataset, record(result.backtest, 'backtest')) }
+    }
     const files: Record<string, ContentHash> = {}
     for (const [name, value] of Object.entries(sections)) {
       state = store.open(caseId)
@@ -161,6 +231,33 @@ async function dispatchQuantResearch(options: QuantResearchOptions, request: Jso
       rationale: error instanceof Error ? error.message : 'Unknown computation failure', refs: [registration.id], decidedAt: now(), details: { requestHash: key } })
     throw error
   }
+}
+
+function getAttribution(store: ResearchWorkspace, state: ResearchCaseState, request: JsonObject): JsonObject {
+  const runId = hash(request.runId, 'runId')
+  const run = state.modelRuns.find(item => item.model === 'quant-experiment' && item.parameters.requestHash === runId)
+  if (!run) throw new Error('Experiment not found in this case')
+  const kinds: Record<string, string> = { model: 'modelAttribution', returns: 'returnAttribution', risk: 'riskAttribution' }
+  const kind = kinds[String(request.kind)]
+  if (!kind) throw new TypeError('Attribution kind must be model, returns or risk')
+  const hashes = record(run.parameters.artifactHashes, 'artifactHashes')
+  const file = `artifacts/quant/runs/${runId.slice(7)}/${kind}.json`
+  if (!hashes[file]) return { runId, status: 'blocked', reason: 'This registered run has no v3 attribution artifact', promotionEligible: false }
+  const value = record(JSON.parse(store.readArtifact(state.case.caseId, file, hash(hashes[file], 'artifact hash')).toString('utf8')), kind)
+  const section = request.section ?? 'summary'
+  if (section === 'summary') {
+    const { rows, daily, groupDiagnostics, ...summary } = value
+    return { runId, ...summary, rowCount: ((rows ?? daily ?? []) as unknown[]).length,
+      groupDiagnosticCount: ((groupDiagnostics ?? []) as unknown[]).length }
+  }
+  const allowed: Record<string, string[]> = { modelAttribution: ['rows', 'groupDiagnostics'],
+    returnAttribution: ['daily'], riskAttribution: ['rows'] }
+  if (!allowed[kind]!.includes(String(section))) throw new TypeError('Unknown attribution section')
+  const offset = request.offset ?? 0, limit = request.limit ?? 50
+  if (!Number.isSafeInteger(offset) || Number(offset) < 0 || !Number.isSafeInteger(limit) || Number(limit) < 1 || Number(limit) > 200) throw new TypeError('Invalid pagination')
+  const items = value[String(section)] as JsonObject[]
+  return { runId, kind: String(request.kind), section: String(section), total: items.length, offset: Number(offset),
+    items: items.slice(Number(offset), Number(offset) + Number(limit)), promotionEligible: false }
 }
 
 function getResult(store: ResearchWorkspace, state: ResearchCaseState, request: JsonObject): JsonObject {

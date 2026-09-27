@@ -1,8 +1,8 @@
 import { spawn } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { mkdtempSync, rmSync, writeFileSync, realpathSync } from 'node:fs'
+import { mkdtempSync, rmSync, writeFileSync, realpathSync, readdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join, resolve } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { defineTool, type ToolDefinition } from '@deepseek-ai/dsh-tools'
 import { ACCUMULATION_BREAKOUT_STRATEGY_V1 } from '@finance2dsh/strategy-accumulation-breakout'
 import {
@@ -134,13 +134,19 @@ export async function quantArtifactComputation(options: StrategyToolOptions, ope
 }
 
 export async function executeQuantResearch(options: StrategyToolOptions, workspaceId: string, request: ResearchJsonObject, signal?: AbortSignal): Promise<ResearchJsonObject> {
-  if (request.action === 'catalog' || request.action === 'schema') {
+  if (request.action === 'catalog' || request.action === 'schema' || request.action === 'factor-catalog') {
     if (Object.keys(request).some(key => key !== 'action')) throw new TypeError('Catalog and schema accept no additional parameters')
     return quantArtifactComputation(options, request.action, {}, signal)
   }
   const root = containedPath(options.runtimeRoot ?? resolve(process.cwd(), '.runtime/finance-data'), 'research', requireRuntimeId(workspaceId, 'workspace_id'))
   ensurePlainDirectory(root)
+  const researchWorkspaces = request.action === 'factor-evaluate' ? readdirSync(dirname(root), { withFileTypes: true }).map(entry => {
+    if (!entry.isDirectory() || entry.isSymbolicLink()) throw new Error('Research domain contains an invalid workspace directory')
+    return new ResearchWorkspace({ root: containedPath(dirname(root), requireRuntimeId(entry.name, 'workspace_id')) })
+  }) : undefined
   return runQuantResearch({ store: new ResearchWorkspace({ root }), identity: quantCodeIdentity(resolve(options.quantProjectRoot)),
+    ...(researchWorkspaces ? { researchWorkspaces } : {}),
+    researchDomainRoot: containedPath(options.runtimeRoot ?? resolve(process.cwd(), '.runtime/finance-data'), 'research-domains', 'quant-v3'),
     compute: (operation, input, abort) => quantArtifactComputation(options, operation, input, abort) }, request, signal)
 }
 
@@ -280,23 +286,27 @@ export function createStrategyTools(options: StrategyToolOptions): ToolDefinitio
     }),
     defineTool({
       name: 'finance_quant_research',
-      description: 'Inspect native factor/model schemas, import explicit PIT data, run a frozen diagnostic experiment, or query registered results. Uses the shared research workspace and execution ledger; not an A3 approved plan, automatic promotion, or live trading. Never invent data or timestamps.',
+      description: 'Register and derive bounded factor families, evaluate frozen train/validation/test plans, explain factors with preregistered controls, and query model/return/risk attribution from immutable experiments. Uses the shared research domain and execution ledger; no automatic promotion or live trading. Never invent data or timestamps.',
       parameters: {
-        action: { type: 'string', enum: ['catalog', 'schema', 'import', 'run', 'get', 'list'], required: true },
+        action: { type: 'string', enum: ['catalog', 'schema', 'import', 'run', 'get', 'list', 'factor-catalog', 'factor-register', 'factor-derive', 'factor-evaluate', 'factor-explain', 'factor-compare', 'factor-get', 'attribute'], required: true },
         workspace_id: { type: 'string' }, case_id: { type: 'string' }, expected_revision: { type: 'integer' },
         dataset: { type: 'object', additionalProperties: true }, dataset_id: { type: 'string' },
         spec: { type: 'object', additionalProperties: true }, run_id: { type: 'string' }, resume: { type: 'boolean' },
         section: { type: 'string' }, offset: { type: 'integer' }, limit: { type: 'integer' },
+        request: { type: 'object', additionalProperties: true }, registration: { type: 'object', additionalProperties: true },
+        stage: { type: 'string', enum: ['development', 'test'] }, evaluation_id: { type: 'string' },
+        kind: { type: 'string', enum: ['model', 'returns', 'risk'] },
       },
       output: JSON_OUTPUT, timeoutMs: 125_000, isConcurrencySafe: () => false,
       async execute(args, exec) {
         if (Buffer.byteLength(JSON.stringify(args)) > MAX_BRIDGE_BYTES) throw new RangeError('Agent input exceeds 8 MiB; import large data through the operator CLI')
         const payload: Record<string, unknown> = { action: args.action }
         for (const [source, target] of [['case_id', 'caseId'], ['expected_revision', 'expectedRevision'], ['dataset', 'dataset'],
-          ['dataset_id', 'datasetId'], ['spec', 'spec'], ['run_id', 'runId'], ['resume', 'resume'], ['section', 'section'], ['offset', 'offset'], ['limit', 'limit']] as const) {
+          ['dataset_id', 'datasetId'], ['spec', 'spec'], ['run_id', 'runId'], ['resume', 'resume'], ['section', 'section'], ['offset', 'offset'], ['limit', 'limit'],
+          ['request', 'request'], ['registration', 'registration'], ['stage', 'stage'], ['evaluation_id', 'evaluationId'], ['kind', 'kind']] as const) {
           if (args[source] !== undefined) payload[target] = args[source]
         }
-        const result = await executeQuantResearch(options, ['catalog', 'schema'].includes(args.action) ? 'catalog' : requireRuntimeId(args.workspace_id, 'workspace_id'), payload as ResearchJsonObject, exec.signal)
+        const result = await executeQuantResearch(options, ['catalog', 'schema', 'factor-catalog'].includes(args.action) ? 'catalog' : requireRuntimeId(args.workspace_id, 'workspace_id'), payload as ResearchJsonObject, exec.signal)
         if (Buffer.byteLength(JSON.stringify(result)) > MAX_BRIDGE_BYTES) throw new RangeError('Agent output exceeds 8 MiB; request a smaller section or page')
         return jsonSafe(result)
       },

@@ -4,10 +4,59 @@ import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { createStrategyTools, executeQuantResearch, quantArtifactComputation } from '@finance2dsh/dsh-tools'
 import { ResearchWorkspace } from '@finance2dsh/research-workspace'
+import { type JsonObject } from '@finance2dsh/research-core'
+import { runQuantResearch } from '@finance2dsh/research-workflow'
 
 const project = path.join(process.cwd(), 'packages/combinatorial-optimization')
 
 describe('native quant Python integration', () => {
+  it('persists v3 explanations and prevents reuse of historical samples across workspaces', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ngfi-v3-integration-'))
+    const options = { quantProjectRoot: project, runtimeRoot: root }
+    try {
+      const demo = await quantArtifactComputation(options, 'demo', {})
+      const dataset: JsonObject = { ...(demo.dataset as JsonObject), schemaVersion: '3' }
+      const spec = { ...(demo.spec as JsonObject), schemaVersion: '3' }
+      const calendar = dataset.calendar as JsonObject[]
+      const family = await quantArtifactComputation(options, 'factor-derive', { request: {
+        generator: 'reversal-volume-v1', hypothesis: 'Synthetic workflow verification', budget: 17,
+      } })
+      expect(family.proposalCount).toBe(17)
+      expect(family.uniqueCount).toBe(17)
+      const imported = await executeQuantResearch(options, 'historical', { action: 'import', dataset })
+      // Simulate an experiment created before the shared research domain was introduced.
+      const result = await runQuantResearch({
+        store: new ResearchWorkspace({ root: path.join(root, 'research/historical') }),
+        identity: { codeVersion: 'historical-fixture' },
+        compute: (operation, input, signal) => quantArtifactComputation(options, operation, input, signal),
+      }, { action: 'run', caseId: imported.caseId!,
+        expectedRevision: imported.revision!, datasetId: imported.datasetId!, spec })
+      const model = await executeQuantResearch(options, 'historical', { action: 'attribute', caseId: imported.caseId!,
+        runId: result.runId!, kind: 'model', section: 'rows', limit: 1 })
+      expect(model.total).toBeGreaterThan(1)
+      expect(model.items).toHaveLength(1)
+      const row = (model.items as JsonObject[])[0]!
+      expect(row.reconciliationError).toBeCloseTo(0, 12)
+      const risk = await executeQuantResearch(options, 'historical', { action: 'attribute', caseId: imported.caseId!,
+        runId: result.runId!, kind: 'risk', section: 'rows', limit: 1 })
+      expect((risk.items as JsonObject[])[0]).toMatchObject({ status: 'blocked' })
+      const other = await executeQuantResearch(options, 'new-research', { action: 'import',
+        dataset: { ...dataset, snapshotId: 'another-snapshot' } })
+      const request = { action: 'factor-evaluate', caseId: other.caseId!, expectedRevision: other.revision!,
+        datasetId: other.datasetId!, registration: {
+          hypothesis: 'Previously inspected history cannot become unseen', factors: family.definitions!,
+          candidateBudget: 17, train: { start: calendar[0]!.date!, end: calendar[39]!.date! },
+          validation: { start: calendar[40]!.date!, end: calendar[69]!.date! },
+          test: { start: calendar[70]!.date!, end: calendar[99]!.date! },
+        } }
+      await expect(executeQuantResearch(options, 'new-research', request)).rejects.toThrow('overlaps')
+      await expect(executeQuantResearch(options, 'new-research', request)).rejects.toThrow('overlaps')
+      const events = fs.readdirSync(path.join(root, 'research-domains/quant-v3')).map(file =>
+        JSON.parse(fs.readFileSync(path.join(root, 'research-domains/quant-v3', file), 'utf8')))
+      expect(events.filter(event => event.kind === 'observe')).toHaveLength(1)
+    } finally { fs.rmSync(root, { recursive: true, force: true }) }
+  }, 90_000)
+
   it('uses real Python, shared workspace and governed tool for the complete workflow', async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ngfi-native-integration-'))
     const options = { quantProjectRoot: project, runtimeRoot: root }

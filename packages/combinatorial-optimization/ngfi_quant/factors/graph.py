@@ -8,6 +8,7 @@ import pandas as pd
 
 from ..research_contracts import FactorDefinition, ResearchDataset, instant
 from .preprocessing import standardize_values
+from .registry import EXTRA_ARITY, EXTRA_ROLLING
 
 OPERATOR_ARITY = {
     "ADD": 2, "SUB": 2, "DIV": 2, "MUL_PANEL": 2, "ADD_CONST": 1, "MUL": 1,
@@ -15,9 +16,13 @@ OPERATOR_ARITY = {
     "SMA": 1, "STD": 1, "TS_SUM": 1, "TS_MIN": 1, "TS_MAX": 1, "RANK": 1,
 }
 ROLLING = {"SMA", "STD", "TS_SUM", "TS_MIN", "TS_MAX"}
+LEGACY_OPERATORS = set(OPERATOR_ARITY)
+OPERATOR_ARITY.update(EXTRA_ARITY)
+ROLLING |= EXTRA_ROLLING
 PARAMETERS = {name: set() for name in OPERATOR_ARITY}
-PARAMETERS.update({name: {"window"} for name in ROLLING | {"RETURN", "DELAY"}})
+PARAMETERS.update({name: {"window"} for name in ROLLING | {"RETURN", "DELAY", "DELTA"}})
 PARAMETERS.update({"ADD_CONST": {"value"}, "MUL": {"value"}, "RANK": {"percentile"}})
+PARAMETERS["TS_QUANTILE"] = {"window", "q"}
 
 
 @dataclass
@@ -36,6 +41,8 @@ def build_panel(dataset: ResearchDataset) -> ResearchPanel:
     bars = {(bar.date, bar.instrument.key): bar for bar in dataset.bars}
     names = {"open", "high", "low", "close", "volume", "amount", "previous_close"}
     external = {f"feature:{name}" for bar in dataset.bars for name in bar.features}
+    if len(external) > 64:
+        raise ValueError("dataset supports at most 64 distinct external features")
     fields = {name: pd.DataFrame(np.nan, index=dates, columns=securities) for name in names | external}
     eligible = pd.DataFrame(False, index=dates, columns=securities)
     for session in dataset.calendar:
@@ -62,7 +69,7 @@ def _window(params: dict) -> int:
     return int(value)
 
 
-def validate_factor(definition: FactorDefinition, fields: set[str], previous: set[str]) -> None:
+def validate_factor(definition: FactorDefinition, fields: set[str], previous: set[str], *, check_units: bool = True) -> None:
     refs = set()
     for name, field in definition.inputs.items():
         if field.startswith("factor:"):
@@ -76,10 +83,16 @@ def validate_factor(definition: FactorDefinition, fields: set[str], previous: se
             raise ValueError("duplicate, cyclic, or unknown factor reference")
         if node.op not in OPERATOR_ARITY or len(node.inputs) != OPERATOR_ARITY[node.op]:
             raise ValueError(f"unsupported operator or arity: {node.op}")
+        if definition.semantics_version == "2" and node.op not in LEGACY_OPERATORS:
+            raise ValueError("new operators require semanticsVersion 3")
         if set(node.params) - PARAMETERS[node.op]:
             raise ValueError(f"unsupported parameters for {node.op}")
-        if node.op in ROLLING | {"RETURN", "DELAY"}:
+        if node.op in ROLLING | {"RETURN", "DELAY", "DELTA"}:
             _window(node.params)
+        if node.op == "TS_QUANTILE":
+            q = node.params.get("q", 0.5)
+            if isinstance(q, bool) or not isinstance(q, (int, float)) or not 0 <= q <= 1:
+                raise ValueError("quantile q must be in [0, 1]")
         if node.op in {"ADD_CONST", "MUL"}:
             value = node.params.get("value")
             if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
@@ -101,6 +114,9 @@ def validate_factor(definition: FactorDefinition, fields: set[str], previous: se
                 raise ValueError("unsupported ZSCORE parameters")
         elif step.params:
             raise ValueError(f"{step.op} transform takes no parameters")
+    if check_units and definition.semantics_version == "3" and not any(field.startswith("factor:") for field in definition.inputs.values()):
+        from .registry import factor_card
+        factor_card(definition)
 
 
 def _evaluate(op: str, inputs: list[pd.DataFrame], params: dict, eligible: pd.DataFrame) -> pd.DataFrame:
@@ -125,25 +141,67 @@ def _evaluate(op: str, inputs: list[pd.DataFrame], params: dict, eligible: pd.Da
         return np.log(x.where(x > 0))
     if op == "RANK":
         return x.where(eligible).rank(axis=1, method="average", pct=True)
+    if op == "ZSCORE":
+        masked = x.where(eligible)
+        std = masked.std(axis=1, ddof=0)
+        return masked.sub(masked.mean(axis=1), axis=0).div(std.where(std > 1e-12), axis=0)
+    if op == "SIGN":
+        return np.sign(x)
+    if op in {"GT", "LT"}:
+        y = inputs[1]
+        return (x > y if op == "GT" else x < y).astype(float).where(x.notna() & y.notna())
+    if op == "SELECT":
+        return inputs[1].where(x == 1, inputs[2]).where(x.notna())
     window = _window(params)
     if op == "DELAY":
         return x.shift(window)
     if op == "RETURN":
         return x / x.shift(window).where(x.shift(window).abs() > 1e-12) - 1
+    if op == "DELTA":
+        return x - x.shift(window)
     rolling = x.rolling(window, min_periods=window)
+    if op == "TS_RANK":
+        return rolling.rank(method="average", pct=True)
+    if op == "CORRELATION":
+        return rolling.corr(inputs[1], ddof=0)
+    if op == "COVARIANCE":
+        return rolling.cov(inputs[1], ddof=0)
+    if op == "DECAY_LINEAR":
+        weights = np.arange(1, window + 1, dtype=float)
+        weights /= weights.sum()
+        return rolling.apply(lambda values: float(values @ weights), raw=True)
+    if op == "TS_QUANTILE":
+        return rolling.quantile(params.get("q", 0.5))
+    if op in {"TS_ARGMAX", "TS_ARGMIN"}:
+        return rolling.apply(lambda values: float((np.argmax(values) if op == "TS_ARGMAX" else np.argmin(values))), raw=True)
     if op == "STD":
         return rolling.std(ddof=0)
     return getattr(rolling, {"SMA": "mean", "TS_SUM": "sum", "TS_MIN": "min", "TS_MAX": "max"}[op])()
 
 
-def compute_factors(panel: ResearchPanel, definitions: list[FactorDefinition]) -> dict[str, pd.DataFrame]:
-    if len(panel.dataset.bars) * len(definitions) > 2_000_000:
+def factor_resource_estimate(dataset: ResearchDataset, definitions: list[FactorDefinition]) -> dict:
+    cells = len(dataset.calendar) * len({bar.instrument.key for bar in dataset.bars})
+    fields = 7 + len({name for bar in dataset.bars for name in bar.features})
+    if fields > 71:
+        raise ValueError("dataset supports at most 64 distinct external features")
+    output = cells * len(definitions)
+    working = cells * (fields + len(definitions) + 3 * max((len(factor.nodes) for factor in definitions), default=0) + 8)
+    if output > 2_000_000:
         raise ValueError("factor panel exceeds two million cells")
-    result = {}
+    if working > 16_000_000:
+        raise ValueError("estimated factor working set exceeds sixteen million numeric cells")
+    return {"panelCells": cells, "outputCells": output, "estimatedWorkingCells": working}
+
+
+def compute_factors(panel: ResearchPanel, definitions: list[FactorDefinition]) -> dict[str, pd.DataFrame]:
+    factor_resource_estimate(panel.dataset, definitions)
+    result, cards = {}, {}
     for definition in definitions:
         if definition.id in result:
             raise ValueError("duplicate factor name")
         validate_factor(definition, set(panel.fields), set(result))
+        from .registry import factor_card
+        cards[definition.id] = factor_card(definition, cards)
         refs = {name: result[field[7:]] if field.startswith("factor:") else panel.fields[field]
                 for name, field in definition.inputs.items()}
         with np.errstate(divide="ignore", invalid="ignore", over="ignore"):
@@ -262,7 +320,7 @@ def factor_catalog() -> dict:
         factors.append({"id": name, "inputs": {"x": f"feature:{name}"}, "nodes": [], "output": "x",
                         "transforms": [{"op": "WINSORIZE", "params": {"n": 3}}, {"op": "ZSCORE"}]})
     return {"engine": "ngfi-factor-graph", "version": "2",
-            "operators": [{"name": name, "arity": arity, "parameters": sorted(PARAMETERS[name])} for name, arity in OPERATOR_ARITY.items()],
+            "operators": [{"name": name, "arity": arity, "parameters": sorted(PARAMETERS[name])} for name, arity in OPERATOR_ARITY.items() if name in LEGACY_OPERATORS],
             "factors": [FactorDefinition.model_validate(value).json() for value in factors],
             "models": ["ridge", "hist-gradient-boosting"], "optimizers": ["mean-variance", "top-k"],
             "limits": {"factorCount": 32, "nodesPerFactor": 64, "maxWindow": 1000},

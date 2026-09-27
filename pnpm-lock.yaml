@@ -217,6 +217,9 @@ importers:
 
   packages/research-workflow:
     dependencies:
+      '@finance2dsh/portfolio-risk':
+        specifier: workspace:*
+        version: link:../portfolio-risk
       '@finance2dsh/research-audit':
         specifier: workspace:*
         version: link:../research-audit

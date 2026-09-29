@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 // Synthetic engineering acceptance through the real operator CLI.
 import assert from 'node:assert/strict'
-import { mkdtempSync, realpathSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { mkdirSync, mkdtempSync, realpathSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
@@ -10,11 +9,15 @@ import { sha256 } from '../packages/research-core/lib/index.js'
 import { quantArtifactComputation } from '../packages/dsh-finance-tools/lib/index.js'
 
 const project = fileURLToPath(new URL('..', import.meta.url))
-const output = mkdtempSync(join(realpathSync(tmpdir()), 'ngfi-factor-smoke-'))
+const outputParent = join(project, '.runtime', 'factor-smoke-runs')
+mkdirSync(outputParent, { recursive: true, mode: 0o700 })
+const output = mkdtempSync(join(realpathSync(outputParent), 'run-'))
 const runtimeRoot = join(output, 'runtime')
 const env = { ...process.env, NGFI_RUNTIME_DATA_ROOT: runtimeRoot }
-const options = { quantProjectRoot: join(project, 'packages/combinatorial-optimization'),
-  runtimeRoot, uvExecutable: process.env.NGFI_UV_EXECUTABLE || 'uv' }
+const options = {
+  quantProjectRoot: join(project, 'packages/combinatorial-optimization'),
+  runtimeRoot, uvExecutable: process.env.NGFI_UV_EXECUTABLE || 'uv'
+}
 const manifest = { synthetic: true, promotionEligible: false, output, runtimeRoot, workspace: 'factor-smoke', steps: [] }
 const save = (name, value) => {
   const file = join(output, `${name}.json`)
@@ -25,8 +28,10 @@ let sequence = 0, caseId, revision, datasetId, evaluationId
 function cli(label, args, expectedError) {
   console.log(`${++sequence}. ${label}`)
   const command = [join(project, 'scripts/quant-research.mjs'), '--workspace', manifest.workspace, ...args.map(String)]
-  const result = spawnSync(process.execPath, command, { cwd: project, env, encoding: 'utf8',
-    timeout: 180_000, maxBuffer: 16 * 1024 * 1024 })
+  const result = spawnSync(process.execPath, command, {
+    cwd: project, env, encoding: 'utf8',
+    timeout: 180_000, maxBuffer: 16 * 1024 * 1024
+  })
   save(`${sequence}-command`, { executable: process.execPath, args: command, env: { NGFI_RUNTIME_DATA_ROOT: runtimeRoot } })
   if (result.error) throw result.error
   if (expectedError) {
@@ -50,8 +55,10 @@ const factorGet = (label, runId, section) => cli(label,
 console.log(`Synthetic acceptance artifacts: ${output}`)
 try {
   const demo = await quantArtifactComputation(options, 'demo', {})
-  const data = { ...demo.dataset, schemaVersion: '3', snapshotId: 'synthetic-factor-smoke-v3',
-    provenance: 'Synthetic engineering fixture: prices, weekdays, volumes, flat index and return decomposition; no market evidence.' }
+  const data = {
+    ...demo.dataset, schemaVersion: '3', snapshotId: 'synthetic-factor-smoke-v3',
+    provenance: 'Synthetic engineering fixture: prices, weekdays, volumes, flat index and return decomposition; no market evidence.'
+  }
   const key = instrument => `${instrument.market}:${instrument.exchange}:${instrument.symbol}:equity`
   const prices = new Map()
   data.bars.forEach((bar, index) => {
@@ -61,23 +68,27 @@ try {
     prices.set(`${bar.date}/${key(bar.instrument)}`, bar.close)
   })
   const securities = [...new Set(data.bars.map(bar => key(bar.instrument)))].sort()
-  data.benchmark = { instrument: 'CN:SSE:000300:index', convention: 'price',
+  data.benchmark = {
+    instrument: 'CN:SSE:000300:index', convention: 'price',
     sourceHash: sha256('synthetic-flat-index'), points: data.calendar.map(row =>
-      ({ date: row.date, value: 100, availableAt: row.decisionAt })) }
+      ({ date: row.date, value: 100, availableAt: row.decisionAt }))
+  }
   data.returnAttribution = data.calendar.slice(1).map((day, index) => {
     const previous = data.calendar[index]
-    return { date: day.date, previousDate: previous.date, weightsAvailableAt: previous.decisionAt,
+    return {
+      date: day.date, previousDate: previous.date, weightsAvailableAt: previous.decisionAt,
       factorReturnsAvailableAt: day.decisionAt, modelHash: sha256('synthetic-country-model'),
       sourceHash: sha256('synthetic-price-returns'), benchmarkWeights: Object.fromEntries(securities.map(name => [name, 1 / securities.length])),
       exposures: Object.fromEntries(securities.map(name => [name, { COUNTRY: 1 }])),
       factorKinds: { COUNTRY: 'country' }, factorReturns: { COUNTRY: 0 },
       industries: Object.fromEntries(securities.map(name => [name, 'synthetic'])),
       specificReturns: Object.fromEntries(securities.map(name => [name,
-        prices.get(`${day.date}/${name}`) / prices.get(`${previous.date}/${name}`) - 1])) }
+        prices.get(`${day.date}/${name}`) / prices.get(`${previous.date}/${name}`) - 1]))
+    }
   })
   const dataFile = save('dataset', data)
   const imported = cli('Import synthetic v3 dataset', ['import', dataFile])
-  ;({ caseId, revision, datasetId } = imported)
+    ; ({ caseId, revision, datasetId } = imported)
   manifest.caseId = caseId
   manifest.datasetId = datasetId
   cli('Operator catalog', ['factor-catalog'])
@@ -93,14 +104,18 @@ try {
   write('Register versioned assets', ['factor-register', '--request', factorFile])
   const dates = data.calendar.map(row => row.date)
   const selectedFeature = 'reversal_volume_5_10'
-  const spec = { ...demo.spec, schemaVersion: '3', trainingStartDate: dates[25], startDate: dates[75], endDate: dates[98],
+  const spec = {
+    ...demo.spec, schemaVersion: '3', trainingStartDate: dates[25], startDate: dates[75], endDate: dates[98],
     factors: definitions.filter(row => ['reversal_5', 'volume_10', selectedFeature].includes(row.id)),
-    modelFeatures: [selectedFeature], model: { ...demo.spec.model, horizon: 1, trainSessions: 20 } }
+    modelFeatures: [selectedFeature], model: { ...demo.spec.model, horizon: 1, trainSessions: 20 }
+  }
   const controls = { controls: ['industry'], weighting: 'uniform', horizon: 1, maximumCondition: 1_000_000 }
-  const registration = { hypothesis, familyId: family.familyId, factors: definitions, candidateBudget: 17,
+  const registration = {
+    hypothesis, familyId: family.familyId, factors: definitions, candidateBudget: 17,
     train: { start: dates[25], end: dates[54] }, validation: { start: dates[55], end: dates[74] },
     test: { start: dates[75], end: dates[99] }, horizons: [1], maximumSelected: 32,
-    minimumRankIc: -1, duplicateCorrelation: 1, styleControls: [controls], experimentSpec: spec }
+    minimumRankIc: -1, duplicateCorrelation: 1, styleControls: [controls], experimentSpec: spec
+  }
   const registrationFile = save('evaluation', registration), specFile = save('spec', spec)
   const evaluationArgs = ['factor-evaluate', '--dataset-id', datasetId, '--registration', registrationFile]
   const before = revision
@@ -113,8 +128,10 @@ try {
   const selection = Object.fromEntries(factorGet('Inspect frozen selection', development.runId, 'selection').items.map(row => [row.key, row.value]))
   assert(selection.selected.includes(selectedFeature), 'Preregistered feature did not qualify; do not tune on test')
   cli('Compare candidates', ['factor-compare', '--case', caseId, '--evaluation-id', evaluationId])
-  const explanationFile = save('explanation', { factors: definitions, factor: selectedFeature,
-    partition: registration.validation, ...controls })
+  const explanationFile = save('explanation', {
+    factors: definitions, factor: selectedFeature,
+    partition: registration.validation, ...controls
+  })
   const explanation = write('Explain industry exposure', ['factor-explain', '--evaluation-id', evaluationId, '--request', explanationFile])
   assert.equal(explanation.status, 'complete')
   factorGet('Inspect daily style explanation', explanation.runId, 'days')

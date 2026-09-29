@@ -62,7 +62,7 @@ export async function quantBridge(
   const project = resolve(options.quantProjectRoot)
   const payload = JSON.stringify(input)
   if (Buffer.byteLength(payload) > MAX_BRIDGE_BYTES) throw new RangeError('quant research input exceeds 8 MiB')
-  const executable = options.uvExecutable ?? 'uv'
+  const executable = options.uvExecutable ?? (process.env.NGFI_UV_EXECUTABLE?.trim() || 'uv')
   const stdout = await new Promise<string>((resolveOutput, reject) => {
     const child = spawn(executable, ['run', '--project', project, '--frozen', '--offline', '--no-sync', '--no-env-file', '--no-config', 'python', '-m', 'ngfi_quant.agent_bridge', operation], {
       cwd: project, stdio: ['pipe', 'pipe', 'pipe'], detached: process.platform !== 'win32',
@@ -286,13 +286,14 @@ export function createStrategyTools(options: StrategyToolOptions): ToolDefinitio
     }),
     defineTool({
       name: 'finance_quant_research',
-      description: 'Register and derive bounded factor families, evaluate frozen train/validation/test plans, explain factors with preregistered controls, and query model/return/risk attribution from immutable experiments. Uses the shared research domain and execution ledger; no automatic promotion or live trading. Never invent data or timestamps.',
+      description: 'Register and derive bounded factor families, evaluate frozen train/validation/test plans, explain factors with preregistered controls, and query model/return/risk attribution from immutable experiments. To inspect existing results, start with {"action":"list","workspace_id":"..."} only (no section/offset/limit); this read does not require catalog/schema or Python. Then factor-compare with workspace_id/case_id discovers stored factor run IDs, actions and evaluation IDs; factor-get reads lineage/cards by run_id, factor-compare with evaluation_id compares frozen results, and attribute with run_id/kind reads model/returns/risk. Pagination is supported only by get/factor-get/factor-compare/attribute. Uses the shared research domain and execution ledger; no automatic promotion or live trading. Never invent data or timestamps.',
       parameters: {
         action: { type: 'string', enum: ['catalog', 'schema', 'import', 'run', 'get', 'list', 'factor-catalog', 'factor-register', 'factor-derive', 'factor-evaluate', 'factor-explain', 'factor-compare', 'factor-get', 'attribute'], required: true },
         workspace_id: { type: 'string' }, case_id: { type: 'string' }, expected_revision: { type: 'integer' },
         dataset: { type: 'object', additionalProperties: true }, dataset_id: { type: 'string' },
         spec: { type: 'object', additionalProperties: true }, run_id: { type: 'string' }, resume: { type: 'boolean' },
-        section: { type: 'string' }, offset: { type: 'integer' }, limit: { type: 'integer' },
+        section: { type: 'string', description: 'Depends on action/kind; omit for summary. attribute: model supports summary/rows/groupDiagnostics; returns supports summary/daily (linked is a field inside summary, not a section); risk supports summary/rows. get supports summary/spec/models/predictions/factors/diagnostics/factorSummary/correlations/modelDiagnostics/equity/orders/fills/decisions/benchmark. Experiment configuration is spec, not config. get has no manifest/provenance section. factor-get supports saved result keys and / paths, e.g. definitions, lineage, cards, selection. Do not invent section names.' },
+        offset: { type: 'integer' }, limit: { type: 'integer' },
         request: { type: 'object', additionalProperties: true }, registration: { type: 'object', additionalProperties: true },
         stage: { type: 'string', enum: ['development', 'test'] }, evaluation_id: { type: 'string' },
         kind: { type: 'string', enum: ['model', 'returns', 'risk'] },

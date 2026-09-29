@@ -74,7 +74,9 @@ async function dispatchQuantResearch(options: QuantResearchOptions, request: Jso
     get: ['action', 'caseId', 'runId', 'section', 'offset', 'limit'], list: ['action'],
     attribute: ['action', 'caseId', 'runId', 'kind', 'section', 'offset', 'limit'],
   }
-  if (typeof action !== 'string' || !allowed[action] || Object.keys(request).some(key => !allowed[action]!.includes(key))) throw new TypeError('Unknown research action or parameters')
+  if (typeof action !== 'string' || !Object.hasOwn(allowed, action)) throw new TypeError(`Unknown research action; use ${Object.keys(allowed).join(', ')}`)
+  const unexpected = Object.keys(request).filter(key => !allowed[action]!.includes(key))
+  if (unexpected.length) throw new TypeError(`Unknown research action or parameters: ${action} does not accept ${unexpected.join(', ')}; allowed parameters: ${allowed[action]!.join(', ')}. workspace_id is supplied separately by the tool.`)
   if (action === 'catalog' || action === 'schema') return options.compute(action, {}, signal)
   const store = options.store
   if (action === 'list') {
@@ -252,7 +254,7 @@ function getAttribution(store: ResearchWorkspace, state: ResearchCaseState, requ
   }
   const allowed: Record<string, string[]> = { modelAttribution: ['rows', 'groupDiagnostics'],
     returnAttribution: ['daily'], riskAttribution: ['rows'] }
-  if (!allowed[kind]!.includes(String(section))) throw new TypeError('Unknown attribution section')
+  if (!allowed[kind]!.includes(String(section))) throw new TypeError(`Unknown attribution section "${String(section)}" for kind "${String(request.kind)}"; allowed sections: summary, ${allowed[kind]!.join(', ')}. Omit section to read the summary${request.kind === 'returns' ? ', including linked' : ''}.`)
   const offset = request.offset ?? 0, limit = request.limit ?? 50
   if (!Number.isSafeInteger(offset) || Number(offset) < 0 || !Number.isSafeInteger(limit) || Number(limit) < 1 || Number(limit) > 200) throw new TypeError('Invalid pagination')
   const items = value[String(section)] as JsonObject[]
@@ -265,7 +267,7 @@ function getResult(store: ResearchWorkspace, state: ResearchCaseState, request: 
   const run = state.modelRuns.find(item => item.model === 'quant-experiment' && item.parameters.requestHash === runId)
   if (!run) throw new Error('Experiment not found in this case')
   const section = request.section ?? 'summary'
-  if (typeof section !== 'string' || !(SECTIONS as readonly string[]).includes(section)) throw new TypeError('Unknown result section')
+  if (typeof section !== 'string' || !(SECTIONS as readonly string[]).includes(section)) throw new TypeError(`Unknown result section "${String(section)}"; allowed sections: ${SECTIONS.join(', ')}. Use spec for the experiment configuration; omit section for summary.`)
   const offset = request.offset ?? 0
   const limit = request.limit ?? 50
   if (!Number.isSafeInteger(offset) || (offset as number) < 0 || !Number.isSafeInteger(limit) || (limit as number) < 1 || (limit as number) > 200) throw new TypeError('Invalid pagination')

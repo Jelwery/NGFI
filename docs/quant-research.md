@@ -104,6 +104,17 @@ pnpm quant:research --workspace alpha attribute RUN_ID --case CASE_ID --kind ris
 
 `attribute` 只读已登记实验的不可变产物；省略 section 返回摘要。Ridge 使用 rows，分组敏感性使用 groupDiagnostics；收益使用 daily；风险使用 rows。收益逐日独立计算期初持仓、实际成交价、费用、基准复制差异，country 独列；滑点只计一次。specific 输入先逐股核对，现金通过明确重分类展示，超容差保持 unreconciled 并阻断 Carino 连接。Brinson-Fachler 是期初静态持仓的独立视角，不与风格贡献重复求和。
 
+`section` 随动作和归因类型变化，不能任意填写：
+
+| 查询 | 合法 section |
+|---|---|
+| attribute / model | summary、rows、groupDiagnostics |
+| attribute / returns | summary、daily；linked 包含在 summary 内 |
+| attribute / risk | summary、rows |
+| get | summary、spec、models、predictions、factors、diagnostics、factorSummary、correlations、modelDiagnostics、equity、orders、fills、decisions、benchmark |
+
+省略 section 默认读取 summary。实验配置使用 `get/section=spec`；`get` 不提供 config、manifest、provenance section。收到不支持的 section 错误时按返回的合法列表更正，不通过猜测别名重试。
+
 风险归因复用 `portfolio-risk` 公式，以账户 NAV 为分母保留现金，分别计算绝对/主动权重；要求同日且来源合格的 CNE6 快照，满足 `closeAt <= availableAt <= decisionAt`。无合格快照或基准权重时对应项 blocked。原生数据仍不支持公司行动面板；底层账本的 v3 归因已覆盖既有拆股和分红应收规则。
 
 ## Agent 入口

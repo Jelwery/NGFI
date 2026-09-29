@@ -26,7 +26,7 @@ export NGFI_UV_EXECUTABLE="$HOME/Library/Python/3.9/bin/uv"
 node scripts/quant-factor-smoke.mjs
 ```
 
-脚本会逐步打印进度，结束输出 `PASS` 和 `manifest.json` 的绝对路径。每次为合成验收创建独立临时 runtime，保留所有输入、实际 CLI 参数、结果和预期拒绝信息；不会清理既有研究记录。任一非预期错误都会返回非零退出码，失败目录也会保留。
+脚本会逐步打印进度，结束输出 `PASS` 和 `manifest.json` 的绝对路径。每次在项目 `.runtime/factor-smoke-runs/run-*/` 下为合成验收创建独立 runtime，保留所有输入、实际 CLI 参数、结果和预期拒绝信息；不会清理既有研究记录。任一非预期错误都会返回非零退出码，失败目录也会保留。旧版写入系统临时目录的验收数据可能已被清理；新合成验收不代表恢复旧实验，也不得用于重置真实研究的已用测试窗。
 
 | 阶段 | 你应该看到什么 |
 |---|---|
@@ -97,6 +97,19 @@ corepack pnpm check
 ## 5. 在 Agent 中查看
 
 以同一个 runtimeRoot 启动 `strategy-research` preset，再发送：
+
+在启动网页的同一个终端里，先设置 Python 工具路径（或将此变量的绝对路径保存到项目 `.env`），并保留已配置的模型提供方：
+
+```bash
+export NGFI_UV_EXECUTABLE="$HOME/Library/Python/3.9/bin/uv"
+export NGFI_AGENT_PRESET=strategy-research
+# NGFI_RUNTIME_DATA_ROOT 使用本次 manifest.json 中的 runtimeRoot
+corepack pnpm web
+```
+
+`NGFI_UV_EXECUTABLE` 同时适用于 CLI 和网页工具；显式传入的 `uvExecutable` 优先，其次此环境变量，最后从 PATH 查找 `uv`。修改环境变量或构建代码后，停止旧网页进程并重新启动。
+
+只查看已有记录时，不需要先执行 catalog/schema。列表调用为 `{"action":"list","workspace_id":"factor-smoke"}`，不附带 `limit/offset/section`。取得 caseId 后调用 factor-compare（不传 evaluation_id）发现因子运行记录，再用返回的 runId 查询 lineage/cards，从记录 summary 获取 evaluationId 做冻结比较。模型/收益/风险归因使用 list 返回的实验 runId。
 
 > 使用 finance_quant_research 查看 factor-smoke workspace 的实验列表。根据返回的实际 ID 查询因子家族、冻结评估比较，以及模型、收益、风险归因。分别说明四类解释回答什么问题、哪些输入缺失、是否可晋级。只读取已登记结果。
 

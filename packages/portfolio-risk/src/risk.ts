@@ -1,4 +1,4 @@
-import { canonicalInstrumentId, type InstrumentId } from '@finance2dsh/core'
+import { canonicalInstrumentId } from '@finance2dsh/core'
 import type { ContentHash } from '@finance2dsh/research-core'
 
 import type {
@@ -7,7 +7,6 @@ import type {
   FactorExposure,
   FactorRiskContribution,
   HoldingPosition,
-  HoldingPositionInput,
   HoldingRiskContribution,
   HoldingsSnapshot,
   MarginalRiskChange,
@@ -280,7 +279,7 @@ function metadata(
   }
 }
 
-function calculate(prepared: PreparedModel, portfolio: PreparedPortfolio, tolerance: number): Calculation {
+function calculate(prepared: PreparedModel, portfolio: PreparedPortfolio, tolerance: number, expectedWeightSum = 1, holdingsTolerance = tolerance): Calculation {
   const factorCount = prepared.model.factors.length
   const exposure = Array<number>(factorCount).fill(0)
   const securityCovariance = Array<number>(portfolio.positions.length).fill(0)
@@ -331,9 +330,9 @@ function calculate(prepared: PreparedModel, portfolio: PreparedPortfolio, tolera
     }, 0)
   ), 0)
   const holdingsCheck = check(Math.max(
-    Math.abs(portfolio.weights.reduce((sum, weight) => sum + weight, 0) - 1),
+    Math.abs(portfolio.weights.reduce((sum, weight) => sum + weight, 0) - expectedWeightSum),
     Math.abs(portfolio.positions.reduce((sum, position) => sum + position.marketValue, 0) - portfolio.coverage.marketValue),
-  ), tolerance)
+  ), holdingsTolerance)
   const exposureCheck = check(maximumDifference(
     exposure,
     Array.from({ length: factorCount }, (_unused, factor) => portfolio.positions.reduce((sum, _position, index) => {
@@ -405,6 +404,48 @@ export class Cne6PortfolioRiskFacade {
     })
     this.model = immutableCopy(model)
     this.#prepared = prepareModel(this.model, this.#tolerance)
+  }
+
+  researchRisk(account: { asOf: string; weights: Readonly<Record<string, number>>; cashWeight: number; nav?: number },
+    benchmarkWeights?: Readonly<Record<string, number>>): {
+      schemaVersion: '3'; kind: 'portfolio-risk'; promotionEligible: false; status: 'available' | 'blocked';
+      mode: 'absolute' | 'active'; issues: readonly PortfolioRiskIssue[]; risk: PortfolioRiskMetrics | null;
+      reconciliation: PortfolioRiskReconciliation; modelHash: ContentHash
+    } {
+    const issues = [...this.#prepared.validationIssues]
+    const mode = benchmarkWeights === undefined ? 'absolute' : 'active'
+    if (this.model.sourceQuality?.quality_flag !== 'good' || this.model.quality.status !== 'ok') {
+      issues.push({ code: 'covariance-quality', message: 'research attribution requires verified source quality and an accepted covariance snapshot' })
+    }
+    const weightTolerance = account.nav !== undefined && finite(account.nav) && account.nav > 0
+      ? Math.max(this.#tolerance, 0.011 / account.nav) : this.#tolerance
+    if (account.asOf !== this.model.asOf) issues.push({ code: 'as-of-mismatch', message: 'research marks must match the model date' })
+    const validWeights = (weights: Readonly<Record<string, number>>) => Object.entries(weights).every(([key, value]) =>
+      finite(value) && value >= 0 && this.#prepared.securityIndex.has(key))
+    if ((account.nav !== undefined && (!finite(account.nav) || account.nav <= 0))
+      || !finite(account.cashWeight) || account.cashWeight < 0 || account.cashWeight > 1 || !validWeights(account.weights)
+      || Math.abs(Object.values(account.weights).reduce((sum, value) => sum + value, account.cashWeight) - 1) > weightTolerance
+      || (benchmarkWeights !== undefined && (!validWeights(benchmarkWeights)
+        || Math.abs(Object.values(benchmarkWeights).reduce((sum, value) => sum + value, 0) - 1) > this.#tolerance))) {
+      issues.push({ code: 'invalid-holdings', message: 'research weights must be finite, covered, and reconcile to NAV including cash; benchmark must sum to one' })
+    }
+    const base = { schemaVersion: '3' as const, kind: 'portfolio-risk' as const, promotionEligible: false as const,
+      mode: mode as 'absolute' | 'active', modelHash: this.model.inputHash }
+    if (issues.length) return { ...base, status: 'blocked', issues, risk: null, reconciliation: failedReconciliation(this.#tolerance) }
+    const keys = [...new Set([...Object.keys(account.weights), ...Object.keys(benchmarkWeights ?? {})])].sort()
+    const weights = keys.map(key => (account.weights[key] ?? 0) - (benchmarkWeights?.[key] ?? 0))
+    const positions: HoldingPosition[] = keys.map((key, index) => {
+      const instrument = this.model.securities[this.#prepared.securityIndex.get(key)!]!.instrument
+      const position = { instrument, quantity: 1, marketValue: weights[index]!, currency: 'CNY', account: 'research' }
+      return { ...position, id: holdingId('research', position) }
+    })
+    const marketValue = weights.reduce((sum, weight) => sum + weight, 0)
+    const coverage: PortfolioCoverage = { positionCount: keys.length, mappedPositionCount: keys.length,
+      positionCoverage: 1, marketValue, mappedMarketValue: marketValue, marketValueCoverage: 1, unmappedInstruments: [] }
+    const calculation = calculate(this.#prepared, { positions, weights, mappedIndexes: keys.map(key => this.#prepared.securityIndex.get(key)!),
+      coverage, issues: [] }, this.#tolerance, (mode === 'absolute' ? 1 : 0) - account.cashWeight, weightTolerance)
+    return { ...base, status: calculation.reconciliation.status === 'ok' ? 'available' : 'blocked', issues,
+      risk: calculation.reconciliation.status === 'ok' ? calculation.metrics : null, reconciliation: calculation.reconciliation }
   }
 
   portfolioRisk(holdings: HoldingsSnapshot): PortfolioRiskResult {

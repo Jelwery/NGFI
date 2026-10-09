@@ -10,6 +10,35 @@ from ngfi_quant.factors.graph import build_panel, compute_factors, forward_label
 
 
 class ResearchFactorsTest(unittest.TestCase):
+    def test_v3_rolling_and_conditional_operators(self):
+        panel = self.panel
+        panel.fields["volume"].iloc[:4, :] = np.array([1, 3, 2, 4])[:, None]
+        cases = {
+            "DELTA": ({"window": 3}, 3.0),
+            "TS_RANK": ({"window": 3}, 1.0),
+            "DECAY_LINEAR": ({"window": 3}, 19 / 6),
+            "TS_QUANTILE": ({"window": 3, "q": 0.5}, 3.0),
+            "TS_ARGMAX": ({"window": 3}, 2.0),
+            "TS_ARGMIN": ({"window": 3}, 1.0),
+            "SIGN": ({}, 1.0),
+            "CORRELATION": ({"window": 3}, 1.0),
+            "COVARIANCE": ({"window": 3}, 2 / 3),
+        }
+        for op, (params, expected) in cases.items():
+            with self.subTest(op=op):
+                raw = {"id": "v3", "semanticsVersion": "3", "inputs": {"x": "volume"},
+                       "nodes": [{"id": "a", "op": op, "inputs": ["x", "x"] if op in {"CORRELATION", "COVARIANCE"} else ["x"], "params": params}],
+                       "output": "a"}
+                values = compute_factors(panel, [FactorDefinition.model_validate(raw)])["v3"]
+                self.assertAlmostEqual(values.iloc[3, 0], expected)
+                if "window" in params:
+                    self.assertTrue(values.iloc[0].isna().all())
+        raw = {"id": "conditional", "semanticsVersion": "3", "inputs": {"x": "close", "y": "open"},
+               "nodes": [{"id": "c", "op": "GT", "inputs": ["x", "y"]},
+                         {"id": "s", "op": "SELECT", "inputs": ["c", "x", "y"]}], "output": "s"}
+        result = compute_factors(panel, [FactorDefinition.model_validate(raw)])["conditional"]
+        pd.testing.assert_frame_equal(result, np.maximum(panel.fields["close"], panel.fields["open"]))
+
     def setUp(self):
         self.raw, config = demo_input()
         self.spec = ResearchSpec.model_validate(config)

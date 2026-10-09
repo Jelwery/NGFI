@@ -7,9 +7,9 @@ import math
 
 import numpy as np
 
-from .contracts import AShareBar, AShareCostModel, BacktestMetadata, BacktestRequest, PortfolioConfig, instrument_from_contract
+from .contracts import AShareBar, AShareCostModel, BacktestMetadata, BacktestRequest, BenchmarkPoint, PortfolioConfig, ReturnAttributionDay, instrument_from_contract, instrument_from_key
 from .execution import money
-from .factors.graph import build_panel, compute_factors, factor_correlations, factor_diagnostics, forward_labels
+from .factors.graph import build_panel, compute_factors, factor_correlations, factor_diagnostics, forward_labels, factor_resource_estimate
 from .hashing import stable_hash
 from .optimizer import optimize_research_weights, plan_research_orders, research_covariance
 from .portfolio import run_research_backtest
@@ -50,6 +50,7 @@ def replay_research(panel, spec: ResearchSpec, policy) -> dict:
     cost = AShareCostModel(commission_rate=spec.execution.commission_rate, minimum_commission=spec.execution.minimum_commission,
                           stamp_duty_rate=spec.execution.stamp_duty_rate, transfer_fee_rate=spec.execution.transfer_fee_rate,
                           slippage_rate=spec.execution.slippage_rate)
+    actual = panel.dataset.benchmark
     request = BacktestRequest(
         calendar=tuple(dates),
         bars=tuple(AShareBar(row.date, instrument_from_contract(row.instrument.json()), row.available_at,
@@ -58,7 +59,15 @@ def replay_research(panel, spec: ResearchSpec, policy) -> dict:
                    for row in panel.dataset.bars if row.date in dates),
         signals=(), cost_model=cost, portfolio=PortfolioConfig(spec.execution.initial_capital, len(panel.securities), 1, len(dates)),
         metadata=BacktestMetadata(panel.dataset.snapshot_id, panel.dataset.hash, panel.dataset.as_of, spec.hash, spec.hash,
-                                  cost.hash, None, None, panel.dataset.as_of, panel.dataset.as_of, "2.0.0"))
+                                  cost.hash, instrument_from_key(actual.instrument) if actual else None,
+                                  actual.source_hash if actual else None, panel.dataset.as_of, panel.dataset.as_of,
+                                  "3.0.0" if spec.schema_version == "3" else "2.0.0"),
+        benchmark_series=tuple(BenchmarkPoint(row.date, row.value, row.available_at) for row in actual.points if row.date in dates) if actual else (),
+        benchmark_convention=actual.convention if actual else "price",
+        attribution=tuple(ReturnAttributionDay(row.date, row.weights_available_at, row.benchmark_weights, row.exposures,
+            row.factor_kinds, row.factor_returns, row.factor_returns_available_at, row.previous_date, row.model_hash,
+            row.source_hash, row.specific_returns, row.industries) for row in panel.dataset.return_attribution if row.date in dates),
+        attribution_method="ledger-v3" if spec.schema_version == "3" else "legacy-v2")
 
     def decide(day, account):
         index = panel.dates.index(day)
@@ -107,6 +116,10 @@ def replay_research(panel, spec: ResearchSpec, policy) -> dict:
             "equity": equity, "orders": orders, "fills": fills, "decisions": decisions,
             "dailyLedger": list(result.daily_ledger), "finalCash": result.final_cash,
             "finalPositions": result.daily_ledger[-1]["quantities"],
+            **({"attribution": {"schemaVersion": "3", "kind": "portfolio-return", "promotionEligible": False,
+                               "status": "complete" if all(row["status"] == "available" for row in result.attribution) else "blocked",
+                               "daily": list(result.attribution), "linked": result.daily_ledger[-1].get("linkedAttribution")}}
+               if spec.schema_version == "3" else {}),
             "metrics": {"totalReturn": float(total), "annualizedReturn": annualized if math.isfinite(annualized) else None,
                         "sharpe": float(np.mean(returns) / deviation * math.sqrt(252)) if deviation > 1e-12 else None,
                         "maxDrawdown": float(np.min(navs / np.maximum.accumulate(navs) - 1)),
@@ -119,6 +132,9 @@ def replay_research(panel, spec: ResearchSpec, policy) -> dict:
 
 
 def run_experiment(dataset: ResearchDataset, spec: ResearchSpec) -> dict:
+    if dataset.schema_version != spec.schema_version:
+        raise ValueError("dataset and spec schema versions must agree")
+    factor_resource_estimate(dataset, spec.factors)
     panel = build_panel(dataset)
     factors = compute_factors(panel, spec.factors)
     models = rolling_predict(panel, factors, spec)
@@ -170,16 +186,21 @@ def run_experiment(dataset: ResearchDataset, spec: ResearchSpec) -> dict:
                              for name, matrix in factors.items() for day in panel.dates if spec.start_date <= day <= spec.end_date for key in panel.securities],
                  "diagnostics": diagnostics, "correlations": factor_correlations(factors, spec.start_date, spec.end_date),
                  "modelDiagnostics": model_diagnostics, "backtest": backtest, "benchmark": benchmark}
+    if spec.schema_version == "3":
+        artifacts.update(modelAttribution=models["attribution"], returnAttribution=backtest["attribution"])
     summary = {"status": status, "synthetic": dataset.synthetic, "datasetSnapshotId": dataset.snapshot_id,
                "predictionDays": len(models["predictions"]), "completeFolds": available, "modelKind": spec.model.kind,
                "optimizerMethod": spec.optimizer.method, "purpose": spec.purpose, "promotionEligible": False,
                "metrics": backtest["metrics"], "benchmarkMetrics": benchmark["metrics"],
                "excessTotalReturn": backtest["metrics"]["totalReturn"] - benchmark["metrics"]["totalReturn"],
                "benchmark": "experimental equal-weight eligible universe; not CSI300/CSI800",
-               "actualBenchmarkStatus": "missing", "strategyValidationStatus": "blocked",
+               "actualBenchmarkStatus": backtest["run"]["benchmark"]["status"], "strategyValidationStatus": "blocked",
                "warnings": ["Research targets are not confirmed-account A3 plans or live orders.",
                             "Source truth and historical membership are caller supplied, not independently accepted.",
                             "No corporate-action ledger is inferred for raw-no-corporate-actions datasets.",
                             "OOS diagnostics do not establish an unused holdout or permit automatic promotion."]}
+    if spec.schema_version == "3":
+        summary.update(returnAttributionStatus=backtest["attribution"]["status"],
+                       actualBenchmark=backtest["run"]["benchmark"])
     return {"id": stable_hash(identity), **identity, "status": status, "promotionEligible": False, "spec": spec.json(),
             **artifacts, "artifactHashes": {name: stable_hash(value) for name, value in artifacts.items()}, "summary": summary}

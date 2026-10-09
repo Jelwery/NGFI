@@ -225,6 +225,8 @@ def run_research_backtest(request: BacktestRequest, *, policy: Callable[[str, di
     strict_status = bool(request.target_schedules) or policy is not None
     if request.benchmark_convention not in ("price", "total-return"):
         raise ValueError("benchmark convention must be price or total-return")
+    if request.attribution_method not in ("legacy-v2", "ledger-v3"):
+        raise ValueError("unknown attribution method")
     from .contracts import require_date
     effective_dates = [date for date, _ in request.cost_schedule]
     for effective_date in effective_dates:
@@ -462,7 +464,13 @@ def run_research_backtest(request: BacktestRequest, *, policy: Callable[[str, di
                             raise ValueError("frozen capacity must be a nonnegative lot multiple")
                     pending = {"date": day, "availableAt": decision_times[day], "quantities": dict(targets_next),
                                "lotSizes": dict(rules), "capacity": dict(capacity)}
-        if day_index:
+        if request.attribution_method == "ledger-v3":
+            from .attribution import ledger_attribution
+            attribution_rows.append(ledger_attribution(day=day, previous_day=request.calendar[day_index - 1] if day_index else None,
+                previous_nav=equity[-2].value if day_index else request.portfolio.initial_capital, nav=point.value,
+                starting_cash=starting_cash, quantities=starting_quantities, bars=bars, actions=actions.get(day, []),
+                benchmark=benchmark_points, data=attribution_inputs.get(day), fills=fills))
+        elif day_index:
             attribution_rows.append(_attribution(day, request.calendar[day_index - 1], equity[-2].value, point.value,
                                                   starting_cash, starting_quantities, bars, actions.get(day, []),
                                                   benchmark_points, attribution_inputs.get(day), day_costs))
@@ -474,7 +482,10 @@ def run_research_backtest(request: BacktestRequest, *, policy: Callable[[str, di
                 "components": {"industry": 0.0, "style": 0.0, "residualSelection": 0.0, "cash": 0.0,
                                "cost": cost_return, "tradingTimingResidual": initial_return - cost_return},
                 "reconciliationError": 0.0, "method": "initial-cash inception; benchmark rebased at first close"})
-    if attribution_rows and all(row["status"] == "available" for row in attribution_rows):
+    if request.attribution_method == "ledger-v3":
+        from .attribution import carino_link
+        daily_ledger[-1]["linkedAttribution"] = carino_link(attribution_rows)
+    elif attribution_rows and all(row["status"] == "available" for row in attribution_rows):
         linked = {name: 0.0 for name in attribution_rows[0]["components"]}
         portfolio_growth = benchmark_growth = 1.0
         for row in attribution_rows:
@@ -526,7 +537,8 @@ def run_research_backtest(request: BacktestRequest, *, policy: Callable[[str, di
         "inputContentHash": stable_hash({"calendar": request.calendar, "bars": request.bars, "signals": request.signals, "schedules": request.target_schedules,
                                           "actions": request.corporate_actions, "benchmark": request.benchmark_series, "attribution": request.attribution,
                                           "portfolio": request.portfolio, "maxParticipation": request.max_participation,
-                                          "costSchedule": request.cost_schedule, "benchmarkConvention": request.benchmark_convention}),
+                                          "costSchedule": request.cost_schedule, "benchmarkConvention": request.benchmark_convention,
+                                          **({"attributionMethod": request.attribution_method} if request.attribution_method != "legacy-v2" else {})}),
         "costModel": {"id": request.cost_model.id, "version": request.cost_model.version, "hash": request.cost_model.hash, "parameters": request.cost_model.parameters()},
         "benchmark": benchmark, "metrics": metrics, "artifacts": artifacts,
         "status": "partial" if incomplete else "complete",

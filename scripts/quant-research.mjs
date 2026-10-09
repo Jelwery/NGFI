@@ -10,6 +10,8 @@ const { values, positionals } = parseArgs({ allowPositionals: true, options: {
   workspace: { type: 'string', default: 'default' }, case: { type: 'string' }, revision: { type: 'string' },
   'dataset-id': { type: 'string' }, spec: { type: 'string' }, section: { type: 'string' },
   offset: { type: 'string' }, limit: { type: 'string' }, resume: { type: 'boolean' },
+  request: { type: 'string' }, registration: { type: 'string' }, stage: { type: 'string' }, 'evaluation-id': { type: 'string' },
+  kind: { type: 'string' },
 } })
 const options = { quantProjectRoot: resolve(root, 'packages/combinatorial-optimization'),
   runtimeRoot: process.env.NGFI_RUNTIME_DATA_ROOT || resolve(root, '.runtime/finance-data'),
@@ -47,18 +49,32 @@ try {
     result = await executeQuantResearch(options, values.workspace, { action: 'run', caseId: imported.caseId,
       expectedRevision: imported.revision, datasetId: imported.datasetId, spec: input.spec }, controller.signal)
   } else {
-    if (!['catalog', 'schema', 'import', 'run', 'get', 'list'].includes(action)) throw new Error('Commands: catalog, schema, import FILE, run --case ID --revision N --dataset-id ID --spec FILE, get RUN --case ID, list, demo')
+    if (!['catalog', 'schema', 'import', 'run', 'get', 'list', 'factor-catalog', 'factor-register', 'factor-derive', 'factor-evaluate', 'factor-explain', 'factor-compare', 'factor-get', 'attribute'].includes(action)) throw new Error('Unknown command; see docs/quant-research.md for experiment and factor commands')
     const request = { action }
     if (values.case !== undefined) request.caseId = values.case
     if (values.revision !== undefined) request.expectedRevision = Number(values.revision)
     if (action === 'import') request.dataset = await quantArtifactComputation(options, 'parse-json', { text: readJson(positionals[1]) }, controller.signal)
     if (action === 'run') {
       request.datasetId = values['dataset-id']
+      if (values['evaluation-id']) request.evaluationId = values['evaluation-id']
       request.spec = await quantArtifactComputation(options, 'parse-json', { text: readJson(values.spec) }, controller.signal)
       if (values.resume !== undefined) request.resume = values.resume
     }
-    if (action === 'get') {
-      request.runId = positionals[1]
+    if (['factor-register', 'factor-derive', 'factor-explain'].includes(action)) {
+      request.request = await quantArtifactComputation(options, 'parse-json', { text: readJson(values.request) }, controller.signal)
+      if (values['evaluation-id']) request.evaluationId = values['evaluation-id']
+      if (values.resume !== undefined) request.resume = values.resume
+    }
+    if (action === 'factor-evaluate') {
+      request.datasetId = values['dataset-id']
+      request.registration = await quantArtifactComputation(options, 'parse-json', { text: readJson(values.registration) }, controller.signal)
+      if (values.stage) request.stage = values.stage
+      if (values.resume !== undefined) request.resume = values.resume
+    }
+    if (action === 'get' || action === 'factor-get' || action === 'factor-compare' || action === 'attribute') {
+      if (action !== 'factor-compare') request.runId = positionals[1]
+      if (action === 'factor-compare' && values['evaluation-id']) request.evaluationId = values['evaluation-id']
+      if (action === 'attribute') request.kind = values.kind
       if (values.section !== undefined) request.section = values.section
       if (values.offset !== undefined) request.offset = Number(values.offset)
       if (values.limit !== undefined) request.limit = Number(values.limit)

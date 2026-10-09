@@ -14,6 +14,29 @@ MAX_BYTES = 128 * 1024 * 1024
 
 
 def compute_research(operation: str, value: dict) -> dict:
+    if operation == "factor-catalog":
+        from .factors.registry import catalog
+        strict_object(value, set(), set(), operation)
+        return catalog()
+    if operation in {"factor-register", "factor-derive"}:
+        strict_object(value, {"request"}, set(), operation)
+        if operation == "factor-register":
+            from .factors.registry import FactorRegistration, register_factors
+            return register_factors(FactorRegistration.model_validate(value["request"]))
+        from .factors.derive import DerivationRequest, derive_factors
+        return derive_factors(DerivationRequest.model_validate(value["request"]))
+    if operation in {"validate-evaluation", "factor-evaluate"}:
+        from .factors.evaluation import EvaluationRegistration, evaluate_factors, validate_registration
+        strict_object(value, {"dataset", "registration"}, {"stage", "frozen"} if operation == "factor-evaluate" else set(), operation)
+        dataset = ResearchDataset.model_validate(value["dataset"])
+        registration = EvaluationRegistration.model_validate(value["registration"])
+        if operation == "validate-evaluation":
+            return validate_registration(dataset, registration)
+        return evaluate_factors(dataset, registration, value.get("stage", "development"), value.get("frozen"))
+    if operation == "style-explain":
+        from .factors.explain import StyleExplanation, explain_style
+        strict_object(value, {"dataset", "request"}, set(), operation)
+        return explain_style(ResearchDataset.model_validate(value["dataset"]), StyleExplanation.model_validate(value["request"]))
     if operation == "parse-json":
         strict_object(value, {"text"}, set(), operation)
         from .agent_bridge import _unique_object
@@ -29,8 +52,16 @@ def compute_research(operation: str, value: dict) -> dict:
         strict_object(value, set(), set(), operation)
         return factor_catalog()
     if operation == "schema":
+        from .factors.registry import FactorRegistration
+        from .factors.derive import DerivationRequest
+        from .factors.evaluation import EvaluationRegistration
+        from .factors.explain import StyleExplanation
         strict_object(value, set(), set(), operation)
-        return {"dataset": ResearchDataset.model_json_schema(by_alias=True), "spec": ResearchSpec.model_json_schema(by_alias=True)}
+        return {"dataset": ResearchDataset.model_json_schema(by_alias=True), "spec": ResearchSpec.model_json_schema(by_alias=True),
+                "factorRegistration": FactorRegistration.model_json_schema(by_alias=True),
+                "derivation": DerivationRequest.model_json_schema(by_alias=True),
+                "evaluation": EvaluationRegistration.model_json_schema(by_alias=True),
+                "styleExplanation": StyleExplanation.model_json_schema(by_alias=True)}
     if operation == "demo":
         from .demo import demo_input
         strict_object(value, set(), set(), operation)

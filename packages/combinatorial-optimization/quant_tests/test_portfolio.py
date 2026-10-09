@@ -8,6 +8,8 @@ from ngfi_quant import (
     PortfolioConfig, compare_candidate_to_benchmark, run_research_backtest, stable_hash,
     TargetSchedule, CorporateAction, BenchmarkPoint, AttributionDay,
 )
+from ngfi_quant.contracts import ReturnAttributionDay
+from ngfi_quant.attribution import carino_link
 
 
 CALENDAR = ("2026-01-05", "2026-01-06", "2026-01-07", "2026-01-08", "2026-01-09")
@@ -120,6 +122,75 @@ class DailyPortfolioTest(unittest.TestCase):
                      TargetSchedule(CALENDAR[1], f"{CALENDAR[1]}T09:00:00+08:00", {B.key: 0.5}),
                      TargetSchedule(CALENDAR[2], f"{CALENDAR[2]}T09:00:00+08:00", {}))
         return replace(request((), rows=rows), target_schedules=schedules, max_participation=0.1)
+
+    def v3_request(self, base):
+        points = tuple(BenchmarkPoint(day, 100 + index, f"{day}T16:00:00+08:00") for index, day in enumerate(CALENDAR))
+        by_key = {(row.date, row.instrument.key): row for row in base.bars}
+        attributes = []
+        for previous, day in zip(CALENDAR, CALENDAR[1:]):
+            returns = {}
+            for key in (A.key, B.key):
+                action = next((item for item in base.corporate_actions if item.date == day and item.instrument.key == key), None)
+                split, dividend = (action.split_ratio, action.cash_dividend) if action else (1, 0)
+                returns[key] = (by_key[day, key].close * split + dividend) / by_key[previous, key].close - 1
+            attributes.append(ReturnAttributionDay(day, f"{previous}T16:00:00+08:00", {A.key: 0.5, B.key: 0.5},
+                {A.key: {"COUNTRY": 1, "SIZE": 1}, B.key: {"COUNTRY": 1, "SIZE": -1}},
+                {"COUNTRY": "country", "SIZE": "style"}, {"COUNTRY": 0.001, "SIZE": 0.002},
+                f"{day}T16:00:00+08:00", previous, stable_hash("model"), stable_hash("source"),
+                {A.key: returns[A.key] - 0.003, B.key: returns[B.key] + 0.001}, {A.key: "bank", B.key: "insurance"}))
+        return replace(base, benchmark_series=points, attribution=tuple(attributes), attribution_method="ledger-v3")
+
+    def test_v3_ledger_reconciles_cash_fills_fees_actions_and_replication(self):
+        base = self.scheduled_request()
+        dividend = CorporateAction("dividend", CALENDAR[1], A, f"{CALENDAR[1]}T08:00:00+08:00", 2, 0.1, CALENDAR[3])
+        split_rows = tuple(replace(row, open=5, high=5, low=5, close=5, previous_close=5)
+                           if row.instrument == A and row.date >= CALENDAR[1] else row for row in base.bars)
+        scenarios = {
+            "cash": replace(base, target_schedules=()),
+            "flat": base,
+            "fees": replace(base, cost_model=AShareCostModel()),
+            "gap": replace(base, bars=tuple(replace(row, open=9.9, low=9.9) if row.date == CALENDAR[1] else row for row in base.bars)),
+            "suspension": replace(base, bars=tuple(replace(row, suspended=True) if row.date == CALENDAR[1] else row for row in base.bars)),
+            "split-and-receivable": replace(base, bars=split_rows, target_schedules=(base.target_schedules[0],), corporate_actions=(dividend,)),
+        }
+        for name, scenario in scenarios.items():
+            with self.subTest(name):
+                result = run_research_backtest(self.v3_request(scenario))
+                for row in result.attribution:
+                    self.assertEqual(row["status"], "available", row)
+                    self.assertLessEqual(abs(row["reconciliationError"]), row["tolerance"])
+                linked = result.daily_ledger[-1]["linkedAttribution"]
+                self.assertEqual(linked["status"], "available")
+                self.assertAlmostEqual(linked["activeReturn"], result.equity[-1].value / 100000 - 1 - 0.04)
+                self.assertLessEqual(abs(linked["reconciliationError"]), linked["tolerance"])
+                if name == "cash":
+                    row = result.attribution[1]
+                    self.assertAlmostEqual(row["components"]["cash"], -0.01)
+                    self.assertAlmostEqual(row["components"]["benchmarkReplication"], -0.01)
+                    self.assertAlmostEqual(sum(row["components"].values()), -0.01)
+                if name == "gap":
+                    ledger = result.daily_ledger[1]
+                    expected = sum((1 if fill["side"] == "buy" else -1) * fill["quantity"] * (10 - fill["price"]) for fill in ledger["fills"]) / result.equity[0].value
+                    self.assertAlmostEqual(result.attribution[1]["components"]["tradingTiming"], expected)
+                if name == "fees":
+                    self.assertAlmostEqual(result.attribution[0]["components"]["fees"],
+                                           -sum(fill["fees"]["total"] for fill in result.daily_ledger[0]["fills"]) / 100000)
+        invalid = self.v3_request(base)
+        wrong = replace(invalid.attribution[0], specific_returns={A.key: 0.1, B.key: 0.1})
+        result = run_research_backtest(replace(invalid, attribution=(wrong,) + invalid.attribution[1:]))
+        self.assertEqual(result.attribution[1]["status"], "unreconciled")
+        self.assertEqual(result.daily_ledger[-1]["linkedAttribution"]["status"], "blocked")
+
+    def test_carino_continuous_limits_and_log_domain(self):
+        for returns in ([0, 0], [0.01, -0.01], [-0.2, 0.5]):
+            with self.subTest(returns):
+                rows = [{"status": "available", "portfolioReturn": value, "benchmarkReturn": value,
+                         "components": {"country": 0.1, "specific": -0.1}} for value in returns]
+                linked = carino_link(rows)
+                self.assertAlmostEqual(linked["activeReturn"], 0)
+                self.assertAlmostEqual(sum(linked["components"].values()), 0)
+        with self.assertRaisesRegex(ValueError, "greater than -1"):
+            carino_link([{"status": "available", "portfolioReturn": -1, "benchmarkReturn": 0, "components": {}}])
 
     def test_daily_targets_sell_before_buy_and_exact_cash(self):
         result = run_research_backtest(self.scheduled_request())

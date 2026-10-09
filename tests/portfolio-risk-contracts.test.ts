@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { researchRiskAttribution } from '../packages/research-workflow/lib/research-risk.js'
+import type { JsonObject } from '@finance2dsh/research-core'
 
 import {
   Cne6PortfolioRiskFacade,
@@ -197,6 +199,45 @@ describe('staged and confirmed holdings store', () => {
 })
 
 describe('CNE6 portfolio risk facade', () => {
+  it('requires same-session risk publication between close and decision', () => {
+    const date = context.asOf
+    const backtest = { equity: [{ date, nav: 1000, positions: {}, cash: 1000, receivableDividends: 0 }] }
+    for (const [availableAt, allowed] of [
+      [`${date}T06:59:59Z`, false], [`${date}T07:00:00Z`, true],
+      [`${date}T08:00:00Z`, true], [`${date}T08:00:01Z`, false],
+    ] as const) {
+      const data = { bars: [], calendar: [{ date, closeAt: `${date}T07:00:00Z`, decisionAt: `${date}T08:00:00Z` }],
+        cne6Models: [{ ...model(), availableAt }], returnAttribution: [] }
+      const result = researchRiskAttribution(data as unknown as JsonObject, backtest)
+      const row = (result.rows as JsonObject[])[0]!
+      if (allowed) {
+        expect(row.status).toBe('partial')
+        expect(row.absolute).toMatchObject({ status: 'available', risk: { totalVariance: 0 } })
+      } else expect(row).toMatchObject({ status: 'blocked', reason: expect.stringContaining('session close and decision') })
+    }
+  })
+
+  it('reuses risk attribution for research NAV weights, cash and signed active positions', () => {
+    const facade = new Cne6PortfolioRiskFacade(model())
+    const weights = { 'CN:SSE:600000:EQUITY': 0.3, 'CN:SZSE:000001:EQUITY': 0.2 }
+    const account = { asOf: context.asOf, weights, cashWeight: 0.5 }
+    const absolute = facade.researchRisk(account)
+    expect(absolute.status).toBe('available')
+    expect(absolute.promotionEligible).toBe(false)
+    expect(absolute.risk?.totalVariance).toBeCloseTo(0.000545 / 4, 12)
+    const active = facade.researchRisk(account, { 'CN:SSE:600000:EQUITY': 0.5, 'CN:SZSE:000001:EQUITY': 0.5 })
+    expect(active.status).toBe('available')
+    const expected = 0.2 ** 2 * 0.000825 + 2 * 0.2 * 0.3 * 0.000175 + 0.3 ** 2 * 0.001025
+    expect(active.risk?.totalVariance).toBeCloseTo(expected, 12)
+    expect(active.risk?.holdingContributions.reduce((sum, row) => sum + row.varianceContribution, 0)).toBeCloseTo(expected, 12)
+    expect(facade.researchRisk({ asOf: context.asOf, weights: {}, cashWeight: 1 }).risk?.totalVariance).toBe(0)
+    expect(facade.researchRisk({ ...account, cashWeight: 0 }).status).toBe('blocked')
+    expect(facade.researchRisk({ ...account, asOf: '2026-09-04' }).status).toBe('blocked')
+    expect(facade.researchRisk(account, { absent: 1 }).status).toBe('blocked')
+    expect(facade.researchRisk(account, weights).status).toBe('blocked')
+    expect(facade.researchRisk({ ...account, nav: -1 }).status).toBe('blocked')
+  })
+
   it('rejects staged holdings before calculating formal risk', () => {
     const store = new InMemoryHoldingsStore()
     const staged = store.stage(readyImport(), 0).snapshot as HoldingsSnapshot
